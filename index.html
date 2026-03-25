@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ObraControl v1.4</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f1117; --bg2:#161b27; --bg3:#1e2436; --card:#1a2035;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0; --muted:#7a8099; --accent:#f5a623; --accent2:#3b82f6;
+  --green:#22c55e; --red:#ef4444; --orange:#f97316;
+  --fh:'Syne',sans-serif; --fb:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px;min-height:100vh}
+/* ── AUTH ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.auth-box{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:44px 40px;width:100%;max-width:400px}
+.auth-logo{font-family:var(--fh);font-size:24px;font-weight:700;color:var(--accent);margin-bottom:6px}
+.auth-sub{color:var(--muted);font-size:13px;margin-bottom:32px}
+.auth-err{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+/* ── LAYOUT ── */
+#app{display:none}
+.shell{display:flex;min-height:100vh}
+.sidebar{width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
+.sidebar-logo{padding:22px 18px 14px;border-bottom:1px solid var(--border)}
+.sidebar-logo .logo-text{font-family:var(--fh);font-size:17px;font-weight:700;color:var(--accent)}
+.sidebar-logo .logo-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.sidebar-user{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:rgba(245,166,35,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0}
+.user-info{min-width:0}
+.user-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-rol{font-size:11px;color:var(--muted)}
+.sidebar-nav{padding:10px 0;flex:1;overflow-y:auto}
+.nav-section{padding:8px 18px 4px;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.nav-item.active{color:var(--accent);background:rgba(245,166,35,.07);border-left-color:var(--accent)}
+.nav-icon{width:15px;height:15px;flex-shrink:0}
+.sidebar-footer{padding:12px 18px;border-top:1px solid var(--border)}
+.btn-logout{width:100%;padding:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:var(--red);font-size:12px;cursor:pointer;font-family:var(--fb);transition:all .15s}
+.btn-logout:hover{background:rgba(239,68,68,.2)}
+.main{margin-left:230px;padding:26px 30px;flex:1;min-width:0}
+/* ── COMMON ── */
+.view{display:none}.view.active{display:block}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.topbar h1{font-family:var(--fh);font-size:21px;font-weight:600}
+.topbar-actions{display:flex;gap:8px}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-family:var(--fb);font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#000}.btn-primary:hover{background:#e69520}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text)}.btn-ghost:hover{background:rgba(255,255,255,.05)}
+.btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red)}.btn-danger:hover{background:rgba(239,68,68,.22)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.card-title{font-family:var(--fh);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.metric-label{font-size:12px;color:var(--muted);margin-bottom:5px}
+.metric-value{font-family:var(--fh);font-size:22px;font-weight:700}
+.metric-sub{font-size:12px;color:var(--muted);margin-top:3px}
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:9px 13px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);font-weight:500}
+td{padding:11px 13px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.table-wrap{overflow-x:auto}
+/* ── BADGES ── */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-amber{background:rgba(245,166,35,.15);color:var(--accent)}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--accent2)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-gray{background:rgba(122,128,153,.15);color:var(--muted)}
+/* ── PROGRESS ── */
+.progress-wrap{background:rgba(255,255,255,.06);border-radius:4px;height:5px;width:100%;overflow:hidden}
+.progress-bar{height:100%;border-radius:4px;transition:width .3s}
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12px;color:var(--muted);font-weight:500}
+.form-group input,.form-group select,.form-group textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:8px 11px;outline:none;transition:border .15s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:64px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.form-group.full{grid-column:1/-1}
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:26px;width:100%;max-width:580px;margin:auto}
+.modal-title{font-family:var(--fh);font-size:17px;font-weight:600;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{cursor:pointer;background:none;border:none;color:var(--muted);font-size:18px;line-height:1}
+/* ── PROYECTO CARDS ── */
+.project-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-bottom:22px}
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .15s}
+.project-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.pc-name{font-family:var(--fh);font-size:14px;font-weight:600;margin-bottom:3px}
+.pc-loc{font-size:12px;color:var(--muted);margin-bottom:12px}
+.pc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.pc-stat-label{font-size:11px;color:var(--muted)}
+.pc-stat-val{font-size:13px;font-weight:500}
+/* ── TABS ── */
+.tabs{display:flex;gap:3px;border-bottom:1px solid var(--border);margin-bottom:18px}
+.tab{padding:8px 15px;cursor:pointer;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+/* ── MISC ── */
+.detail-back{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:18px;transition:color .15s}
+.detail-back:hover{color:var(--text)}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.chart-box{position:relative;width:100%;height:200px}
+.notif{position:fixed;bottom:22px;right:22px;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;display:none;pointer-events:none}
+.partida-row{background:var(--bg3);border-radius:8px;padding:11px 13px;margin-bottom:7px}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-size:13px}
+/* ── ADMIN ── */
+.role-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:rgba(59,130,246,.15);color:var(--accent2)}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">⬡ ObraControl</div>
+    <div class="auth-sub">Sistema de gestión de obra civil</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Usuario</label>
+      <input type="text" id="login-usuario" placeholder="nombre de usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Ingresar</button>
+    <div class="auth-err" id="login-err"></div>
+    <p style="font-size:12px;color:var(--muted);margin-top:16px;text-align:center">¿No tenés acceso? Pedile al administrador que te agregue.</p>
+  </div>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app">
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">⬡ ObraControl</div>
+      <div class="logo-sub">Gestión de Obra Civil</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.4</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name">Cargando...</div>
+        <div class="user-rol" id="user-rol">—</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <div class="nav-item active" onclick="showView('dashboard')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showView('proyectos')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
+        Proyectos
+      </div>
+      <div class="nav-item" onclick="showView('gastos')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="4" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".75" fill="currentColor" stroke="none"/></svg>
+        Gastos
+      </div>
+      <div class="nav-item" onclick="showView('reportes')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 8,9 11,4 15,6"/></svg>
+        Reportes
+      </div>
+      <div class="nav-item" id="nav-admin" style="display:none" onclick="showView('admin')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+        Usuarios
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view active">
+      <div class="topbar">
+        <h1>Dashboard</h1>
+        <button class="btn btn-primary" id="btn-nueva-obra" onclick="openModal('modal-proyecto')">+ Nueva Obra</button>
+      </div>
+      <div class="metrics" id="dash-metrics"><div class="loading">Cargando...</div></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Presupuesto vs Gasto</div><div class="chart-box"><canvas id="chart-barras"></canvas></div></div>
+        <div class="card"><div class="card-title">Gastos por categoría</div><div class="chart-box"><canvas id="chart-dona"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">Obras activas</div><div class="table-wrap"><table id="tabla-resumen"></table></div></div>
+    </div>
+
+    <!-- PROYECTOS -->
+    <div id="view-proyectos" class="view">
+      <div id="lista-proyectos">
+        <div class="topbar"><h1>Proyectos</h1><button class="btn btn-primary" id="btn-nueva-obra2" onclick="openModal('modal-proyecto')">+ Nueva Obra</button></div>
+        <div class="project-cards" id="project-cards"></div>
+      </div>
+      <div id="detalle-proyecto" style="display:none"></div>
+    </div>
+
+    <!-- GASTOS -->
+    <div id="view-gastos" class="view">
+      <div class="topbar"><h1>Gastos</h1><button class="btn btn-primary" onclick="openModal('modal-gasto')">+ Registrar Gasto</button></div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:10px">
+          <div class="form-group" style="flex:1"><select id="filtro-proy" onchange="renderGastos()"><option value="">Todas las obras</option></select></div>
+          <div class="form-group" style="flex:1"><select id="filtro-cat" onchange="renderGastos()"><option value="">Todas las categorías</option><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
+          <div class="form-group" style="flex:1"><input type="month" id="filtro-mes" onchange="renderGastos()"/></div>
+        </div>
+      </div>
+      <div class="card"><div class="table-wrap"><table id="tabla-gastos"></table></div></div>
+    </div>
+
+    <!-- REPORTES -->
+    <div id="view-reportes" class="view">
+      <div class="topbar"><h1>Reportes</h1></div>
+      <div class="metrics" id="rep-metrics" style="grid-template-columns:repeat(3,1fr)"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Gasto mensual</div><div class="chart-box"><canvas id="chart-lineas"></canvas></div></div>
+        <div class="card"><div class="card-title">Por categoría</div><div class="chart-box"><canvas id="chart-categ"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">Estado de partidas</div><div id="rep-partidas"></div></div>
+    </div>
+
+    <!-- ADMIN USUARIOS -->
+    <div id="view-admin" class="view">
+      <div class="topbar"><h1>Gestión de usuarios</h1><button class="btn btn-primary" onclick="openModal('modal-crear-usuario')">+ Agregar usuario</button></div>
+      <div class="card"><div class="table-wrap"><table id="tabla-usuarios"></table></div></div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ══ MODALES ══ -->
+<!-- Proyecto -->
+<div class="modal-overlay" id="modal-proyecto">
+  <div class="modal">
+    <div class="modal-title">Nueva Obra<button class="modal-close" onclick="closeModal('modal-proyecto')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nombre de la obra *</label><input id="p-nombre" placeholder="Ej: Edificio Central Norte"/></div>
+      <div class="form-group"><label>Ubicación</label><input id="p-ubicacion" placeholder="Ciudad, Departamento"/></div>
+      <div class="form-group"><label>Cliente / Contratante</label><input id="p-cliente" placeholder="Nombre del cliente"/></div>
+      <div class="form-group"><label>Presupuesto total ($)</label><input type="number" id="p-presupuesto" placeholder="0"/></div>
+      <div class="form-group"><label>Estado</label>
+        <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option></select>
+      </div>
+      <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio"/></div>
+      <div class="form-group"><label>Fecha fin estimada</label><input type="date" id="p-fin"/></div>
+      <div class="form-group"><label>Avance físico (%)</label><input type="number" id="p-avance" min="0" max="100" placeholder="0"/></div>
+      <div class="form-group full"><label>Descripción</label><textarea id="p-desc"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-proyecto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarProyecto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gasto -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal">
+    <div class="modal-title">Registrar Gasto<button class="modal-close" onclick="closeModal('modal-gasto')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Obra *</label><select id="g-proyecto" onchange="cargarPartidasSelect()"></select></div>
+      <div class="form-group"><label>Partida</label><select id="g-partida"><option value="">Sin partida</option></select></div>
+      <div class="form-group"><label>Categoría</label><select id="g-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="number" id="g-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
+      <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
+      <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
+      <div class="form-group full"><label>Observaciones</label><textarea id="g-obs"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarGasto()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Partida -->
+<div class="modal-overlay" id="modal-partida">
+  <div class="modal">
+    <div class="modal-title">Agregar Partida<button class="modal-close" onclick="closeModal('modal-partida')">✕</button></div>
+    <input type="hidden" id="part-proy-id"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nombre *</label><input id="part-nombre" placeholder="Ej: Estructura hormigón"/></div>
+      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="part-ppto" placeholder="0"/></div>
+      <div class="form-group"><label>Unidad</label><input id="part-unidad" placeholder="m², m³, gl..."/></div>
+      <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0"/></div>
+      <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0"/></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-partida')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPartida()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cambiar rol -->
+<div class="modal-overlay" id="modal-rol">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">Cambiar rol<button class="modal-close" onclick="closeModal('modal-rol')">✕</button></div>
+    <input type="hidden" id="rol-uid"/>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Rol del usuario</label>
+      <select id="rol-nuevo">
+        <option value="visor">Visor</option>
+        <option value="capataz">Capataz</option>
+        <option value="administrativo">Administrativo</option>
+        <option value="ingeniero">Ingeniero</option>
+        <option value="director">Director</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Estado</label>
+      <select id="rol-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rol')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarRol()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Crear usuario (solo admin) -->
+<div class="modal-overlay" id="modal-crear-usuario">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">Agregar usuario<button class="modal-close" onclick="closeModal('modal-crear-usuario')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nombre para mostrar *</label><input id="cu-nombre" placeholder="Ej: Carlos Méndez"/></div>
+      <div class="form-group full">
+        <label>Nombre de usuario *</label>
+        <input id="cu-usuario" placeholder="Ej: carlos.mendez" autocomplete="off" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,'')"/>
+        <span style="font-size:11px;color:var(--muted);margin-top:3px">Solo letras minúsculas, números y puntos. Sin espacios.</span>
+      </div>
+      <div class="form-group"><label>Contraseña *</label><input type="password" id="cu-pass" placeholder="Mínimo 6 caracteres"/></div>
+      <div class="form-group"><label>Rol</label>
+        <select id="cu-rol">
+          <option value="visor">Visor</option>
+          <option value="capataz">Capataz</option>
+          <option value="administrativo">Administrativo</option>
+          <option value="ingeniero">Ingeniero</option>
+          <option value="director">Director</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">El usuario ingresará con su nombre de usuario y contraseña. No necesita email.</p>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-crear-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="crearUsuario()">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIGURACIÓN — reemplazá con tus datos de Supabase
+// ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://vhxsjdifmgvyvnwupspt.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeHNqZGlmbWd2eXZud3Vwc3B0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDY4MzEsImV4cCI6MjA5MDAyMjgzMX0.4VXNJ1dat-0QPwvGT0zAuSkOrAjXKPXsdBi4TXFYemQ';
+// ══════════════════════════════════════════
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let currentUser = null;
+let currentPerfil = null;
+let currentProyectoId = null;
+let chartBarras = null, chartDona = null, chartLineas = null, chartCateg = null;
+let cache = { proyectos: [], gastos: [] };
+
+// ── HELPERS ──────────────────────────────
+const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
+const fmtN = n => new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(n||0);
+const pct = (a,b) => b>0?Math.round(a/b*100):0;
+const colorPct = p => p>90?'var(--red)':p>70?'var(--orange)':p>50?'var(--accent)':'var(--green)';
+const estadoBadge = e => {
+  const m={'En curso':'badge-blue','Planificación':'badge-amber','Finalizado':'badge-green','Suspendido':'badge-red'};
+  return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
+};
+const rolLabel = r => ({admin:'Administrador',director:'Director',ingeniero:'Ingeniero',administrativo:'Administrativo',capataz:'Capataz',visor:'Visor'}[r]||r);
+const puedeEditar = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
+const esAdmin = () => currentPerfil?.rol === 'admin';
+
+function notify(msg, ok=true){
+  const n=document.getElementById('notif');
+  n.textContent=msg; n.style.background=ok?'var(--green)':'var(--red)';
+  n.style.color=ok?'#000':'#fff'; n.style.display='block';
+  setTimeout(()=>n.style.display='none',2800);
+}
+
+// ── AUTH ──────────────────────────────────
+function usernameToEmail(u){ return u.toLowerCase().replace(/[^a-z0-9]/g,'_')+'@obracontrol.interno'; }
+
+async function doLogin(){
+  const usuario=document.getElementById('login-usuario').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  err.textContent='';
+  if(!usuario||!pass){err.textContent='Completá usuario y contraseña';return;}
+
+  // Si tiene @ es un email directo, sino generamos el interno
+  const email=usuario.includes('@') ? usuario : usernameToEmail(usuario);
+  
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error) err.textContent='Usuario o contraseña incorrectos';
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('login-usuario').value='';
+  document.getElementById('login-pass').value='';
+  currentUser=null; currentPerfil=null;
+}
+
+// Auth state listener
+sb.auth.onAuthStateChange(async (event,session)=>{
+  if(session?.user){
+    currentUser=session.user;
+    await cargarPerfil();
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    initApp();
+  } else {
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
+  }
+});
+
+async function cargarPerfil(){
+  const {data}=await sb.from('perfiles').select('*').eq('id',currentUser.id).single();
+  currentPerfil=data;
+  if(data){
+    document.getElementById('user-name').textContent=data.nombre||'—';
+    document.getElementById('user-rol').textContent=rolLabel(data.rol);
+    document.getElementById('user-avatar').textContent=(data.nombre||data.email||'?')[0].toUpperCase();
+    if(esAdmin()) document.getElementById('nav-admin').style.display='flex';
+    if(!puedeEditar()){
+      document.getElementById('btn-nueva-obra').style.display='none';
+      document.getElementById('btn-nueva-obra2').style.display='none';
+    }
+  }
+}
+
+// ── VIEWS ──────────────────────────────────
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  const map={dashboard:0,proyectos:1,gastos:2,reportes:3,admin:4};
+  const items=document.querySelectorAll('.nav-item');
+  if(map[v]!==undefined&&items[map[v]]) items[map[v]].classList.add('active');
+  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin};
+  if(fns[v]) fns[v]();
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ── INIT ──────────────────────────────────
+async function initApp(){
+  await Promise.all([fetchProyectos(), fetchGastos()]);
+  renderDashboard();
+}
+
+async function fetchProyectos(){
+  const {data}=await sb.from('v_resumen_proyectos').select('*').order('created_at',{ascending:false});
+  cache.proyectos=data||[];
+}
+
+async function fetchGastos(){
+  const {data}=await sb.from('gastos').select('*,proyectos(nombre),partidas(nombre)').order('fecha',{ascending:false});
+  cache.gastos=data||[];
+}
+
+async function fetchPartidas(proyId){
+  const {data}=await sb.from('v_resumen_partidas').select('*').eq('proyecto_id',proyId).order('orden');
+  return data||[];
+}
+
+// ── DASHBOARD ──────────────────────────────
+async function renderDashboard(){
+  const p=cache.proyectos;
+  const g=cache.gastos;
+  const totalPpto=p.reduce((s,x)=>s+Number(x.presupuesto_total),0);
+  const totalGasto=p.reduce((s,x)=>s+Number(x.total_gastado),0);
+  const activas=p.filter(x=>x.estado==='En curso').length;
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Presupuesto total</div><div class="metric-value">${fmt(totalPpto)}</div><div class="metric-sub">${p.length} obras</div></div>
+    <div class="metric"><div class="metric-label">Total ejecutado</div><div class="metric-value" style="color:var(--accent)">${fmt(totalGasto)}</div><div class="metric-sub">${pct(totalGasto,totalPpto)}% del presupuesto</div></div>
+    <div class="metric"><div class="metric-label">Saldo global</div><div class="metric-value" style="color:${totalPpto-totalGasto>=0?'var(--green)':'var(--red)'}">${fmt(totalPpto-totalGasto)}</div></div>
+    <div class="metric"><div class="metric-label">Obras activas</div><div class="metric-value">${activas}</div><div class="metric-sub">${g.length} gastos registrados</div></div>`;
+
+  document.getElementById('tabla-resumen').innerHTML=p.length?
+    `<thead><tr><th>Obra</th><th>Estado</th><th>Presupuesto</th><th>Gastado</th><th>Avance</th></tr></thead><tbody>${p.map(x=>{
+      const av=Number(x.pct_ejecutado),col=colorPct(av);
+      return `<tr style="cursor:pointer" onclick="irADetalle('${x.id}')"><td><div style="font-weight:500">${x.nombre}</div><div style="font-size:12px;color:var(--muted)">${x.cliente||''}</div></td><td>${estadoBadge(x.estado)}</td><td>${fmt(x.presupuesto_total)}</td><td style="color:${col}">${fmt(x.total_gastado)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-wrap" style="width:70px"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div><span style="color:${col}">${av}%</span></div></td></tr>`;
+    }).join('')}</tbody>`:
+    '<tr><td style="padding:30px;color:var(--muted)">No hay obras</td></tr>';
+
+  // Charts
+  const ctx1=document.getElementById('chart-barras');
+  if(chartBarras) chartBarras.destroy();
+  chartBarras=new Chart(ctx1,{type:'bar',data:{labels:p.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),datasets:[{label:'Presupuesto',data:p.map(x=>Number(x.presupuesto_total)),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},{label:'Gastado',data:p.map(x=>Number(x.total_gastado)),backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  const ctx2=document.getElementById('chart-dona');
+  if(chartDona) chartDona.destroy();
+  const cats=['Materiales','Mano de obra','Equipos','Subcontratos','Varios'];
+  const catVals=cats.map(c=>g.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
+  chartDona=new Chart(ctx2,{type:'doughnut',data:{labels:cats,datasets:[{data:catVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}}},cutout:'65%'}});
+}
+
+// ── PROYECTOS ──────────────────────────────
+function renderProyectos(){
+  const p=cache.proyectos;
+  document.getElementById('lista-proyectos').style.display='block';
+  document.getElementById('detalle-proyecto').style.display='none';
+  const cont=document.getElementById('project-cards');
+  if(!p.length){cont.innerHTML='<div class="empty"><p>No hay obras. Crea la primera.</p></div>';return;}
+  cont.innerHTML=p.map(x=>{
+    const av=Number(x.pct_ejecutado),col=colorPct(av);
+    return `<div class="project-card" onclick="verDetalle('${x.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div><div class="pc-name">${x.nombre}</div><div class="pc-loc">📍 ${x.ubicacion||'Sin ubicación'}</div></div>
+        ${estadoBadge(x.estado)}
+      </div>
+      <div class="pc-stats">
+        <div><div class="pc-stat-label">Presupuesto</div><div class="pc-stat-val">${fmt(x.presupuesto_total)}</div></div>
+        <div><div class="pc-stat-label">Gastado</div><div class="pc-stat-val" style="color:${col}">${fmt(x.total_gastado)}</div></div>
+        <div><div class="pc-stat-label">Partidas</div><div class="pc-stat-val">${x.total_partidas}</div></div>
+        <div><div class="pc-stat-label">Ejecución</div><div class="pc-stat-val" style="color:${col}">${av}%</div></div>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function irADetalle(id){
+  showView('proyectos');
+  setTimeout(()=>verDetalle(id),10);
+}
+
+async function verDetalle(id){
+  currentProyectoId=id;
+  document.getElementById('lista-proyectos').style.display='none';
+  const det=document.getElementById('detalle-proyecto');
+  det.style.display='block';
+  det.innerHTML='<div class="loading">Cargando...</div>';
+
+  const [proyRes, partidasData, gastosData] = await Promise.all([
+    sb.from('proyectos').select('*,perfiles!responsable_id(nombre)').eq('id',id).single(),
+    fetchPartidas(id),
+    sb.from('gastos').select('*,perfiles!pagado_por(nombre),partidas(nombre)').eq('proyecto_id',id).order('fecha',{ascending:false})
+  ]);
+  const p=proyRes.data;
+  const partidas=partidasData;
+  const gastos=gastosData.data||[];
+  const totalGasto=gastos.reduce((s,g)=>s+Number(g.monto),0);
+  const av=pct(totalGasto,p.presupuesto_total),col=colorPct(av);
+  const saldo=p.presupuesto_total-totalGasto;
+
+  det.innerHTML=`
+    <div class="detail-back" onclick="renderProyectos()">← Volver</div>
+    <div class="topbar">
+      <div><h1 style="font-size:19px">${p.nombre}</h1><div style="color:var(--muted);font-size:13px;margin-top:3px">📍 ${p.ubicacion||''} &nbsp;·&nbsp; ${estadoBadge(p.estado)}</div></div>
+      <div style="display:flex;gap:7px">
+        ${puedeEditar()?`<button class="btn btn-ghost btn-sm" onclick="abrirModalPartida('${id}')">+ Partida</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirGastoProyecto('${id}')">+ Gasto</button>`:''}
+        ${esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarProyecto('${id}')">Eliminar</button>`:''}
+      </div>
+    </div>
+    <div class="metrics" style="margin-bottom:18px">
+      <div class="metric"><div class="metric-label">Presupuesto</div><div class="metric-value" style="font-size:18px">${fmt(p.presupuesto_total)}</div></div>
+      <div class="metric"><div class="metric-label">Gastado</div><div class="metric-value" style="font-size:18px;color:${col}">${fmt(totalGasto)}</div></div>
+      <div class="metric"><div class="metric-label">Saldo</div><div class="metric-value" style="font-size:18px;color:${saldo>=0?'var(--green)':'var(--red)'}">${fmt(saldo)}</div></div>
+      <div class="metric"><div class="metric-label">Avance presup.</div><div class="metric-value" style="font-size:18px;color:${col}">${av}%<div style="margin-top:6px"><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div></div></div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tp')">Partidas (${partidas.length})</div>
+      <div class="tab" onclick="switchTab(this,'tg')">Gastos (${gastos.length})</div>
+      <div class="tab" onclick="switchTab(this,'ti')">Información</div>
+    </div>
+    <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar())}</div>
+    <div id="tg" class="tab-panel">${renderGastosDetHTML(gastos,partidas,puedeEditar())}</div>
+    <div id="ti" class="tab-panel">${renderInfoHTML(p)}</div>`;
+}
+
+function renderPartidasHTML(partidas,pid,editar){
+  if(!partidas.length) return `<div class="empty"><p>Sin partidas. ${editar?'Agrega partidas al presupuesto.':''}</p></div>`;
+  return partidas.map(pa=>{
+    const av=Number(pa.pct_ejecutado),col=colorPct(av);
+    return `<div class="partida-row">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span style="font-weight:500">${pa.nombre}</span>
+        <span style="font-size:12px;color:var(--muted)">${pa.unidad||''}</span>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmt(pa.presupuesto)}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmt(pa.total_gastado)}</div></div>
+          <div style="text-align:right;min-width:44px"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:13px;color:${col}">${av}%</div></div>
+          ${editar?`<button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>`:''}
+        </div>
+      </div>
+      <div style="margin-top:8px"><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderGastosDetHTML(gastos,partidas,editar){
+  if(!gastos.length) return '<div class="empty"><p>No hay gastos registrados.</p></div>';
+  return `<table><thead><tr><th>Fecha</th><th>Descripción</th><th>Partida</th><th>Categoría</th><th>Comp.</th><th>Monto</th>${editar?'<th></th>':''}</tr></thead><tbody>${gastos.map(g=>`<tr>
+    <td>${g.fecha||'-'}</td><td>${g.descripcion}</td>
+    <td style="color:var(--muted)">${g.partidas?.nombre||'-'}</td>
+    <td><span class="badge badge-gray">${g.categoria}</span></td>
+    <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
+    <td style="font-weight:500">${fmt(g.monto)}</td>
+    ${editar?`<td><button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button></td>`:''}
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function renderInfoHTML(p){
+  return `<div class="card"><div class="form-grid">
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Cliente</div><div>${p.cliente||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Responsable</div><div>${p.perfiles?.nombre||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Inicio</div><div>${p.fecha_inicio||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Fin estimado</div><div>${p.fecha_fin_estimada||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Avance físico</div><div>${p.avance_fisico||0}%</div></div>
+    <div class="full"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Descripción</div><div>${p.descripcion||'—'}</div></div>
+  </div></div>`;
+}
+
+function switchTab(el,panelId){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ── CRUD PROYECTOS ──────────────────────────
+async function guardarProyecto(){
+  const nombre=document.getElementById('p-nombre').value.trim();
+  if(!nombre){notify('El nombre es obligatorio',false);return;}
+  const data={nombre,ubicacion:document.getElementById('p-ubicacion').value,cliente:document.getElementById('p-cliente').value,
+    presupuesto_total:Number(document.getElementById('p-presupuesto').value)||0,
+    estado:document.getElementById('p-estado').value,fecha_inicio:document.getElementById('p-inicio').value||null,
+    fecha_fin_estimada:document.getElementById('p-fin').value||null,
+    avance_fisico:Number(document.getElementById('p-avance').value)||0,
+    descripcion:document.getElementById('p-desc').value,created_by:currentUser.id};
+  const {error}=await sb.from('proyectos').insert(data);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Obra creada');
+  closeModal('modal-proyecto');
+  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc'].forEach(id=>document.getElementById(id).value='');
+  await Promise.all([fetchProyectos(),fetchGastos()]);
+  renderDashboard(); renderProyectos();
+}
+
+async function eliminarProyecto(id){
+  if(!confirm('¿Eliminar esta obra y todos sus datos?')) return;
+  const {error}=await sb.from('proyectos').delete().eq('id',id);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Obra eliminada');
+  await Promise.all([fetchProyectos(),fetchGastos()]);
+  renderProyectos();
+}
+
+// ── PARTIDAS ──────────────────────────────
+function abrirModalPartida(pid){
+  document.getElementById('part-proy-id').value=pid;
+  openModal('modal-partida');
+}
+
+async function guardarPartida(){
+  const pid=document.getElementById('part-proy-id').value;
+  const nombre=document.getElementById('part-nombre').value.trim();
+  if(!nombre){notify('Nombre obligatorio',false);return;}
+  const data={proyecto_id:pid,nombre,presupuesto:Number(document.getElementById('part-ppto').value)||0,
+    unidad:document.getElementById('part-unidad').value,cantidad:Number(document.getElementById('part-cant').value)||0,
+    precio_unitario:Number(document.getElementById('part-precio').value)||0};
+  const {error}=await sb.from('partidas').insert(data);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Partida agregada');
+  closeModal('modal-partida');
+  ['part-nombre','part-ppto','part-unidad','part-cant','part-precio'].forEach(id=>document.getElementById(id).value='');
+  verDetalle(pid);
+}
+
+async function eliminarPartida(partId,pid){
+  if(!confirm('¿Eliminar esta partida?')) return;
+  await sb.from('partidas').delete().eq('id',partId);
+  notify('Partida eliminada');
+  verDetalle(pid);
+}
+
+// ── GASTOS ──────────────────────────────
+async function cargarPartidasSelect(){
+  const pid=document.getElementById('g-proyecto').value;
+  const {data}=await sb.from('partidas').select('id,nombre').eq('proyecto_id',pid);
+  const sel=document.getElementById('g-partida');
+  sel.innerHTML='<option value="">Sin partida</option>'+(data||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+}
+
+async function poblarSelectGasto(){
+  const {data}=await sb.from('proyectos').select('id,nombre').order('nombre');
+  const sel=document.getElementById('g-proyecto');
+  sel.innerHTML=(data||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  if(data?.length) await cargarPartidasSelect();
+}
+
+async function abrirGastoProyecto(pid){
+  await poblarSelectGasto();
+  document.getElementById('g-proyecto').value=pid;
+  await cargarPartidasSelect();
+  document.getElementById('g-fecha').value=new Date().toISOString().split('T')[0];
+  openModal('modal-gasto');
+}
+
+async function guardarGasto(){
+  const pid=document.getElementById('g-proyecto').value;
+  const monto=Number(document.getElementById('g-monto').value);
+  const desc=document.getElementById('g-desc').value.trim();
+  if(!pid||!monto||!desc){notify('Completá obra, monto y descripción',false);return;}
+  const partidaId=document.getElementById('g-partida').value||null;
+  const data={proyecto_id:pid,partida_id:partidaId,categoria:document.getElementById('g-cat').value,
+    descripcion:desc,monto,fecha:document.getElementById('g-fecha').value,
+    comprobante_nro:document.getElementById('g-comp').value,observaciones:document.getElementById('g-obs').value,
+    created_by:currentUser.id,pagado_por:currentUser.id};
+  const {error}=await sb.from('gastos').insert(data);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Gasto registrado');
+  closeModal('modal-gasto');
+  ['g-monto','g-desc','g-comp','g-obs'].forEach(id=>document.getElementById(id).value='');
+  await fetchGastos();
+  renderGastos(); renderDashboard();
+  if(currentProyectoId===pid) verDetalle(pid);
+}
+
+async function eliminarGasto(gid,pid){
+  if(!confirm('¿Eliminar este gasto?')) return;
+  await sb.from('gastos').delete().eq('id',gid);
+  notify('Gasto eliminado');
+  await fetchGastos();
+  renderGastos(); renderDashboard();
+  if(currentProyectoId===pid) verDetalle(pid);
+}
+
+async function renderGastos(){
+  const fsel=document.getElementById('filtro-proy');
+  const {data:proyData}=await sb.from('proyectos').select('id,nombre').order('nombre');
+  const curVal=fsel.value;
+  fsel.innerHTML='<option value="">Todas las obras</option>'+(proyData||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  if(curVal) fsel.value=curVal;
+
+  let q=sb.from('gastos').select('*,proyectos(nombre),partidas(nombre)').order('fecha',{ascending:false});
+  const fpid=fsel.value;const fcat=document.getElementById('filtro-cat').value;const fmes=document.getElementById('filtro-mes').value;
+  if(fpid) q=q.eq('proyecto_id',fpid);
+  if(fcat) q=q.eq('categoria',fcat);
+  if(fmes){q=q.gte('fecha',fmes+'-01').lte('fecha',fmes+'-31');}
+  const {data:gs}=await q;
+  const t=document.getElementById('tabla-gastos');
+  if(!gs?.length){t.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--muted)">No hay gastos</td></tr>';return;}
+  t.innerHTML=`<thead><tr><th>Fecha</th><th>Obra</th><th>Descripción</th><th>Categoría</th><th>Partida</th><th>Comp.</th><th>Monto</th>${puedeEditar()?'<th></th>':''}</tr></thead><tbody>${gs.map(g=>`<tr>
+    <td>${g.fecha||'-'}</td><td style="color:var(--accent)">${g.proyectos?.nombre||'—'}</td>
+    <td>${g.descripcion}</td><td><span class="badge badge-gray">${g.categoria}</span></td>
+    <td style="color:var(--muted)">${g.partidas?.nombre||'-'}</td>
+    <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
+    <td style="font-weight:500">${fmt(g.monto)}</td>
+    ${puedeEditar()?`<td><button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button></td>`:''}
+  </tr>`).join('')}</tbody>`;
+}
+
+// ── REPORTES ──────────────────────────────
+async function renderReportes(){
+  const p=cache.proyectos;
+  const g=cache.gastos;
+  const totalPpto=p.reduce((s,x)=>s+Number(x.presupuesto_total),0);
+  const totalGasto=p.reduce((s,x)=>s+Number(x.total_gastado),0);
+  document.getElementById('rep-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Total presupuestado</div><div class="metric-value" style="font-size:18px">${fmt(totalPpto)}</div></div>
+    <div class="metric"><div class="metric-label">Total ejecutado</div><div class="metric-value" style="font-size:18px;color:var(--accent)">${fmt(totalGasto)}</div><div class="metric-sub">${pct(totalGasto,totalPpto)}% ejecutado</div></div>
+    <div class="metric"><div class="metric-label">Saldo global</div><div class="metric-value" style="font-size:18px;color:${totalPpto-totalGasto>=0?'var(--green)':'var(--red)'}">${fmt(totalPpto-totalGasto)}</div></div>`;
+
+  const byMonth={};
+  g.forEach(x=>{if(!x.fecha)return;const m=x.fecha.slice(0,7);byMonth[m]=(byMonth[m]||0)+Number(x.monto);});
+  const months=Object.keys(byMonth).sort().slice(-10);
+  const c3=document.getElementById('chart-lineas');
+  if(chartLineas) chartLineas.destroy();
+  chartLineas=new Chart(c3,{type:'line',data:{labels:months,datasets:[{label:'Gasto',data:months.map(m=>byMonth[m]),borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.1)',fill:true,tension:.4,pointBackgroundColor:'#f5a623',pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  const cats=['Materiales','Mano de obra','Equipos','Subcontratos','Varios'];
+  const catVals=cats.map(c=>g.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
+  const c4=document.getElementById('chart-categ');
+  if(chartCateg) chartCateg.destroy();
+  chartCateg=new Chart(c4,{type:'bar',data:{labels:cats,datasets:[{data:catVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:11}},grid:{display:false}}}}});
+
+  const rp=document.getElementById('rep-partidas');
+  if(!p.length){rp.innerHTML='<div class="empty"><p>Sin datos</p></div>';return;}
+  const partResData=await Promise.all(p.map(x=>fetchPartidas(x.id)));
+  rp.innerHTML=p.map((proy,i)=>{
+    const parts=partResData[i];
+    if(!parts.length) return `<div style="padding:8px 0;color:var(--muted);font-size:13px">${proy.nombre}: sin partidas</div>`;
+    return `<div style="margin-bottom:18px"><div style="font-weight:600;color:var(--accent);margin-bottom:8px">${proy.nombre}</div>${parts.map(pa=>{
+      const av=Number(pa.pct_ejecutado),col=colorPct(av);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <div style="flex:1"><div style="font-size:13px;margin-bottom:4px">${pa.nombre}</div><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
+        <div style="min-width:130px;text-align:right;font-size:12px;color:var(--muted)">${fmt(pa.total_gastado)} / ${fmt(pa.presupuesto)}</div>
+        <div style="min-width:38px;text-align:right;color:${col};font-size:13px;font-weight:500">${av}%</div>
+      </div>`;
+    }).join('')}</div>`;
+  }).join('');
+}
+
+// ── ADMIN USUARIOS ──────────────────────────
+async function renderAdmin(){
+  if(!esAdmin()) return;
+  const {data}=await sb.from('perfiles').select('*').order('created_at',{ascending:false});
+  const t=document.getElementById('tabla-usuarios');
+  if(!data?.length){t.innerHTML='<tr><td style="padding:20px;color:var(--muted)">Sin usuarios</td></tr>';return;}
+  t.innerHTML=`<thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Desde</th><th></th></tr></thead><tbody>${data.map(u=>`<tr>
+    <td>${u.nombre||'—'}</td><td style="color:var(--muted);font-family:monospace">${u.email?u.email.replace('@obracontrol.interno',''):'—'}</td>
+    <td><span class="role-pill">${rolLabel(u.rol)}</span></td>
+    <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
+    <td style="color:var(--muted)">${u.created_at?u.created_at.slice(0,10):'-'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirModalRol('${u.id}','${u.rol}',${u.activo})">Editar</button></td>
+  </tr>`).join('')}</tbody>`;
+}
+
+function abrirModalRol(uid,rol,activo){
+  document.getElementById('rol-uid').value=uid;
+  document.getElementById('rol-nuevo').value=rol;
+  document.getElementById('rol-activo').value=String(activo);
+  openModal('modal-rol');
+}
+
+async function guardarRol(){
+  const uid=document.getElementById('rol-uid').value;
+  const {error}=await sb.from('perfiles').update({rol:document.getElementById('rol-nuevo').value,activo:document.getElementById('rol-activo').value==='true'}).eq('id',uid);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Usuario actualizado');
+  closeModal('modal-rol');
+  renderAdmin();
+}
+
+
+// ── CREAR USUARIO (admin) ──────────────────
+async function crearUsuario(){
+  if(!esAdmin()){notify('Solo el administrador puede crear usuarios',false);return;}
+  const nombre=document.getElementById('cu-nombre').value.trim();
+  const usuario=document.getElementById('cu-usuario').value.trim();
+  const pass=document.getElementById('cu-pass').value;
+  const rol=document.getElementById('cu-rol').value;
+  if(!nombre||!usuario||!pass){notify('Completá nombre, usuario y contraseña',false);return;}
+  if(pass.length<6){notify('Contraseña mínimo 6 caracteres',false);return;}
+  if(!/^[a-z0-9._]+$/.test(usuario)){notify('Usuario: solo letras minúsculas, números y puntos',false);return;}
+
+  // Convertimos username a email interno — el usuario nunca lo ve
+  const emailInterno=usernameToEmail(usuario);
+
+  const {data,error}=await sb.auth.signUp({
+    email:emailInterno, password:pass,
+    options:{data:{nombre, rol, username:usuario}}
+  });
+  if(error){
+    if(error.message.includes('already registered')) notify('Ese nombre de usuario ya existe',false);
+    else notify('Error: '+error.message,false);
+    return;
+  }
+
+  if(data.user){
+    await sb.from('perfiles').upsert({
+      id:data.user.id, nombre,
+      email:emailInterno,
+      rol, activo:true
+    },{onConflict:'id'});
+  }
+
+  notify('Usuario "'+nombre+'" creado correctamente');
+  closeModal('modal-crear-usuario');
+  ['cu-nombre','cu-usuario','cu-pass'].forEach(id=>document.getElementById(id).value='');
+  renderAdmin();
+}
+
+// Modal gasto open override
+document.querySelector('[onclick="openModal(\'modal-gasto\')"]')?.addEventListener('click',async()=>{
+  await poblarSelectGasto();
+  document.getElementById('g-fecha').value=new Date().toISOString().split('T')[0];
+});
+</script>
+</body>
+</html>
