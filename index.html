@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v1.5</title>
+<title>ObraControl v1.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -131,17 +131,42 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="auth-box">
     <div class="auth-logo">⬡ ObraControl</div>
     <div class="auth-sub">Sistema de gestión de obra civil</div>
-    <div class="form-group" style="margin-bottom:12px">
-      <label>Usuario</label>
-      <input type="text" id="login-usuario" placeholder="nombre de usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"/>
+
+    <!-- LOGIN NORMAL -->
+    <div id="panel-login">
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Usuario</label>
+        <input type="text" id="login-usuario" placeholder="nombre de usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Ingresar</button>
+      <div class="auth-err" id="login-err"></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:16px;text-align:center">¿No tenés acceso? Pedile al administrador que te agregue.</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">Primera vez? <span style="color:var(--accent);cursor:pointer" onclick="mostrarSetup()">Crear cuenta admin</span></p>
     </div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label>Contraseña</label>
-      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+
+    <!-- SETUP PRIMER ADMIN -->
+    <div id="panel-setup" style="display:none">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Creá la cuenta del administrador del sistema.</p>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Nombre</label>
+        <input type="text" id="setup-nombre" placeholder="Tu nombre"/>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Usuario</label>
+        <input type="text" id="setup-usuario" placeholder="admin" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,'')"/>
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label>Contraseña</label>
+        <input type="password" id="setup-pass" placeholder="Mínimo 6 caracteres"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doSetup()">Crear cuenta admin</button>
+      <div class="auth-err" id="setup-err"></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center"><span style="color:var(--accent);cursor:pointer" onclick="mostrarLogin()">← Volver al login</span></p>
     </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Ingresar</button>
-    <div class="auth-err" id="login-err"></div>
-    <p style="font-size:12px;color:var(--muted);margin-top:16px;text-align:center">¿No tenés acceso? Pedile al administrador que te agregue.</p>
   </div>
 </div>
 
@@ -153,7 +178,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -424,6 +449,36 @@ async function doLogin(){
   
   const {error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error) err.textContent='Usuario o contraseña incorrectos';
+}
+
+function mostrarSetup(){
+  document.getElementById('panel-login').style.display='none';
+  document.getElementById('panel-setup').style.display='block';
+}
+function mostrarLogin(){
+  document.getElementById('panel-setup').style.display='none';
+  document.getElementById('panel-login').style.display='block';
+}
+
+async function doSetup(){
+  const nombre=document.getElementById('setup-nombre').value.trim();
+  const usuario=document.getElementById('setup-usuario').value.trim();
+  const pass=document.getElementById('setup-pass').value;
+  const err=document.getElementById('setup-err');
+  err.textContent='';
+  if(!nombre||!usuario||!pass){err.textContent='Completá todos los campos';return;}
+  if(pass.length<6){err.textContent='Contraseña mínimo 6 caracteres';return;}
+
+  const email=usernameToEmail(usuario);
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{nombre,rol:'admin'}}});
+  if(error){err.textContent='Error: '+error.message;return;}
+  if(data.user){
+    await sb.from('perfiles').upsert({
+      id:data.user.id, nombre, email, rol:'admin', activo:true
+    },{onConflict:'id'});
+    // Auto login
+    await sb.auth.signInWithPassword({email,password:pass});
+  }
 }
 
 async function doLogout(){
