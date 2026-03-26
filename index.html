@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v1.7</title>
+<title>ObraControl v1.8</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.7</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.8</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -572,8 +572,29 @@ async function initApp(){
 }
 
 async function fetchProyectos(){
-  const {data}=await sb.from('v_resumen_proyectos').select('*').order('created_at',{ascending:false});
-  cache.proyectos=data||[];
+  const {data, error}=await sb.from('proyectos').select('*').order('created_at',{ascending:false});
+  console.log('fetchProyectos:', data?.length, error);
+  if(!data) { cache.proyectos=[]; return; }
+  // Calcular totales de gastos por proyecto
+  const {data:gastos}=await sb.from('gastos').select('proyecto_id, monto');
+  const gastosPorProy={};
+  (gastos||[]).forEach(g=>{
+    gastosPorProy[g.proyecto_id]=(gastosPorProy[g.proyecto_id]||0)+Number(g.monto);
+  });
+  const {data:partidas}=await sb.from('partidas').select('proyecto_id');
+  const partidasPorProy={};
+  (partidas||[]).forEach(p=>{
+    partidasPorProy[p.proyecto_id]=(partidasPorProy[p.proyecto_id]||0)+1;
+  });
+  cache.proyectos=data.map(p=>({
+    ...p,
+    total_gastado: gastosPorProy[p.id]||0,
+    saldo: p.presupuesto_total-(gastosPorProy[p.id]||0),
+    pct_ejecutado: p.presupuesto_total>0?Math.round((gastosPorProy[p.id]||0)*100/p.presupuesto_total):0,
+    total_partidas: partidasPorProy[p.id]||0,
+    total_gastos: 0,
+    responsable_nombre: ''
+  }));
 }
 
 async function fetchGastos(){
@@ -582,8 +603,20 @@ async function fetchGastos(){
 }
 
 async function fetchPartidas(proyId){
-  const {data}=await sb.from('v_resumen_partidas').select('*').eq('proyecto_id',proyId).order('orden');
-  return data||[];
+  const {data:partidas, error}=await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('orden');
+  console.log('fetchPartidas:', partidas?.length, error);
+  if(!partidas) return [];
+  const {data:gastos}=await sb.from('gastos').select('partida_id, monto').eq('proyecto_id',proyId);
+  const gastosPorPart={};
+  (gastos||[]).forEach(g=>{
+    if(g.partida_id) gastosPorPart[g.partida_id]=(gastosPorPart[g.partida_id]||0)+Number(g.monto);
+  });
+  return partidas.map(p=>({
+    ...p,
+    total_gastado: gastosPorPart[p.id]||0,
+    saldo: p.presupuesto-(gastosPorPart[p.id]||0),
+    pct_ejecutado: p.presupuesto>0?Math.round((gastosPorPart[p.id]||0)*100/p.presupuesto):0
+  }));
 }
 
 // ── DASHBOARD ──────────────────────────────
@@ -752,7 +785,9 @@ async function guardarProyecto(){
     estado:document.getElementById('p-estado').value,fecha_inicio:document.getElementById('p-inicio').value||null,
     fecha_fin_estimada:document.getElementById('p-fin').value||null,
     avance_fisico:Number(document.getElementById('p-avance').value)||0,
-    descripcion:document.getElementById('p-desc').value,created_by:currentUser.id};
+    descripcion:document.getElementById('p-desc').value,
+    created_by:currentUser?.id||null,
+    responsable_id:currentUser?.id||null};
   const {error}=await sb.from('proyectos').insert(data);
   if(error){notify('Error: '+error.message,false);return;}
   notify('Obra creada');
