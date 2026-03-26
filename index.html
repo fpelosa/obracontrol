@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v1.6</title>
+<title>ObraControl v1.7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.6</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.7</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -406,7 +406,15 @@ const SUPABASE_URL  = 'https://vhxsjdifmgvyvnwupspt.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeHNqZGlmbWd2eXZud3Vwc3B0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDY4MzEsImV4cCI6MjA5MDAyMjgzMX0.4VXNJ1dat-0QPwvGT0zAuSkOrAjXKPXsdBi4TXFYemQ';
 // ══════════════════════════════════════════
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: {
+    storage: window.localStorage,
+    storageKey: 'obracontrol-auth',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false
+  }
+});
 window.sb = sb;
 let currentUser = null;
 let currentPerfil = null;
@@ -492,15 +500,19 @@ async function doLogout(){
 
 // Auth state listener
 sb.auth.onAuthStateChange(async (event,session)=>{
-  if(session?.user){
-    currentUser=session.user;
-    await cargarPerfil();
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    initApp();
-  } else {
+  console.log('Auth event:', event, 'user:', session?.user?.id);
+  if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION'){
+    if(session?.user){
+      currentUser=session.user;
+      document.getElementById('auth-screen').style.display='none';
+      document.getElementById('app').style.display='block';
+      await cargarPerfil();
+      await initApp();
+    }
+  } else if(event === 'SIGNED_OUT'){
     document.getElementById('auth-screen').style.display='flex';
     document.getElementById('app').style.display='none';
+    currentUser=null; currentPerfil=null;
   }
 });
 
