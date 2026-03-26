@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v1.4</title>
+<title>ObraControl v1.5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -153,7 +153,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.4</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.5</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -377,11 +377,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
 // ══════════════════════════════════════════
 // CONFIGURACIÓN — reemplazá con tus datos de Supabase
 // ══════════════════════════════════════════
-const SUPABASE_URL  = 'https://vhxsjdifmgvyvnwupspt.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeHNqZGlmbWd2eXZud3Vwc3B0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDY4MzEsImV4cCI6MjA5MDAyMjgzMX0.4VXNJ1dat-0QPwvGT0zAuSkOrAjXKPXsdBi4TXFYemQ';
+const SUPABASE_URL  = 'https://TU_PROYECTO.supabase.co';
+const SUPABASE_ANON = 'TU_ANON_KEY';
 // ══════════════════════════════════════════
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+window.sb = sb;
 let currentUser = null;
 let currentPerfil = null;
 let currentProyectoId = null;
@@ -449,17 +450,35 @@ sb.auth.onAuthStateChange(async (event,session)=>{
 });
 
 async function cargarPerfil(){
-  const {data}=await sb.from('perfiles').select('*').eq('id',currentUser.id).single();
-  currentPerfil=data;
-  if(data){
-    document.getElementById('user-name').textContent=data.nombre||'—';
-    document.getElementById('user-rol').textContent=rolLabel(data.rol);
-    document.getElementById('user-avatar').textContent=(data.nombre||data.email||'?')[0].toUpperCase();
-    if(esAdmin()) document.getElementById('nav-admin').style.display='flex';
-    if(!puedeEditar()){
-      document.getElementById('btn-nueva-obra').style.display='none';
-      document.getElementById('btn-nueva-obra2').style.display='none';
+  try {
+    const {data, error}=await sb.from('perfiles').select('*').eq('id',currentUser.id).single();
+    console.log('cargarPerfil - data:', data, 'error:', error, 'userId:', currentUser.id);
+    if(error && error.code === 'PGRST116') {
+      // Perfil no existe, lo creamos
+      const {data:nuevo, error:err2} = await sb.from('perfiles').insert({
+        id: currentUser.id,
+        nombre: currentUser.email.split('@')[0],
+        email: currentUser.email,
+        rol: 'admin',
+        activo: true
+      }).select().single();
+      console.log('perfil creado:', nuevo, err2);
+      currentPerfil = nuevo;
+    } else {
+      currentPerfil = data;
     }
+    if(currentPerfil){
+      document.getElementById('user-name').textContent=currentPerfil.nombre||'—';
+      document.getElementById('user-rol').textContent=rolLabel(currentPerfil.rol);
+      document.getElementById('user-avatar').textContent=(currentPerfil.nombre||'?')[0].toUpperCase();
+      if(esAdmin()) document.getElementById('nav-admin').style.display='flex';
+      if(!puedeEditar()){
+        document.getElementById('btn-nueva-obra').style.display='none';
+        document.getElementById('btn-nueva-obra2').style.display='none';
+      }
+    }
+  } catch(e) {
+    console.error('cargarPerfil error:', e);
   }
 }
 
