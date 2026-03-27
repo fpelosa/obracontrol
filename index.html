@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v2.1</title>
+<title>ObraControl v2.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -215,6 +215,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </head>
 <body>
 
+<!-- ══════════════ LOADING SCREEN ══════════════ -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999">
+  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--accent);margin-bottom:16px">⬡ ObraControl</div>
+  <div style="width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div id="loading-msg" style="color:var(--muted);font-size:13px;margin-top:16px">Iniciando...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
 <!-- ══════════════ AUTH SCREEN ══════════════ -->
 <div id="auth-screen">
   <div class="auth-box">
@@ -292,7 +300,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.1</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.2</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -748,8 +756,12 @@ async function doLogin(){
   // Si tiene @ es un email directo, sino generamos el interno
   const email=usuario.includes('@') ? usuario : usernameToEmail(usuario);
   
+  showLoading('Ingresando...');
   const {error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error) err.textContent='Usuario o contraseña incorrectos';
+  if(error){
+    hideLoading();
+    err.textContent='Usuario o contraseña incorrectos';
+  }
 }
 
 function mostrarSetup(){
@@ -783,31 +795,91 @@ async function doSetup(){
 }
 
 async function doLogout(){
+  showLoading('Cerrando sesión...');
   await sb.auth.signOut();
-  document.getElementById('app').style.display='none';
-  document.getElementById('auth-screen').style.display='flex';
   document.getElementById('login-usuario').value='';
   document.getElementById('login-pass').value='';
+  showLogin();
+}
+
+// ── PANTALLA DE CARGA ──
+function showLoading(msg='Cargando...'){
+  document.getElementById('loading-screen').style.display='flex';
+  document.getElementById('loading-msg').textContent=msg;
+}
+function hideLoading(){
+  document.getElementById('loading-screen').style.display='none';
+}
+function showApp(){
+  hideLoading();
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+function showLogin(){
+  hideLoading();
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
   currentUser=null; currentPerfil=null;
 }
 
-// Auth state listener
-sb.auth.onAuthStateChange(async (event,session)=>{
+// Auth state listener — con timeout para evitar cuelgues
+let authInitialized = false;
+let authTimeout = null;
+
+sb.auth.onAuthStateChange(async (event, session) => {
   console.log('Auth event:', event, 'user:', session?.user?.id);
-  if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION'){
-    if(session?.user){
-      currentUser=session.user;
-      document.getElementById('auth-screen').style.display='none';
-      document.getElementById('app').style.display='block';
-      await cargarPerfil();
-      await initApp();
+
+  // Limpiar timeout si hay uno pendiente
+  if(authTimeout) { clearTimeout(authTimeout); authTimeout=null; }
+
+  if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+    if(session?.user) {
+      currentUser = session.user;
+      showLoading('Cargando datos...');
+      try {
+        await cargarPerfil();
+        await initApp();
+        showApp();
+      } catch(e) {
+        console.error('Error al cargar app:', e);
+        showApp(); // Mostrar app igual aunque falle algo
+      }
+    } else if(event === 'INITIAL_SESSION') {
+      // No hay sesión — ir al login
+      showLogin();
     }
-  } else if(event === 'SIGNED_OUT'){
-    document.getElementById('auth-screen').style.display='flex';
-    document.getElementById('app').style.display='none';
-    currentUser=null; currentPerfil=null;
+  } else if(event === 'SIGNED_OUT') {
+    showLogin();
   }
+
+  authInitialized = true;
 });
+
+// Timeout de seguridad: si en 6 segundos no se resolvió, mostrar login
+authTimeout = setTimeout(() => {
+  if(!authInitialized) {
+    console.warn('Auth timeout — mostrando login');
+    showLogin();
+  }
+}, 6000);
+
+// Verificar sesión existente al cargar
+(async () => {
+  showLoading('Verificando sesión...');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) {
+      // No hay sesión guardada, ir al login inmediatamente
+      showLogin();
+      authInitialized = true;
+      if(authTimeout) { clearTimeout(authTimeout); authTimeout=null; }
+    }
+    // Si hay sesión, onAuthStateChange la va a manejar con INITIAL_SESSION
+  } catch(e) {
+    console.error('getSession error:', e);
+    showLogin();
+  }
+})();
 
 async function cargarPerfil(){
   try {
@@ -859,9 +931,19 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 
 // ── INIT ──────────────────────────────────
+async function withTimeout(promise, ms=8000, fallback=null){
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => { console.warn('Query timeout'); resolve(fallback); }, ms))
+  ]);
+}
+
 async function initApp(){
   try {
-    await Promise.all([fetchProyectos(), fetchGastos()]);
+    await Promise.all([
+      withTimeout(fetchProyectos(), 8000),
+      withTimeout(fetchGastos(), 8000)
+    ]);
   } catch(e){
     console.error('initApp error:', e);
   }
@@ -1365,7 +1447,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v2.1';
+    const CACHE = 'obracontrol-v2.2';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
