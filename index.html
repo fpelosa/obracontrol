@@ -5,8 +5,15 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v2.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ObraControl">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1117">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
+<link rel="manifest" id="manifest-link">
+<title>ObraControl v2.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -125,6 +132,85 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-size:13px}
 /* ── ADMIN ── */
 .role-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;background:rgba(59,130,246,.15);color:var(--accent2)}
+
+/* ══════════════ MOBILE RESPONSIVE ══════════════ */
+/* Bottom nav for mobile */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);z-index:150;padding:6px 0 max(6px,env(safe-area-inset-bottom));justify-content:space-around}
+.mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;font-family:var(--fb);transition:color .15s;flex:1}
+.mobile-nav-item.active{color:var(--accent)}
+.mobile-nav-item svg{width:20px;height:20px}
+/* FAB button */
+.fab{display:none;position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:18px;width:52px;height:52px;background:var(--accent);border-radius:50%;border:none;cursor:pointer;z-index:140;align-items:center;justify-content:center;font-size:24px;color:#000;box-shadow:0 4px 12px rgba(245,166,35,.4);transition:transform .15s}
+.fab:active{transform:scale(.93)}
+
+@media (max-width: 768px) {
+  /* Ocultar sidebar, mostrar nav inferior */
+  .sidebar{display:none}
+  .mobile-nav{display:flex}
+  .fab{display:flex}
+  .main{margin-left:0;padding:16px 14px 80px;padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+
+  /* Auth */
+  .auth-box{border-radius:16px;padding:32px 22px;margin:16px}
+
+  /* Topbar */
+  .topbar{margin-bottom:16px}
+  .topbar h1{font-size:18px}
+  .topbar-actions{gap:6px}
+  .topbar-actions .btn{padding:7px 10px;font-size:12px}
+
+  /* Metrics: 2 columnas en mobile */
+  .metrics{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .metric{padding:12px 14px}
+  .metric-value{font-size:17px}
+
+  /* Grid: 1 columna */
+  .grid-2{grid-template-columns:1fr;gap:14px;margin-bottom:16px}
+
+  /* Cards */
+  .card{padding:14px}
+  .project-cards{grid-template-columns:1fr}
+
+  /* Tabla scroll horizontal */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:500px}
+  th,td{padding:8px 10px;font-size:12px}
+
+  /* Tabs scroll horizontal */
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .tab{white-space:nowrap;padding:8px 12px;font-size:12px}
+
+  /* Modales full screen en mobile */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{border-radius:20px 20px 0 0;max-width:100%;max-height:92vh;overflow-y:auto;padding:20px 18px;padding-bottom:max(20px,env(safe-area-inset-bottom))}
+
+  /* Forms */
+  .form-grid{grid-template-columns:1fr}
+  .form-grid .form-group.full{grid-column:1}
+
+  /* Charts más chicos en mobile */
+  .chart-box{height:160px}
+
+  /* Notif abajo del todo */
+  .notif{bottom:calc(75px + env(safe-area-inset-bottom));right:14px;left:14px;text-align:center}
+
+  /* Finanzas tabs */
+  #fpanel-resumen .grid-2{grid-template-columns:1fr}
+  #fin-metrics{grid-template-columns:1fr 1fr}
+
+  /* Ocultar topbar actions en mobile - usar FAB */
+  .topbar-actions .btn-primary{display:none}
+  .topbar-actions .btn-ghost{font-size:11px;padding:5px 8px}
+
+  /* Detalle obra back button */
+  .detail-back{font-size:14px;margin-bottom:12px}
+}
+
+@media (max-width: 380px) {
+  .metrics{grid-template-columns:1fr}
+  .metric-value{font-size:15px}
+}
+
 </style>
 </head>
 <body>
@@ -176,12 +262,37 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- ══════════════ APP ══════════════ -->
 <div id="app">
 <div class="shell">
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav">
+    <button class="mobile-nav-item active" id="mnav-dashboard" onclick="showView('dashboard')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Inicio
+    </button>
+    <button class="mobile-nav-item" id="mnav-proyectos" onclick="showView('proyectos')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/></svg>
+      Obras
+    </button>
+    <button class="mobile-nav-item" id="mnav-finanzas" onclick="showView('finanzas')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1.5"/><path d="M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1"/><circle cx="8" cy="9" r="2"/></svg>
+      Finanzas
+    </button>
+    <button class="mobile-nav-item" id="mnav-gastos" onclick="showView('gastos')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="4" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".75" fill="currentColor" stroke="none"/></svg>
+      Gastos
+    </button>
+    <button class="mobile-nav-item" id="mnav-reportes" onclick="showView('reportes')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 8,9 11,4 15,6"/></svg>
+      Reportes
+    </button>
+  </nav>
+  <!-- FAB -->
+  <button class="fab" id="fab-btn" onclick="fabAction()">+</button>
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.1</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -1230,6 +1341,106 @@ window.openModal=function(id){
     if(!document.getElementById(dateField).value) document.getElementById(dateField).value=new Date().toISOString().split('T')[0];
   }
 };
+
+
+// ── PWA SETUP ──────────────────────────────
+const manifest = {
+  name: 'ObraControl',
+  short_name: 'ObraControl',
+  description: 'Sistema de gestión de obra civil',
+  start_url: './',
+  display: 'standalone',
+  background_color: '#0f1117',
+  theme_color: '#0f1117',
+  orientation: 'portrait-primary',
+  icons: [{
+    src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230f1117'/><text y='155' x='20' font-size='160' font-family='sans-serif'>⬡</text></svg>",
+    sizes: '192x192', type: 'image/svg+xml'
+  }]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.getElementById('manifest-link').setAttribute('href', manifestURL);
+
+// Service Worker para PWA
+if('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'obracontrol-v2.1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
+    });
+    self.addEventListener('fetch', e => {
+      if(e.request.url.includes('supabase.co') || e.request.url.includes('googleapis')) return;
+      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    });
+  `;
+  const swBlob = new Blob([swCode], {type:'application/javascript'});
+  const swURL = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL).then(() => console.log('SW registered')).catch(e => console.log('SW error:', e));
+}
+
+// ── MOBILE NAV SYNC ──────────────────────────
+const mnavMap = {dashboard:'mnav-dashboard',proyectos:'mnav-proyectos',gastos:'mnav-gastos',reportes:'mnav-reportes',finanzas:'mnav-finanzas'};
+const _origShowView = showView;
+window.showView = function(v) {
+  _origShowView(v);
+  // Sync mobile nav
+  document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+  if(mnavMap[v]) document.getElementById(mnavMap[v])?.classList.add('active');
+  // Update FAB action
+  updateFab(v);
+};
+
+// ── FAB BUTTON ──────────────────────────────
+let currentView = 'dashboard';
+function updateFab(v) {
+  currentView = v;
+  const fab = document.getElementById('fab-btn');
+  const fabActions = {
+    dashboard: () => openModal('modal-proyecto'),
+    proyectos: () => openModal('modal-proyecto'),
+    gastos: () => openModal('modal-gasto'),
+    finanzas: () => showFabMenu(),
+    reportes: null,
+    admin: null
+  };
+  fab.style.display = fabActions[v] !== undefined && fabActions[v] !== null ? 'flex' : 'none';
+}
+
+let fabMenuOpen = false;
+function showFabMenu() {
+  if(fabMenuOpen) { closeFabMenu(); return; }
+  fabMenuOpen = true;
+  const menu = document.createElement('div');
+  menu.id = 'fab-menu';
+  menu.style.cssText = 'position:fixed;bottom:calc(130px + env(safe-area-inset-bottom));right:14px;display:flex;flex-direction:column;gap:10px;z-index:141';
+  menu.innerHTML = `
+    <button onclick="openModal('modal-egreso');closeFabMenu()" style="background:var(--red);color:#fff;border:none;border-radius:24px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--fb);white-space:nowrap">− Registrar egreso</button>
+    <button onclick="openModal('modal-ingreso');closeFabMenu()" style="background:var(--green);color:#000;border:none;border-radius:24px;padding:10px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--fb);white-space:nowrap">+ Registrar ingreso</button>
+  `;
+  document.body.appendChild(menu);
+  document.getElementById('fab-btn').textContent = '✕';
+  setTimeout(() => document.addEventListener('click', closeFabOnClick), 100);
+}
+function closeFabMenu() {
+  fabMenuOpen = false;
+  document.getElementById('fab-menu')?.remove();
+  document.getElementById('fab-btn').textContent = '+';
+  document.removeEventListener('click', closeFabOnClick);
+}
+function closeFabOnClick(e) { if(!e.target.closest('#fab-menu')&&!e.target.closest('#fab-btn')) closeFabMenu(); }
+function fabAction() {
+  const actions = {
+    dashboard: () => openModal('modal-proyecto'),
+    proyectos: () => openModal('modal-proyecto'),
+    gastos: () => openModal('modal-gasto'),
+    finanzas: showFabMenu
+  };
+  if(actions[currentView]) actions[currentView]();
+}
+
+// Init FAB
+updateFab('dashboard');
 
 // Modal gasto open override
 document.querySelector('[onclick="openModal(\'modal-gasto\')"]')?.addEventListener('click',async()=>{
