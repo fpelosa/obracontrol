@@ -2,8 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v1.8</title>
+<title>ObraControl v1.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -145,7 +148,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Ingresar</button>
       <div class="auth-err" id="login-err"></div>
       <p style="font-size:12px;color:var(--muted);margin-top:16px;text-align:center">¿No tenés acceso? Pedile al administrador que te agregue.</p>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">Primera vez? <span style="color:var(--accent);cursor:pointer" onclick="mostrarSetup()">Crear cuenta admin</span></p>
+
     </div>
 
     <!-- SETUP PRIMER ADMIN -->
@@ -178,7 +181,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.8</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -402,8 +405,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
 // ══════════════════════════════════════════
 // CONFIGURACIÓN — reemplazá con tus datos de Supabase
 // ══════════════════════════════════════════
-const SUPABASE_URL  = 'https://vhxsjdifmgvyvnwupspt.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeHNqZGlmbWd2eXZud3Vwc3B0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NDY4MzEsImV4cCI6MjA5MDAyMjgzMX0.4VXNJ1dat-0QPwvGT0zAuSkOrAjXKPXsdBi4TXFYemQ';
+const SUPABASE_URL  = 'https://TU_PROYECTO.supabase.co';
+const SUPABASE_ANON = 'TU_ANON_KEY';
 // ══════════════════════════════════════════
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
@@ -413,9 +416,29 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false
+  },
+  global: {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    }
   }
 });
 window.sb = sb;
+
+// Limpiar sesiones viejas que puedan causar conflictos
+const _authKey = 'obracontrol-auth';
+try {
+  const _stored = localStorage.getItem(_authKey);
+  if(_stored) {
+    const _parsed = JSON.parse(_stored);
+    const _exp = _parsed?.expires_at;
+    if(_exp && _exp < Math.floor(Date.now()/1000)) {
+      localStorage.removeItem(_authKey);
+      console.log('Sesión expirada limpiada');
+    }
+  }
+} catch(e) {}
 let currentUser = null;
 let currentPerfil = null;
 let currentProyectoId = null;
@@ -567,11 +590,16 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
 
 // ── INIT ──────────────────────────────────
 async function initApp(){
-  await Promise.all([fetchProyectos(), fetchGastos()]);
+  try {
+    await Promise.all([fetchProyectos(), fetchGastos()]);
+  } catch(e){
+    console.error('initApp error:', e);
+  }
   renderDashboard();
 }
 
 async function fetchProyectos(){
+  try {
   const {data, error}=await sb.from('proyectos').select('*').order('created_at',{ascending:false});
   console.log('fetchProyectos:', data?.length, error);
   if(!data) { cache.proyectos=[]; return; }
@@ -595,11 +623,18 @@ async function fetchProyectos(){
     total_gastos: 0,
     responsable_nombre: ''
   }));
+  } catch(e){ console.error('fetchProyectos error:',e); cache.proyectos=[]; }
 }
 
 async function fetchGastos(){
-  const {data}=await sb.from('gastos').select('*,proyectos(nombre),partidas(nombre)').order('fecha',{ascending:false});
-  cache.gastos=data||[];
+  try {
+    const {data}=await sb.from('gastos').select('*,proyectos(nombre),partidas(nombre)').order('fecha',{ascending:false});
+    cache.gastos=data||[];
+    console.log('fetchGastos:', data?.length);
+  } catch(e){
+    console.error('fetchGastos error:', e);
+    cache.gastos=[];
+  }
 }
 
 async function fetchPartidas(proyId){
