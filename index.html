@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ObraControl v1.9</title>
+<title>ObraControl v2.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -181,7 +181,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v1.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.0</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -207,6 +207,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nav-item" onclick="showView('reportes')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 8,9 11,4 15,6"/></svg>
         Reportes
+      </div>
+      <div class="nav-section">Empresa</div>
+      <div class="nav-item" onclick="showView('finanzas')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1.5"/><path d="M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1"/><circle cx="8" cy="9" r="2"/></svg>
+        Finanzas
       </div>
       <div class="nav-item" id="nav-admin" style="display:none" onclick="showView('admin')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
@@ -264,6 +269,83 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="card"><div class="card-title">Por categoría</div><div class="chart-box"><canvas id="chart-categ"></canvas></div></div>
       </div>
       <div class="card"><div class="card-title">Estado de partidas</div><div id="rep-partidas"></div></div>
+    </div>
+
+    <!-- FINANZAS -->
+    <div id="view-finanzas" class="view">
+      <div class="topbar">
+        <h1>Finanzas</h1>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" onclick="showFinTab('cuentas')">Cuentas</button>
+          <button class="btn btn-ghost" onclick="openModal('modal-ingreso')">+ Ingreso</button>
+          <button class="btn btn-primary" onclick="openModal('modal-egreso')">+ Egreso</button>
+        </div>
+      </div>
+      <!-- SUB TABS -->
+      <div class="tabs" style="margin-bottom:20px">
+        <div class="tab active" id="ftab-resumen" onclick="showFinTab('resumen')">Resumen</div>
+        <div class="tab" id="ftab-ingresos" onclick="showFinTab('ingresos')">Ingresos</div>
+        <div class="tab" id="ftab-egresos" onclick="showFinTab('egresos')">Egresos</div>
+        <div class="tab" id="ftab-cuentas" onclick="showFinTab('cuentas')">Cuentas</div>
+        <div class="tab" id="ftab-flujo" onclick="showFinTab('flujo')">Flujo de caja</div>
+      </div>
+
+      <!-- RESUMEN -->
+      <div id="fpanel-resumen" class="tab-panel active">
+        <div class="metrics" id="fin-metrics" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-title">Ingresos vs Egresos (mensual)</div><div class="chart-box"><canvas id="chart-fin-barras"></canvas></div></div>
+          <div class="card"><div class="card-title">Egresos por naturaleza</div><div class="chart-box"><canvas id="chart-fin-dona"></canvas></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-title">Por comportamiento económico</div><div id="fin-comportamiento"></div></div>
+          <div class="card"><div class="card-title">Por relación con ingreso</div><div id="fin-relacion"></div></div>
+        </div>
+      </div>
+
+      <!-- INGRESOS -->
+      <div id="fpanel-ingresos" class="tab-panel">
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;gap:10px">
+            <div class="form-group" style="flex:1"><select id="fin-filtro-cuenta" onchange="renderFinIngresos()"><option value="">Todas las cuentas</option></select></div>
+            <div class="form-group" style="flex:1"><input type="month" id="fin-filtro-mes-ing" onchange="renderFinIngresos()"/></div>
+          </div>
+        </div>
+        <div class="card"><div class="table-wrap"><table id="tabla-ingresos"></table></div></div>
+      </div>
+
+      <!-- EGRESOS -->
+      <div id="fpanel-egresos" class="tab-panel">
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:140px"><select id="fin-filtro-naturaleza" onchange="renderFinEgresos()"><option value="">Todas las naturalezas</option><option>Operativo</option><option>Administrativo</option><option>RRHH</option><option>Inversión</option><option>Financiero</option><option>Impuesto</option></select></div>
+            <div class="form-group" style="flex:1;min-width:140px"><select id="fin-filtro-comportamiento" onchange="renderFinEgresos()"><option value="">Fijo / Variable</option><option>Fijo</option><option>Variable</option></select></div>
+            <div class="form-group" style="flex:1;min-width:140px"><select id="fin-filtro-relacion" onchange="renderFinEgresos()"><option value="">Relación con ingreso</option><option>Productivo</option><option>Soporte Productivo</option><option>No Productivo</option></select></div>
+            <div class="form-group" style="flex:1;min-width:140px"><input type="month" id="fin-filtro-mes-eg" onchange="renderFinEgresos()"/></div>
+          </div>
+        </div>
+        <div class="card"><div class="table-wrap"><table id="tabla-egresos"></table></div></div>
+      </div>
+
+      <!-- CUENTAS -->
+      <div id="fpanel-cuentas" class="tab-panel">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+          <button class="btn btn-primary" onclick="openModal('modal-cuenta')">+ Nueva cuenta</button>
+        </div>
+        <div id="fin-cuentas-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px"></div>
+      </div>
+
+      <!-- FLUJO DE CAJA -->
+      <div id="fpanel-flujo" class="tab-panel">
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;gap:10px">
+            <div class="form-group" style="flex:1"><select id="fin-filtro-año"><option>2024</option><option selected>2025</option><option>2026</option></select></div>
+            <button class="btn btn-ghost" onclick="renderFinFlujo()">Actualizar</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px"><div class="chart-box" style="height:260px"><canvas id="chart-flujo"></canvas></div></div>
+        <div class="card"><div class="table-wrap"><table id="tabla-flujo"></table></div></div>
+      </div>
     </div>
 
     <!-- ADMIN USUARIOS -->
@@ -395,6 +477,83 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-crear-usuario')">Cancelar</button>
       <button class="btn btn-primary" onclick="crearUsuario()">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Nueva Cuenta -->
+<div class="modal-overlay" id="modal-cuenta">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">Nueva cuenta<button class="modal-close" onclick="closeModal('modal-cuenta')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nombre de la cuenta *</label><input id="cnt-nombre" placeholder="Ej: Banco Galicia, Caja, Mercado Pago"/></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="cnt-tipo"><option>Banco</option><option>Caja</option><option>Billetera virtual</option><option>Inversión</option><option>Otro</option></select>
+      </div>
+      <div class="form-group"><label>Moneda</label>
+        <select id="cnt-moneda"><option>ARS</option><option>USD</option></select>
+      </div>
+      <div class="form-group full"><label>Saldo inicial ($)</label><input type="number" id="cnt-saldo" placeholder="0"/></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cuenta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCuenta()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Ingreso -->
+<div class="modal-overlay" id="modal-ingreso">
+  <div class="modal">
+    <div class="modal-title">Registrar ingreso<button class="modal-close" onclick="closeModal('modal-ingreso')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Concepto *</label><input id="ing-concepto" placeholder="Ej: Cobro certificado obra, Anticipo cliente"/></div>
+      <div class="form-group"><label>Fecha *</label><input type="date" id="ing-fecha"/></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="number" id="ing-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Cuenta destino</label><select id="ing-cuenta"></select></div>
+      <div class="form-group"><label>Obra relacionada (opcional)</label><select id="ing-obra"><option value="">Sin obra específica</option></select></div>
+      <div class="form-group"><label>Comprobante N°</label><input id="ing-comp" placeholder="Factura / Recibo"/></div>
+      <div class="form-group full"><label>Observaciones</label><textarea id="ing-obs"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ingreso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarIngreso()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Egreso -->
+<div class="modal-overlay" id="modal-egreso">
+  <div class="modal">
+    <div class="modal-title">Registrar egreso<button class="modal-close" onclick="closeModal('modal-egreso')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Concepto *</label><input id="eg-concepto" placeholder="Ej: Sueldo mensual, Factura luz, IVA"/></div>
+      <div class="form-group"><label>Fecha *</label><input type="date" id="eg-fecha"/></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="number" id="eg-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Cuenta origen</label><select id="eg-cuenta"></select></div>
+      <div class="form-group"><label>Naturaleza *</label>
+        <select id="eg-naturaleza">
+          <option>Operativo</option><option>Administrativo</option><option>RRHH</option>
+          <option>Inversión</option><option>Financiero</option><option>Impuesto</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Comportamiento</label>
+        <select id="eg-comportamiento"><option>Fijo</option><option>Variable</option></select>
+      </div>
+      <div class="form-group full"><label>Relación con ingreso</label>
+        <select id="eg-relacion">
+          <option>Productivo</option><option>Soporte Productivo</option><option>No Productivo</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Proveedor / Beneficiario</label><input id="eg-proveedor" placeholder="Nombre"/></div>
+      <div class="form-group"><label>Comprobante N°</label><input id="eg-comp" placeholder="Factura / Recibo"/></div>
+      <div class="form-group"><label>Obra relacionada (opcional)</label><select id="eg-obra"><option value="">Sin obra específica</option></select></div>
+      <div class="form-group full"><label>Observaciones</label><textarea id="eg-obs"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-egreso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEgreso()">Registrar</button>
     </div>
   </div>
 </div>
@@ -577,10 +736,10 @@ function showView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
-  const map={dashboard:0,proyectos:1,gastos:2,reportes:3,admin:4};
+  const map={dashboard:0,proyectos:1,gastos:2,reportes:3,finanzas:4,admin:5};
   const items=document.querySelectorAll('.nav-item');
   if(map[v]!==undefined&&items[map[v]]) items[map[v]].classList.add('active');
-  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin};
+  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin,finanzas:renderFinanzas};
   if(fns[v]) fns[v]();
 }
 
@@ -1057,11 +1216,306 @@ async function crearUsuario(){
   renderAdmin();
 }
 
+// Finanzas modals populate
+document.getElementById('modal-ingreso').addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay'))return;});
+document.getElementById('modal-egreso').addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay'))return;});
+
+// Populate finanzas selects when opening modals
+const _origOpenModal=openModal;
+window.openModal=function(id){
+  _origOpenModal(id);
+  if(id==='modal-ingreso'||id==='modal-egreso'){
+    poblarSelectsCuentasObras();
+    const dateField=id==='modal-ingreso'?'ing-fecha':'eg-fecha';
+    if(!document.getElementById(dateField).value) document.getElementById(dateField).value=new Date().toISOString().split('T')[0];
+  }
+};
+
 // Modal gasto open override
 document.querySelector('[onclick="openModal(\'modal-gasto\')"]')?.addEventListener('click',async()=>{
   await poblarSelectGasto();
   document.getElementById('g-fecha').value=new Date().toISOString().split('T')[0];
 });
+
+// ══════════════════════════════════════════
+// MÓDULO FINANZAS
+// ══════════════════════════════════════════
+let chartFinBarras=null, chartFinDona=null, chartFlujo=null;
+let cacheFin={cuentas:[], ingresos:[], egresos:[]};
+
+// ── TABS FINANZAS ──
+function showFinTab(t){
+  document.querySelectorAll('[id^="ftab-"]').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('[id^="fpanel-"]').forEach(el=>el.classList.remove('active'));
+  document.getElementById('ftab-'+t).classList.add('active');
+  document.getElementById('fpanel-'+t).classList.add('active');
+  const fns={resumen:renderFinResumen,ingresos:renderFinIngresos,egresos:renderFinEgresos,cuentas:renderFinCuentas,flujo:renderFinFlujo};
+  if(fns[t]) fns[t]();
+}
+
+// ── FETCH FINANZAS ──
+async function fetchFinanzas(){
+  try{
+    const [c,i,e]=await Promise.all([
+      sb.from('fin_cuentas').select('*').order('nombre'),
+      sb.from('fin_ingresos').select('*,fin_cuentas(nombre),proyectos(nombre)').order('fecha',{ascending:false}),
+      sb.from('fin_egresos').select('*,fin_cuentas(nombre),proyectos(nombre)').order('fecha',{ascending:false})
+    ]);
+    cacheFin.cuentas=c.data||[];
+    cacheFin.ingresos=i.data||[];
+    // Incluir gastos de obras en egresos con flag
+    const gastosObras=(cache.gastos||[]).map(g=>({
+      id:'obra_'+g.id, concepto:g.descripcion||g.desc,
+      fecha:g.fecha, monto:Number(g.monto),
+      naturaleza:'Operativo', comportamiento:'Variable',
+      relacion_ingreso:'Productivo',
+      proveedor:g.proveedor||'', comprobante_nro:g.comprobante_nro||'',
+      proyecto_id:g.proyecto_id,
+      proyectos:{nombre:cache.proyectos.find(p=>p.id===g.proyecto_id)?.nombre||''},
+      fin_cuentas:{nombre:'—'}, es_obra:true
+    }));
+    cacheFin.egresos=[...(e.data||[]),...gastosObras].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  }catch(err){console.error('fetchFinanzas:',err);}
+}
+
+async function poblarSelectsCuentasObras(){
+  const selCuentas=document.querySelectorAll('#ing-cuenta,#eg-cuenta,#fin-filtro-cuenta');
+  selCuentas.forEach(s=>{
+    s.innerHTML='<option value="">Sin cuenta</option>'+cacheFin.cuentas.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  });
+  const selObras=document.querySelectorAll('#ing-obra,#eg-obra');
+  selObras.forEach(s=>{
+    s.innerHTML='<option value="">Sin obra específica</option>'+(cache.proyectos||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  });
+}
+
+// ── RENDER FINANZAS ──
+async function renderFinanzas(){
+  await fetchFinanzas();
+  renderFinResumen();
+}
+
+function renderFinResumen(){
+  const totalIng=cacheFin.ingresos.reduce((s,x)=>s+Number(x.monto),0);
+  const totalEg=cacheFin.egresos.reduce((s,x)=>s+Number(x.monto),0);
+  const resultado=totalIng-totalEg;
+  const totalCuentas=cacheFin.cuentas.reduce((s,x)=>s+Number(x.saldo_actual||x.saldo_inicial||0),0);
+
+  document.getElementById('fin-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Total ingresos</div><div class="metric-value" style="color:var(--green)">${fmt(totalIng)}</div></div>
+    <div class="metric"><div class="metric-label">Total egresos</div><div class="metric-value" style="color:var(--red)">${fmt(totalEg)}</div></div>
+    <div class="metric"><div class="metric-label">Resultado</div><div class="metric-value" style="color:${resultado>=0?'var(--green)':'var(--red)'}">${fmt(resultado)}</div></div>
+    <div class="metric"><div class="metric-label">Saldo en cuentas</div><div class="metric-value" style="color:var(--accent2)">${fmt(totalCuentas)}</div></div>`;
+
+  // Chart barras ingresos vs egresos por mes
+  const meses={};
+  cacheFin.ingresos.forEach(x=>{if(x.fecha){const m=x.fecha.slice(0,7);if(!meses[m])meses[m]={ing:0,eg:0};meses[m].ing+=Number(x.monto);}});
+  cacheFin.egresos.forEach(x=>{if(x.fecha){const m=x.fecha.slice(0,7);if(!meses[m])meses[m]={ing:0,eg:0};meses[m].eg+=Number(x.monto);}});
+  const labels=Object.keys(meses).sort().slice(-8);
+  const ctx1=document.getElementById('chart-fin-barras');
+  if(chartFinBarras) chartFinBarras.destroy();
+  chartFinBarras=new Chart(ctx1,{type:'bar',data:{labels,datasets:[
+    {label:'Ingresos',data:labels.map(m=>meses[m]?.ing||0),backgroundColor:'rgba(34,197,94,.5)',borderColor:'#22c55e',borderWidth:1},
+    {label:'Egresos',data:labels.map(m=>meses[m]?.eg||0),backgroundColor:'rgba(239,68,68,.5)',borderColor:'#ef4444',borderWidth:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  // Chart dona por naturaleza
+  const nats=['Operativo','Administrativo','RRHH','Inversión','Financiero','Impuesto'];
+  const natVals=nats.map(n=>cacheFin.egresos.filter(x=>x.naturaleza===n).reduce((s,x)=>s+Number(x.monto),0));
+  const ctx2=document.getElementById('chart-fin-dona');
+  if(chartFinDona) chartFinDona.destroy();
+  chartFinDona=new Chart(ctx2,{type:'doughnut',data:{labels:nats,datasets:[{data:natVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444','#f97316'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:8}}},cutout:'60%'}});
+
+  // Comportamiento
+  const fijo=cacheFin.egresos.filter(x=>x.comportamiento==='Fijo').reduce((s,x)=>s+Number(x.monto),0);
+  const variable=cacheFin.egresos.filter(x=>x.comportamiento==='Variable').reduce((s,x)=>s+Number(x.monto),0);
+  document.getElementById('fin-comportamiento').innerHTML=`
+    <div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Fijo</span><span>${fmt(fijo)}</span></div><div class="progress-wrap"><div class="progress-bar" style="width:${pct(fijo,fijo+variable)}%;background:#3b82f6"></div></div></div>
+    <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Variable</span><span>${fmt(variable)}</span></div><div class="progress-wrap"><div class="progress-bar" style="width:${pct(variable,fijo+variable)}%;background:#f5a623"></div></div></div>`;
+
+  // Relación ingreso
+  const rels=['Productivo','Soporte Productivo','No Productivo'];
+  const relColors=['#22c55e','#f5a623','#ef4444'];
+  const relVals=rels.map(r=>cacheFin.egresos.filter(x=>x.relacion_ingreso===r).reduce((s,x)=>s+Number(x.monto),0));
+  const relTotal=relVals.reduce((s,x)=>s+x,0);
+  document.getElementById('fin-relacion').innerHTML=rels.map((r,i)=>`
+    <div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${r}</span><span>${fmt(relVals[i])}</span></div><div class="progress-wrap"><div class="progress-bar" style="width:${pct(relVals[i],relTotal)}%;background:${relColors[i]}"></div></div></div>`).join('');
+}
+
+function renderFinIngresos(){
+  const cuenta=document.getElementById('fin-filtro-cuenta')?.value||'';
+  const mes=document.getElementById('fin-filtro-mes-ing')?.value||'';
+  let data=[...cacheFin.ingresos];
+  if(cuenta) data=data.filter(x=>x.cuenta_id===cuenta);
+  if(mes) data=data.filter(x=>x.fecha?.startsWith(mes));
+  const t=document.getElementById('tabla-ingresos');
+  if(!data.length){t.innerHTML='<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--muted)">Sin ingresos</td></tr>';return;}
+  t.innerHTML=`<thead><tr><th>Fecha</th><th>Concepto</th><th>Cuenta</th><th>Obra</th><th>Comp.</th><th>Monto</th><th></th></tr></thead><tbody>${data.map(x=>`<tr>
+    <td>${x.fecha||'-'}</td><td>${x.concepto}</td>
+    <td style="color:var(--muted)">${x.fin_cuentas?.nombre||'-'}</td>
+    <td style="color:var(--muted)">${x.proyectos?.nombre||'-'}</td>
+    <td style="color:var(--muted)">${x.comprobante_nro||'-'}</td>
+    <td style="font-weight:500;color:var(--green)">${fmt(x.monto)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="eliminarIngreso('${x.id}')">✕</button></td>
+  </tr>`).join('')}</tbody>`;
+}
+
+function renderFinEgresos(){
+  const nat=document.getElementById('fin-filtro-naturaleza')?.value||'';
+  const comp=document.getElementById('fin-filtro-comportamiento')?.value||'';
+  const rel=document.getElementById('fin-filtro-relacion')?.value||'';
+  const mes=document.getElementById('fin-filtro-mes-eg')?.value||'';
+  let data=[...cacheFin.egresos];
+  if(nat) data=data.filter(x=>x.naturaleza===nat);
+  if(comp) data=data.filter(x=>x.comportamiento===comp);
+  if(rel) data=data.filter(x=>x.relacion_ingreso===rel);
+  if(mes) data=data.filter(x=>x.fecha?.startsWith(mes));
+  const t=document.getElementById('tabla-egresos');
+  if(!data.length){t.innerHTML='<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted)">Sin egresos</td></tr>';return;}
+  t.innerHTML=`<thead><tr><th>Fecha</th><th>Concepto</th><th>Naturaleza</th><th>Comp.</th><th>Relación</th><th>Cuenta</th><th>Obra</th><th>Monto</th><th></th></tr></thead><tbody>${data.map(x=>`<tr>
+    <td>${x.fecha||'-'}</td><td>${x.concepto}${x.es_obra?'<span class="badge badge-blue" style="margin-left:6px;font-size:10px">Obra</span>':''}</td>
+    <td><span class="badge badge-gray">${x.naturaleza||'-'}</span></td>
+    <td style="color:var(--muted)">${x.comportamiento||'-'}</td>
+    <td style="color:var(--muted);font-size:12px">${x.relacion_ingreso||'-'}</td>
+    <td style="color:var(--muted)">${x.fin_cuentas?.nombre||'-'}</td>
+    <td style="color:var(--muted)">${x.proyectos?.nombre||'-'}</td>
+    <td style="font-weight:500;color:var(--red)">${fmt(x.monto)}</td>
+    <td>${!x.es_obra?`<button class="btn btn-danger btn-sm" onclick="eliminarEgreso('${x.id}')">✕</button>`:''}</td>
+  </tr>`).join('')}</tbody>`;
+}
+
+function renderFinCuentas(){
+  const cont=document.getElementById('fin-cuentas-cards');
+  if(!cacheFin.cuentas.length){cont.innerHTML='<div class="empty"><p>Sin cuentas. Creá la primera.</p></div>';return;}
+  cont.innerHTML=cacheFin.cuentas.map(c=>{
+    const ings=cacheFin.ingresos.filter(x=>x.cuenta_id===c.id).reduce((s,x)=>s+Number(x.monto),0);
+    const egs=cacheFin.egresos.filter(x=>x.cuenta_id===c.id&&!x.es_obra).reduce((s,x)=>s+Number(x.monto),0);
+    const saldo=(Number(c.saldo_inicial)||0)+ings-egs;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div><div style="font-weight:600;font-size:14px">${c.nombre}</div><div style="font-size:12px;color:var(--muted)">${c.tipo} · ${c.moneda}</div></div>
+        <button class="btn btn-danger btn-sm" onclick="eliminarCuenta('${c.id}')">✕</button>
+      </div>
+      <div style="font-family:var(--fh);font-size:22px;font-weight:700;color:${saldo>=0?'var(--green)':'var(--red)'}">${fmt(saldo)}</div>
+      <div style="display:flex;gap:14px;margin-top:10px;font-size:12px">
+        <span style="color:var(--green)">▲ ${fmt(ings)}</span>
+        <span style="color:var(--red)">▼ ${fmt(egs)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFinFlujo(){
+  const año=document.getElementById('fin-filtro-año')?.value||new Date().getFullYear();
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const ingMes=Array(12).fill(0);
+  const egMes=Array(12).fill(0);
+  cacheFin.ingresos.forEach(x=>{
+    if(x.fecha?.startsWith(año)){const m=parseInt(x.fecha.slice(5,7))-1;ingMes[m]+=Number(x.monto);}
+  });
+  cacheFin.egresos.forEach(x=>{
+    if(x.fecha?.startsWith(año)){const m=parseInt(x.fecha.slice(5,7))-1;egMes[m]+=Number(x.monto);}
+  });
+  const saldoAcum=[];let acum=0;
+  ingMes.forEach((ing,i)=>{acum+=ing-egMes[i];saldoAcum.push(acum);});
+
+  const ctx=document.getElementById('chart-flujo');
+  if(chartFlujo) chartFlujo.destroy();
+  chartFlujo=new Chart(ctx,{type:'line',data:{labels:meses,datasets:[
+    {label:'Ingresos',data:ingMes,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.08)',fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#22c55e'},
+    {label:'Egresos',data:egMes,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#ef4444'},
+    {label:'Saldo acumulado',data:saldoAcum,borderColor:'#f5a623',borderDash:[5,5],tension:.4,pointRadius:3,pointBackgroundColor:'#f5a623'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+
+  const t=document.getElementById('tabla-flujo');
+  t.innerHTML=`<thead><tr><th>Mes</th><th>Ingresos</th><th>Egresos</th><th>Resultado</th><th>Saldo acumulado</th></tr></thead><tbody>${meses.map((m,i)=>{
+    const res=ingMes[i]-egMes[i];
+    return `<tr><td>${m} ${año}</td><td style="color:var(--green)">${fmt(ingMes[i])}</td><td style="color:var(--red)">${fmt(egMes[i])}</td><td style="color:${res>=0?'var(--green)':'var(--red)'}">${fmt(res)}</td><td style="font-weight:500;color:${saldoAcum[i]>=0?'var(--accent2)':'var(--red)'}">${fmt(saldoAcum[i])}</td></tr>`;
+  }).join('')}</tbody>`;
+}
+
+// ── CRUD CUENTAS ──
+async function guardarCuenta(){
+  const nombre=document.getElementById('cnt-nombre').value.trim();
+  if(!nombre){notify('El nombre es obligatorio',false);return;}
+  const {error}=await sb.from('fin_cuentas').insert({
+    nombre, tipo:document.getElementById('cnt-tipo').value,
+    moneda:document.getElementById('cnt-moneda').value,
+    saldo_inicial:Number(document.getElementById('cnt-saldo').value)||0,
+    created_by:currentUser?.id
+  });
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Cuenta creada');
+  closeModal('modal-cuenta');
+  ['cnt-nombre','cnt-saldo'].forEach(id=>document.getElementById(id).value='');
+  await fetchFinanzas(); renderFinCuentas();
+}
+
+async function eliminarCuenta(id){
+  if(!confirm('¿Eliminar esta cuenta?')) return;
+  await sb.from('fin_cuentas').delete().eq('id',id);
+  notify('Cuenta eliminada');
+  await fetchFinanzas(); renderFinCuentas();
+}
+
+// ── CRUD INGRESOS ──
+async function guardarIngreso(){
+  const concepto=document.getElementById('ing-concepto').value.trim();
+  const monto=Number(document.getElementById('ing-monto').value);
+  if(!concepto||!monto){notify('Completá concepto y monto',false);return;}
+  const {error}=await sb.from('fin_ingresos').insert({
+    concepto, monto, fecha:document.getElementById('ing-fecha').value,
+    cuenta_id:document.getElementById('ing-cuenta').value||null,
+    proyecto_id:document.getElementById('ing-obra').value||null,
+    comprobante_nro:document.getElementById('ing-comp').value,
+    observaciones:document.getElementById('ing-obs').value,
+    created_by:currentUser?.id
+  });
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Ingreso registrado');
+  closeModal('modal-ingreso');
+  ['ing-concepto','ing-monto','ing-comp','ing-obs'].forEach(id=>document.getElementById(id).value='');
+  await fetchFinanzas(); renderFinResumen();
+}
+
+async function eliminarIngreso(id){
+  if(!confirm('¿Eliminar este ingreso?')) return;
+  await sb.from('fin_ingresos').delete().eq('id',id);
+  notify('Ingreso eliminado');
+  await fetchFinanzas(); renderFinIngresos();
+}
+
+// ── CRUD EGRESOS ──
+async function guardarEgreso(){
+  const concepto=document.getElementById('eg-concepto').value.trim();
+  const monto=Number(document.getElementById('eg-monto').value);
+  if(!concepto||!monto){notify('Completá concepto y monto',false);return;}
+  const {error}=await sb.from('fin_egresos').insert({
+    concepto, monto, fecha:document.getElementById('eg-fecha').value,
+    cuenta_id:document.getElementById('eg-cuenta').value||null,
+    proyecto_id:document.getElementById('eg-obra').value||null,
+    naturaleza:document.getElementById('eg-naturaleza').value,
+    comportamiento:document.getElementById('eg-comportamiento').value,
+    relacion_ingreso:document.getElementById('eg-relacion').value,
+    proveedor:document.getElementById('eg-proveedor').value,
+    comprobante_nro:document.getElementById('eg-comp').value,
+    observaciones:document.getElementById('eg-obs').value,
+    created_by:currentUser?.id
+  });
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Egreso registrado');
+  closeModal('modal-egreso');
+  ['eg-concepto','eg-monto','eg-proveedor','eg-comp','eg-obs'].forEach(id=>document.getElementById(id).value='');
+  await fetchFinanzas(); renderFinResumen();
+}
+
+async function eliminarEgreso(id){
+  if(!confirm('¿Eliminar este egreso?')) return;
+  await sb.from('fin_egresos').delete().eq('id',id);
+  notify('Egreso eliminado');
+  await fetchFinanzas(); renderFinEgresos();
+}
+
 </script>
 </body>
 </html>
