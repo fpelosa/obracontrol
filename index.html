@@ -1230,7 +1230,7 @@ async function guardarProyecto(){
 
   closeModal('modal-proyecto');
   document.getElementById('p-id').value='';
-  document.getElementById('p-modal-title').innerHTML='Nueva Obra<button class="modal-close" onclick="closeModal('modal-proyecto')">✕</button>';
+  document.getElementById('p-modal-title').innerHTML='Nueva Obra<button class="modal-close" onclick="closeModal(&quot;modal-proyecto&quot;)">✕</button>';
   ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('p-estado').value='Planificación';
 
@@ -1249,7 +1249,7 @@ async function editarProyecto(id){
 
   // Rellenar el modal con los datos actuales
   document.getElementById('p-id').value=p.id;
-  document.getElementById('p-modal-title').innerHTML='Editar Obra<button class="modal-close" onclick="closeModal('modal-proyecto')">✕</button>';
+  document.getElementById('p-modal-title').innerHTML='Editar Obra<button class="modal-close" onclick="closeModal(&quot;modal-proyecto&quot;)">✕</button>';
   document.getElementById('p-nombre').value=p.nombre||'';
   document.getElementById('p-ubicacion').value=p.ubicacion||'';
   document.getElementById('p-cliente').value=p.cliente||'';
