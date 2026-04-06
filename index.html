@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v2.7</title>
+<title>ObraControl v2.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -300,7 +300,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.7</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -400,6 +400,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <h1>Finanzas</h1>
         <div class="topbar-actions">
           <button class="btn btn-ghost" onclick="showFinTab('cuentas')">Cuentas</button>
+          <button class="btn btn-ghost" onclick="showFinTab('pendientes')" id="btn-ver-pendientes" style="display:none">⏳ Sin clasificar <span id="badge-pendientes" style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:3px">0</span></button>
+          <button class="btn btn-ghost" onclick="openModal('modal-importar-mp')">↑ Importar gastos MP</button>
           <button class="btn btn-ghost" onclick="openModal('modal-ingreso')">+ Ingreso</button>
           <button class="btn btn-primary" onclick="openModal('modal-egreso')">+ Egreso</button>
         </div>
@@ -411,6 +413,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="tab" id="ftab-egresos" onclick="showFinTab('egresos')">Egresos</div>
         <div class="tab" id="ftab-cuentas" onclick="showFinTab('cuentas')">Cuentas</div>
         <div class="tab" id="ftab-flujo" onclick="showFinTab('flujo')">Flujo de caja</div>
+      <div class="tab" id="ftab-pendientes" onclick="showFinTab('pendientes')">⏳ Sin clasificar</div>
       </div>
 
       <!-- RESUMEN -->
@@ -456,6 +459,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <button class="btn btn-primary" onclick="openModal('modal-cuenta')">+ Nueva cuenta</button>
         </div>
         <div id="fin-cuentas-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px"></div>
+      </div>
+
+      <!-- PENDIENTES DE CLASIFICAR -->
+      <div id="fpanel-pendientes" class="tab-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:13px;color:var(--muted)">Gastos importados pendientes de clasificar.</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="sel-todos" onchange="toggleSelTodos(this.checked)"/> Seleccionar todos
+            </label>
+            <button class="btn btn-primary btn-sm" id="btn-clasificar-sel" style="display:none" onclick="openModal('modal-clasificar-masivo')">Clasificar seleccionados (<span id="cnt-sel">0</span>)</button>
+          </div>
+        </div>
+        <div id="lista-pendientes"></div>
       </div>
 
       <!-- FLUJO DE CAJA -->
@@ -750,6 +767,99 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-cobro')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarCobro()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Importar Egresos Mercado Pago -->
+<div class="modal-overlay" id="modal-importar-mp">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title">Importar egresos de Mercado Pago<button class="modal-close" onclick="closeModal('modal-importar-mp')">✕</button></div>
+    <div id="imp-paso1">
+      <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.7">
+        Se van a importar los <strong style="color:var(--text)">egresos</strong> del extracto: retiros (PAYOUTS) y pagos a proveedores (SETTLEMENT negativos). Después los clasificás uno por uno o en grupo.
+      </div>
+      <div style="border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;cursor:pointer" onclick="document.getElementById('imp-file').click()">
+        <div style="font-size:26px;margin-bottom:8px">📂</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px">Seleccioná el archivo CSV de Mercado Pago</div>
+        <div style="font-size:12px;color:var(--muted)">settlement-XXXXXXXX-manual-XXXX.csv</div>
+        <input type="file" id="imp-file" accept=".csv" style="display:none" onchange="procesarCSVEgresos(this)"/>
+      </div>
+      <div id="imp-filename" style="font-size:12px;color:var(--accent);margin-top:8px;text-align:center"></div>
+    </div>
+    <div id="imp-paso2" style="display:none">
+      <div id="imp-resumen" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">Preview de egresos a importar:</div>
+      <div class="table-wrap" style="max-height:260px;overflow-y:auto;margin-bottom:14px">
+        <table id="imp-preview-tabla"></table>
+      </div>
+      <div style="font-size:12px;color:var(--muted);background:var(--bg3);padding:10px 14px;border-radius:8px;margin-bottom:14px">
+        Los registros se van a guardar como <strong style="color:var(--text)">pendientes de clasificar</strong>. Después les asignás cuenta, naturaleza, comportamiento y si corresponde a una obra.
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="document.getElementById('imp-paso2').style.display='none';document.getElementById('imp-paso1').style.display='block'">← Volver</button>
+        <button class="btn btn-primary" id="imp-btn-confirmar" onclick="confirmarImportacionEgresos()">Importar como pendientes</button>
+      </div>
+    </div>
+    <div id="imp-paso3" style="display:none;text-align:center;padding:28px">
+      <div style="font-size:32px;margin-bottom:12px">✅</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px" id="imp-resultado"></div>
+      <div style="font-size:13px;color:var(--muted)" id="imp-detalle"></div>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="closeModal('modal-importar-mp');showFinTab('pendientes')">Ver pendientes →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Clasificar uno -->
+<div class="modal-overlay" id="modal-clasificar-uno">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">Clasificar gasto<button class="modal-close" onclick="closeModal('modal-clasificar-uno')">✕</button></div>
+    <input type="hidden" id="clas-id"/>
+    <div id="clas-info" style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Cuenta de origen</label><select id="clas-cuenta"><option value="">Sin cuenta</option></select></div>
+      <div class="form-group"><label>Naturaleza</label>
+        <select id="clas-naturaleza"><option>Operativo</option><option>Administrativo</option><option>RRHH</option><option>Inversión</option><option>Financiero</option><option>Impuesto</option></select>
+      </div>
+      <div class="form-group"><label>Comportamiento</label>
+        <select id="clas-comportamiento"><option>Fijo</option><option>Variable</option></select>
+      </div>
+      <div class="form-group"><label>Relación con ingreso</label>
+        <select id="clas-relacion"><option>Productivo</option><option>Soporte Productivo</option><option>No Productivo</option></select>
+      </div>
+      <div class="form-group"><label>Proveedor</label><input id="clas-proveedor" placeholder="Nombre del proveedor"/></div>
+      <div class="form-group"><label>Obra (opcional)</label><select id="clas-obra"><option value="">Sin obra</option></select></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-clasificar-uno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClasificacion()">Clasificar y mover a egresos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Clasificar masivo -->
+<div class="modal-overlay" id="modal-clasificar-masivo">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">Clasificar seleccionados<button class="modal-close" onclick="closeModal('modal-clasificar-masivo')">✕</button></div>
+    <div id="clas-mas-info" style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted)"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Cuenta de origen</label><select id="clas-mas-cuenta"><option value="">Sin cuenta</option></select></div>
+      <div class="form-group"><label>Naturaleza</label>
+        <select id="clas-mas-naturaleza"><option>Operativo</option><option>Administrativo</option><option>RRHH</option><option>Inversión</option><option>Financiero</option><option>Impuesto</option></select>
+      </div>
+      <div class="form-group"><label>Comportamiento</label>
+        <select id="clas-mas-comportamiento"><option>Fijo</option><option>Variable</option></select>
+      </div>
+      <div class="form-group"><label>Relación con ingreso</label>
+        <select id="clas-mas-relacion"><option>Productivo</option><option>Soporte Productivo</option><option>No Productivo</option></select>
+      </div>
+      <div class="form-group"><label>Proveedor</label><input id="clas-mas-proveedor" placeholder="(opcional)"/></div>
+      <div class="form-group"><label>Obra (opcional)</label><select id="clas-mas-obra"><option value="">Sin obra</option></select></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-clasificar-masivo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarClasificacionMasiva()">Clasificar todos y mover a egresos</button>
     </div>
   </div>
 </div>
@@ -1936,7 +2046,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v2.7';
+    const CACHE = 'obracontrol-v2.9';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -2314,6 +2424,303 @@ async function eliminarEgreso(id){
   notify('Egreso eliminado');
   await fetchFinanzas(); renderFinEgresos();
 }
+
+
+// ══════════════════════════════════════════
+// IMPORTADOR EGRESOS MERCADO PAGO
+// ══════════════════════════════════════════
+let impEgresos = [];
+let seleccionados = new Set();
+
+function poblarCuentasImport(){
+  ['imp-cuenta','clas-cuenta','clas-mas-cuenta'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Sin cuenta</option>' +
+      cacheFin.cuentas.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+  });
+  ['clas-obra','clas-mas-obra'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Sin obra</option>' +
+      (cache.proyectos||[]).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  });
+}
+
+function procesarCSVEgresos(input){
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('imp-filename').textContent = '📄 ' + file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const lines = e.target.result.split('\n').filter(l=>l.trim());
+      const headers = lines[0].split(';').map(h=>h.trim().replace(/"/g,''));
+      const get = (cols,name) => { const i=headers.indexOf(name); return i>=0&&i<cols.length?cols[i].trim().replace(/^"|"$/g,''):''; };
+
+      impEgresos = [];
+      let incluidos = 0, excluidos = 0;
+
+      for(let i=1;i<lines.length;i++){
+        const cols = parsearLineaCSV(lines[i]);
+        if(cols.length<5) continue;
+        const tipo = get(cols,'TRANSACTION_TYPE');
+        const monto = parseFloat(get(cols,'TRANSACTION_AMOUNT')||0);
+        const neto = parseFloat(get(cols,'SETTLEMENT_NET_AMOUNT')||0);
+
+        // Solo egresos: PAYOUTS o SETTLEMENT negativos
+        const esEgreso = tipo==='PAYOUTS' || (tipo==='SETTLEMENT' && monto<0);
+        if(!esEgreso){ excluidos++; continue; }
+
+        const fecha = (get(cols,'TRANSACTION_DATE')||'').slice(0,10);
+        const payer = get(cols,'PAYER_NAME');
+        const source = get(cols,'SOURCE_ID');
+        const taxes = Math.abs(parseFloat(get(cols,'TAXES_AMOUNT')||0));
+
+        const esRetiro = tipo==='PAYOUTS';
+        const concepto = esRetiro
+          ? `Retiro MP${taxes>0?' (imp. '+fmt(taxes)+')':''}`
+          : `Pago a ${payer||'proveedor'} vía MP`;
+
+        impEgresos.push({
+          concepto, fecha,
+          monto: Math.abs(Math.round(neto)),
+          monto_original: Math.abs(monto),
+          comprobante_nro: source,
+          proveedor: payer,
+          tipo_mp: tipo,
+          origen: 'Mercado Pago'
+        });
+        incluidos++;
+      }
+
+      if(!impEgresos.length){ notify('No se encontraron egresos en el archivo', false); return; }
+
+      const total = impEgresos.reduce((s,r)=>s+r.monto,0);
+      document.getElementById('imp-resumen').innerHTML = `
+        <div class="metric"><div class="metric-label">Egresos encontrados</div><div class="metric-value" style="font-size:20px;color:var(--red)">${incluidos}</div><div class="metric-sub">${excluidos} ingresos excluidos</div></div>
+        <div class="metric"><div class="metric-label">Total egresos</div><div class="metric-value" style="font-size:20px">${fmt(total)}</div></div>
+        <div class="metric"><div class="metric-label">Estado</div><div class="metric-value" style="font-size:14px;color:var(--accent)">Pendientes de clasificar</div></div>`;
+
+      document.getElementById('imp-preview-tabla').innerHTML =
+        `<thead><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th>Monto</th></tr></thead>
+        <tbody>${impEgresos.slice(0,10).map(r=>`<tr>
+          <td>${r.fecha}</td>
+          <td style="font-size:12px">${r.concepto}</td>
+          <td><span class="badge ${r.tipo_mp==='PAYOUTS'?'badge-amber':'badge-red'}">${r.tipo_mp==='PAYOUTS'?'Retiro':'Pago prov.'}</span></td>
+          <td style="font-weight:500;color:var(--red)">${fmt(r.monto)}</td>
+        </tr>`).join('')}
+        ${impEgresos.length>10?`<tr><td colspan="4" style="text-align:center;color:var(--muted);font-size:12px">... y ${impEgresos.length-10} más</td></tr>`:''}
+        </tbody>`;
+
+      document.getElementById('imp-paso1').style.display='none';
+      document.getElementById('imp-paso2').style.display='block';
+    } catch(err){ console.error(err); notify('Error al leer el archivo', false); }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function parsearLineaCSV(line){
+  const cols=[]; let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){inQ=!inQ;}
+    else if(ch===';'&&!inQ){cols.push(cur);cur='';}
+    else{cur+=ch;}
+  }
+  cols.push(cur); return cols;
+}
+
+async function confirmarImportacionEgresos(){
+  const btn=document.getElementById('imp-btn-confirmar');
+  btn.textContent='Importando...'; btn.disabled=true;
+  let ok=0,err=0;
+  const lote=50;
+  for(let i=0;i<impEgresos.length;i+=lote){
+    const batch=impEgresos.slice(i,i+lote).map(r=>({
+      concepto:r.concepto, monto:r.monto, fecha:r.fecha,
+      comprobante_nro:r.comprobante_nro, proveedor:r.proveedor||'',
+      origen:r.origen, clasificado:false, movido:false,
+      created_by:currentUser?.id
+    }));
+    const {error}=await sb.from('fin_egresos_importados').insert(batch);
+    if(error){err+=batch.length;console.error(error);}else{ok+=batch.length;}
+  }
+  document.getElementById('imp-paso2').style.display='none';
+  document.getElementById('imp-paso3').style.display='block';
+  document.getElementById('imp-resultado').textContent=`${ok} egresos importados como pendientes`;
+  document.getElementById('imp-detalle').textContent=err>0?`${err} con error`:'Ahora clasificalos desde la pestaña "Sin clasificar"';
+  btn.textContent='Importar como pendientes'; btn.disabled=false;
+  impEgresos=[];
+  actualizarBadgePendientes();
+}
+
+// ── PENDIENTES DE CLASIFICAR ──────────────
+async function renderPendientes(){
+  const {data}=await sb.from('fin_egresos_importados').select('*').eq('clasificado',false).eq('movido',false).order('fecha',{ascending:false});
+  const cont=document.getElementById('lista-pendientes');
+  seleccionados.clear();
+  actualizarBotonesSel();
+
+  if(!data?.length){
+    cont.innerHTML='<div class="empty"><div style="font-size:32px;margin-bottom:12px">✅</div><p>No hay gastos pendientes de clasificar.</p></div>';
+    return;
+  }
+
+  cont.innerHTML=data.map(r=>`
+    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <input type="checkbox" data-id="${r.id}" style="width:16px;height:16px;flex-shrink:0;cursor:pointer" onchange="toggleSel('${r.id}',this.checked)"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${r.concepto}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${r.fecha||'-'} · ${r.proveedor||'Sin proveedor'} · Comp: ${r.comprobante_nro||'-'}</div>
+      </div>
+      <div style="font-size:15px;font-weight:600;color:var(--red);min-width:100px;text-align:right">${fmt(r.monto)}</div>
+      <button class="btn btn-primary btn-sm" onclick="abrirClasificarUno('${r.id}','${r.concepto.replace(/'/g,"\'")}',${r.monto},'${r.fecha||''}','${r.proveedor||''}')">Clasificar</button>
+    </div>`).join('');
+  
+  actualizarBadgePendientes(data.length);
+}
+
+async function actualizarBadgePendientes(n){
+  if(n===undefined){
+    const {count}=await sb.from('fin_egresos_importados').select('id',{count:'exact',head:true}).eq('clasificado',false).eq('movido',false);
+    n=count||0;
+  }
+  const badge=document.getElementById('badge-pendientes');
+  const btn=document.getElementById('btn-ver-pendientes');
+  if(badge) badge.textContent=n;
+  if(btn) btn.style.display=n>0?'flex':'none';
+}
+
+function toggleSel(id,checked){
+  if(checked) seleccionados.add(id); else seleccionados.delete(id);
+  actualizarBotonesSel();
+}
+
+function toggleSelTodos(checked){
+  document.querySelectorAll('#lista-pendientes input[type=checkbox]').forEach(cb=>{
+    cb.checked=checked;
+    toggleSel(cb.dataset.id,checked);
+  });
+}
+
+function actualizarBotonesSel(){
+  const n=seleccionados.size;
+  const btn=document.getElementById('btn-clasificar-sel');
+  const cnt=document.getElementById('cnt-sel');
+  if(btn) btn.style.display=n>0?'inline-flex':'none';
+  if(cnt) cnt.textContent=n;
+}
+
+function abrirClasificarUno(id,concepto,monto,fecha,proveedor){
+  document.getElementById('clas-id').value=id;
+  document.getElementById('clas-info').innerHTML=`<strong>${concepto}</strong><br><span style="color:var(--red)">${fmt(monto)}</span> · ${fecha}`;
+  document.getElementById('clas-proveedor').value=proveedor||'';
+  poblarCuentasImport();
+  openModal('modal-clasificar-uno');
+}
+
+async function guardarClasificacion(){
+  const id=document.getElementById('clas-id').value;
+  const dataClas={
+    clasificado:true,
+    cuenta_id:document.getElementById('clas-cuenta').value||null,
+    naturaleza:document.getElementById('clas-naturaleza').value,
+    comportamiento:document.getElementById('clas-comportamiento').value,
+    relacion_ingreso:document.getElementById('clas-relacion').value,
+    proveedor:document.getElementById('clas-proveedor').value,
+    proyecto_id:document.getElementById('clas-obra').value||null,
+    movido:true
+  };
+  // 1. Marcar como clasificado
+  const {error:e1}=await sb.from('fin_egresos_importados').update(dataClas).eq('id',id);
+  if(e1){notify('Error: '+e1.message,false);return;}
+
+  // 2. Mover a fin_egresos
+  const {data:orig}=await sb.from('fin_egresos_importados').select('*').eq('id',id).single();
+  if(orig){
+    await sb.from('fin_egresos').insert({
+      concepto:orig.concepto, monto:orig.monto, fecha:orig.fecha,
+      comprobante_nro:orig.comprobante_nro, proveedor:orig.proveedor||dataClas.proveedor,
+      cuenta_id:dataClas.cuenta_id, naturaleza:dataClas.naturaleza,
+      comportamiento:dataClas.comportamiento, relacion_ingreso:dataClas.relacion_ingreso,
+      proyecto_id:dataClas.proyecto_id, observaciones:'Importado de '+orig.origen,
+      created_by:currentUser?.id
+    });
+  }
+  notify('Gasto clasificado y movido a egresos');
+  closeModal('modal-clasificar-uno');
+  renderPendientes();
+  fetchFinanzas();
+}
+
+async function guardarClasificacionMasiva(){
+  if(!seleccionados.size){notify('No hay registros seleccionados',false);return;}
+  const ids=Array.from(seleccionados);
+  const dataClas={
+    clasificado:true, movido:true,
+    cuenta_id:document.getElementById('clas-mas-cuenta').value||null,
+    naturaleza:document.getElementById('clas-mas-naturaleza').value,
+    comportamiento:document.getElementById('clas-mas-comportamiento').value,
+    relacion_ingreso:document.getElementById('clas-mas-relacion').value,
+    proveedor:document.getElementById('clas-mas-proveedor').value||null,
+    proyecto_id:document.getElementById('clas-mas-obra').value||null,
+  };
+
+  // Traer originales
+  const {data:origs}=await sb.from('fin_egresos_importados').select('*').in('id',ids);
+
+  // Marcar como clasificados
+  await sb.from('fin_egresos_importados').update(dataClas).in('id',ids);
+
+  // Mover todos a fin_egresos
+  if(origs?.length){
+    const batch=origs.map(orig=>({
+      concepto:orig.concepto, monto:orig.monto, fecha:orig.fecha,
+      comprobante_nro:orig.comprobante_nro, proveedor:orig.proveedor||dataClas.proveedor||'',
+      cuenta_id:dataClas.cuenta_id, naturaleza:dataClas.naturaleza,
+      comportamiento:dataClas.comportamiento, relacion_ingreso:dataClas.relacion_ingreso,
+      proyecto_id:dataClas.proyecto_id, observaciones:'Importado de MP',
+      created_by:currentUser?.id
+    }));
+    await sb.from('fin_egresos').insert(batch);
+  }
+
+  notify(`${ids.length} gastos clasificados y movidos a egresos`);
+  closeModal('modal-clasificar-masivo');
+  renderPendientes();
+  fetchFinanzas();
+}
+
+// Agregar pendientes al showFinTab
+const _origShowFinTab=showFinTab;
+window.showFinTab=function(t){
+  _origShowFinTab(t);
+  if(t==='pendientes'){ poblarCuentasImport(); renderPendientes(); }
+};
+
+// Resetear modal import al abrir
+const _origOpenModalImp=window.openModal;
+window.openModal=function(id){
+  if(id==='modal-importar-mp'){
+    document.getElementById('imp-paso1').style.display='block';
+    document.getElementById('imp-paso2').style.display='none';
+    document.getElementById('imp-paso3').style.display='none';
+    document.getElementById('imp-filename').textContent='';
+    document.getElementById('imp-file').value='';
+    impEgresos=[];
+    poblarCuentasImport();
+  }
+  if(id==='modal-clasificar-masivo'){
+    document.getElementById('clas-mas-info').textContent=`Se van a clasificar ${seleccionados.size} gastos con la misma categoría.`;
+    poblarCuentasImport();
+  }
+  _origOpenModalImp(id);
+};
+
+// Cargar badge al iniciar
+setTimeout(actualizarBadgePendientes, 2000);
+
 
 </script>
 </body>
