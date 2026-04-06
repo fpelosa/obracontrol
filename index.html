@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v2.4</title>
+<title>ObraControl v2.5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -300,7 +300,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.4</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.5</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -494,6 +494,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Fecha fin estimada</label><input type="date" id="p-fin"/></div>
       <div class="form-group"><label>Avance físico (%)</label><input type="number" id="p-avance" min="0" max="100" placeholder="0"/></div>
       <div class="form-group full"><label>Descripción</label><textarea id="p-desc"></textarea></div>
+      <div class="form-group full" id="p-admin-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔒 Solo administradores</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Precio cobrado al cliente ($)</label><input type="number" id="p-precio-cliente" placeholder="0"/></div>
+          <div class="form-group"><label>Margen esperado (%)</label><input type="number" id="p-margen" placeholder="Calculado automático" readonly style="color:var(--muted)"/></div>
+        </div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-proyecto')">Cancelar</button>
@@ -694,6 +701,45 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-egreso')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarEgreso()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Editar Precio Cliente -->
+<div class="modal-overlay" id="modal-precio-cliente">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Precio al cliente<button class="modal-close" onclick="closeModal('modal-precio-cliente')">✕</button></div>
+    <input type="hidden" id="epc-id"/>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Precio cobrado al cliente ($)</label>
+      <input type="number" id="epc-precio" placeholder="0"/>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-precio-cliente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrecioCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Registrar Cobro -->
+<div class="modal-overlay" id="modal-cobro">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">Registrar cobro<button class="modal-close" onclick="closeModal('modal-cobro')">✕</button></div>
+    <input type="hidden" id="cob-proy-id"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Concepto *</label><input id="cob-concepto" placeholder="Ej: Certificado N°1, Anticipo, Saldo final"/></div>
+      <div class="form-group"><label>Fecha</label><input type="date" id="cob-fecha"/></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="number" id="cob-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Comprobante N°</label><input id="cob-comp" placeholder="Factura / Recibo"/></div>
+      <div class="form-group full" style="flex-direction:row;align-items:center;gap:10px">
+        <input type="checkbox" id="cob-cobrado" style="width:auto"/>
+        <label for="cob-cobrado" style="margin:0;cursor:pointer">Ya fue cobrado (marcar si el dinero ya ingresó)</label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cobro')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCobro()">Registrar</button>
     </div>
   </div>
 </div>
@@ -1141,10 +1187,12 @@ async function verDetalle(id){
       <div class="tab active" onclick="switchTab(this,'tp')">Partidas (${partidas.length})</div>
       <div class="tab" onclick="switchTab(this,'tg')">Gastos (${gastos.length})</div>
       <div class="tab" onclick="switchTab(this,'ti')">Información</div>
+      ${esAdmin()?'<div class="tab" onclick="switchTab(this,'tr')">💰 Rentabilidad</div>':''}
     </div>
     <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar())}</div>
     <div id="tg" class="tab-panel">${renderGastosDetHTML(gastos,partidas,puedeEditar())}</div>
-    <div id="ti" class="tab-panel">${renderInfoHTML(p)}</div>`;
+    <div id="ti" class="tab-panel">${renderInfoHTML(p)}</div>
+    ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id)}</div>`:''}`;
 }
 
 function renderPartidasHTML(partidas,pid,editar){
@@ -1179,6 +1227,162 @@ function renderGastosDetHTML(gastos,partidas,editar){
   </tr>`).join('')}</tbody></table>`;
 }
 
+
+function renderRentabilidadHTML(p, totalGasto, pid){
+  const precioCliente = Number(p.precio_cliente)||0;
+  const presupuesto = Number(p.presupuesto_total)||0;
+  const gananciaEsperada = precioCliente - presupuesto;
+  const gananciaReal = precioCliente - totalGasto;
+  const margenEsperado = precioCliente>0 ? (gananciaEsperada/precioCliente*100).toFixed(1) : 0;
+  const margenReal = precioCliente>0 ? (gananciaReal/precioCliente*100).toFixed(1) : 0;
+
+  return `
+  <div style="margin-bottom:16px">
+    <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      <div class="metric" style="border-color:rgba(59,130,246,.3)">
+        <div class="metric-label">Precio al cliente</div>
+        <div class="metric-value" style="font-size:18px;color:var(--accent2)">${fmt(precioCliente)}</div>
+        <div class="metric-sub" style="margin-top:6px">
+          <button class="btn btn-ghost btn-sm" onclick="editarPrecioCliente('${pid}',${precioCliente})">✏️ Editar</button>
+        </div>
+      </div>
+      <div class="metric" style="border-color:rgba(245,166,35,.3)">
+        <div class="metric-label">Presupuesto obra</div>
+        <div class="metric-value" style="font-size:18px;color:var(--accent)">${fmt(presupuesto)}</div>
+        <div class="metric-sub">Lo máximo a gastar</div>
+      </div>
+      <div class="metric" style="border-color:rgba(34,197,94,.3)">
+        <div class="metric-label">Ganancia esperada</div>
+        <div class="metric-value" style="font-size:18px;color:${gananciaEsperada>=0?'var(--green)':'var(--red)'}">${fmt(gananciaEsperada)}</div>
+        <div class="metric-sub">Margen: ${margenEsperado}%</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;border-color:rgba(34,197,94,.2)">
+      <div class="card-title" style="color:var(--green)">Situación real al día de hoy</div>
+      <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
+        <div class="metric">
+          <div class="metric-label">Gastado hasta hoy</div>
+          <div class="metric-value" style="font-size:18px;color:var(--red)">${fmt(totalGasto)}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Ganancia real actual</div>
+          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=0?'var(--green)':'var(--red)'}">${fmt(gananciaReal)}</div>
+          <div class="metric-sub">Margen real: ${margenReal}%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Diferencia vs esperado</div>
+          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=gananciaEsperada?'var(--green)':'var(--red)'}">${fmt(gananciaReal-gananciaEsperada)}</div>
+          <div class="metric-sub">${gananciaReal>=gananciaEsperada?'✓ Mejor de lo esperado':'⚠ Por debajo del esperado'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:0">Cobros al cliente</div>
+        <button class="btn btn-primary btn-sm" onclick="openModalCobro('${pid}',${precioCliente})">+ Registrar cobro</button>
+      </div>
+      <div id="lista-cobros-${pid}">Cargando cobros...</div>
+    </div>
+  </div>`;
+}
+
+async function cargarCobros(pid){
+  const {data}=await sb.from('obra_cobros').select('*').eq('proyecto_id',pid).order('fecha',{ascending:false});
+  const cont=document.getElementById('lista-cobros-'+pid);
+  if(!cont) return;
+  if(!data?.length){
+    cont.innerHTML='<div class="empty" style="padding:20px"><p>Sin cobros registrados. Registrá el primer cobro.</p></div>';
+    return;
+  }
+  const totalCobrado=data.reduce((s,x)=>s+Number(x.monto),0);
+  cont.innerHTML=`
+    <div style="margin-bottom:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--muted)">Total cobrado</span>
+      <span style="font-size:16px;font-weight:600;color:var(--green)">${fmt(totalCobrado)}</span>
+    </div>
+    <table><thead><tr><th>Fecha</th><th>Concepto</th><th>Comprobante</th><th>Estado</th><th>Monto</th><th></th></tr></thead>
+    <tbody>${data.map(x=>`<tr>
+      <td>${x.fecha||'-'}</td>
+      <td>${x.concepto||'-'}</td>
+      <td style="color:var(--muted)">${x.comprobante_nro||'-'}</td>
+      <td>
+        <span class="badge ${x.cobrado?'badge-green':'badge-amber'}" style="cursor:pointer" onclick="toggleCobro('${x.id}',${!x.cobrado},'${pid}')">
+          ${x.cobrado?'✓ Cobrado':'⏳ Pendiente'}
+        </span>
+      </td>
+      <td style="font-weight:500;color:${x.cobrado?'var(--green)':'var(--muted)'}">${fmt(x.monto)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="eliminarCobro('${x.id}','${pid}')">✕</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function toggleCobro(id, cobrado, pid){
+  await sb.from('obra_cobros').update({cobrado}).eq('id',id);
+  cargarCobros(pid);
+}
+
+async function eliminarCobro(id, pid){
+  if(!confirm('¿Eliminar este cobro?')) return;
+  await sb.from('obra_cobros').delete().eq('id',id);
+  notify('Cobro eliminado');
+  cargarCobros(pid);
+}
+
+function editarPrecioCliente(pid, precioActual){
+  document.getElementById('epc-id').value=pid;
+  document.getElementById('epc-precio').value=precioActual||0;
+  openModal('modal-precio-cliente');
+}
+
+async function guardarPrecioCliente(){
+  const pid=document.getElementById('epc-id').value;
+  const precio=Number(document.getElementById('epc-precio').value)||0;
+  const {error}=await sb.from('proyectos').update({precio_cliente:precio}).eq('id',pid);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Precio actualizado');
+  closeModal('modal-precio-cliente');
+  verDetalle(pid);
+}
+
+function openModalCobro(pid, precioCliente){
+  document.getElementById('cob-proy-id').value=pid;
+  document.getElementById('cob-fecha').value=new Date().toISOString().split('T')[0];
+  openModal('modal-cobro');
+}
+
+async function guardarCobro(){
+  const pid=document.getElementById('cob-proy-id').value;
+  const monto=Number(document.getElementById('cob-monto').value);
+  const concepto=document.getElementById('cob-concepto').value.trim();
+  if(!monto||!concepto){notify('Completá concepto y monto',false);return;}
+  const {error}=await sb.from('obra_cobros').insert({
+    proyecto_id:pid, monto, concepto,
+    fecha:document.getElementById('cob-fecha').value,
+    comprobante_nro:document.getElementById('cob-comp').value,
+    cobrado:document.getElementById('cob-cobrado').checked,
+    created_by:currentUser?.id
+  });
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Cobro registrado');
+  closeModal('modal-cobro');
+  ['cob-monto','cob-concepto','cob-comp'].forEach(id=>document.getElementById(id).value='');
+  cargarCobros(pid);
+}
+
+function calcularMargen(){
+  const precio=Number(document.getElementById('p-precio-cliente')?.value)||0;
+  const ppto=Number(document.getElementById('p-presupuesto')?.value)||0;
+  const margenEl=document.getElementById('p-margen');
+  if(!margenEl) return;
+  if(precio>0 && ppto>0){
+    const margen=((precio-ppto)/precio*100).toFixed(1);
+    margenEl.value=margen+'%';
+  } else {
+    margenEl.value='';
+  }
+}
+
 function renderInfoHTML(p){
   return `<div class="card"><div class="form-grid">
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Cliente</div><div>${p.cliente||'—'}</div></div>
@@ -1211,8 +1415,10 @@ async function guardarProyecto(){
     fecha_inicio:document.getElementById('p-inicio').value||null,
     fecha_fin_estimada:document.getElementById('p-fin').value||null,
     avance_fisico:Number(document.getElementById('p-avance').value)||0,
-    descripcion:document.getElementById('p-desc').value
+    descripcion:document.getElementById('p-desc').value,
+    precio_cliente:esAdmin()?Number(document.getElementById('p-precio-cliente').value)||0:undefined
   };
+  if(!esAdmin()) delete data.precio_cliente;
 
   if(pid){
     // EDITAR obra existente
@@ -1231,7 +1437,8 @@ async function guardarProyecto(){
   closeModal('modal-proyecto');
   document.getElementById('p-id').value='';
   document.getElementById('p-modal-title').innerHTML='Nueva Obra<button class="modal-close" onclick="closeModal(&quot;modal-proyecto&quot;)">✕</button>';
-  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc'].forEach(id=>document.getElementById(id).value='');
+  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc','p-precio-cliente'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-margen').value='';
   document.getElementById('p-estado').value='Planificación';
 
   await Promise.all([fetchProyectos(),fetchGastos()]);
@@ -1259,6 +1466,8 @@ async function editarProyecto(id){
   document.getElementById('p-fin').value=p.fecha_fin_estimada||'';
   document.getElementById('p-avance').value=p.avance_fisico||0;
   document.getElementById('p-desc').value=p.descripcion||'';
+  if(esAdmin()) document.getElementById('p-precio-cliente').value=p.precio_cliente||0;
+  calcularMargen();
 
   openModal('modal-proyecto');
 }
@@ -1557,7 +1766,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v2.4';
+    const CACHE = 'obracontrol-v2.5';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -1633,6 +1842,23 @@ function fabAction() {
 
 // Init FAB
 updateFab('dashboard');
+
+// Calcular margen en tiempo real
+document.getElementById('p-precio-cliente').addEventListener('input', calcularMargen);
+document.getElementById('p-presupuesto').addEventListener('input', calcularMargen);
+
+// Ocultar sección admin si no es admin (se mostrará al cargar perfil)
+function actualizarVisibilidadAdmin(){
+  const sec=document.getElementById('p-admin-section');
+  if(sec) sec.style.display=esAdmin()?'block':'none';
+}
+
+// Cargar cobros cuando se activa tab rentabilidad
+const _origSwitchTab = switchTab;
+window.switchTab = function(el, panelId){
+  _origSwitchTab(el, panelId);
+  if(panelId==='tr' && currentProyectoId) cargarCobros(currentProyectoId);
+};
 
 // Modal gasto open override
 document.querySelector('[onclick="openModal(\'modal-gasto\')"]')?.addEventListener('click',async()=>{
