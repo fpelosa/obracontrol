@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v2.9</title>
+<title>ObraControl v3.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -300,7 +300,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v2.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v3.0</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -778,12 +778,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="modal-title">Importar egresos de Mercado Pago<button class="modal-close" onclick="closeModal('modal-importar-mp')">✕</button></div>
     <div id="imp-paso1">
       <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.7">
-        Se van a importar los <strong style="color:var(--text)">egresos</strong> del extracto: retiros (PAYOUTS) y pagos a proveedores (SETTLEMENT negativos). Después los clasificás uno por uno o en grupo.
+        Soporta dos formatos de Mercado Pago: <strong style="color:var(--text)">Retiros</strong> (withdraw-XXXXX.csv) y <strong style="color:var(--text)">Extracto general</strong> (settlement-XXXXX.csv). Después clasificás cada gasto con cuenta, naturaleza y obra.
       </div>
       <div style="border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;cursor:pointer" onclick="document.getElementById('imp-file').click()">
         <div style="font-size:26px;margin-bottom:8px">📂</div>
         <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px">Seleccioná el archivo CSV de Mercado Pago</div>
-        <div style="font-size:12px;color:var(--muted)">settlement-XXXXXXXX-manual-XXXX.csv</div>
+        <div style="font-size:12px;color:var(--muted)">withdraw-XXXXXXXX.csv · settlement-XXXXXXXX.csv</div>
         <input type="file" id="imp-file" accept=".csv" style="display:none" onchange="procesarCSVEgresos(this)"/>
       </div>
       <div id="imp-filename" style="font-size:12px;color:var(--accent);margin-top:8px;text-align:center"></div>
@@ -2046,7 +2046,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v2.9';
+    const CACHE = 'obracontrol-v3.0';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -2454,60 +2454,71 @@ function procesarCSVEgresos(input){
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const lines = e.target.result.split('\n').filter(l=>l.trim());
+      const text = e.target.result.replace(/^\uFEFF/,''); // quitar BOM
+      const lines = text.split('\n').filter(l=>l.trim());
       const headers = lines[0].split(';').map(h=>h.trim().replace(/"/g,''));
-      const get = (cols,name) => { const i=headers.indexOf(name); return i>=0&&i<cols.length?cols[i].trim().replace(/^"|"$/g,''):''; };
+
+      // Detectar formato: withdraw (retiros MP) o settlement (extracto general)
+      const esWithdraw = headers.some(h=>h.includes('withdraw_id')||h.includes('Número de retiro'));
+
+      const get = (cols,name) => {
+        const i=headers.findIndex(h=>h.includes(name));
+        return i>=0&&i<cols.length?cols[i].trim().replace(/^"|"$/g,''):'';
+      };
 
       impEgresos = [];
-      let incluidos = 0, excluidos = 0;
 
       for(let i=1;i<lines.length;i++){
-        const cols = parsearLineaCSV(lines[i]);
-        if(cols.length<5) continue;
-        const tipo = get(cols,'TRANSACTION_TYPE');
-        const monto = parseFloat(get(cols,'TRANSACTION_AMOUNT')||0);
-        const neto = parseFloat(get(cols,'SETTLEMENT_NET_AMOUNT')||0);
+        const cols = lines[i].split(';');
+        if(cols.length<4) continue;
 
-        // Solo egresos: PAYOUTS o SETTLEMENT negativos
-        const esEgreso = tipo==='PAYOUTS' || (tipo==='SETTLEMENT' && monto<0);
-        if(!esEgreso){ excluidos++; continue; }
+        let fecha,monto,concepto,proveedor,comprobante,banco;
 
-        const fecha = (get(cols,'TRANSACTION_DATE')||'').slice(0,10);
-        const payer = get(cols,'PAYER_NAME');
-        const source = get(cols,'SOURCE_ID');
-        const taxes = Math.abs(parseFloat(get(cols,'TAXES_AMOUNT')||0));
+        if(esWithdraw){
+          // Formato: withdraw-XXXXXX.csv
+          // Columnas: fecha;withdraw_id;status;status_detail;amount;fee;...;titular;id_type;id_num;bank_id;bank_name;...
+          fecha = get(cols,'date_created')||get(cols,'Fecha')||cols[0]?.trim();
+          fecha = fecha?.slice(0,10);
+          const status = get(cols,'status')||cols[2]?.trim().replace(/"/g,'');
+          if(status && status!=='approved') continue; // solo aprobados
+          monto = Math.abs(parseFloat(get(cols,'amount')||get(cols,'Monto')||cols[4])||0);
+          proveedor = get(cols,'bank_account_holder')||get(cols,'Nombre del titular')||cols[8]?.trim().replace(/"/g,'')||'';
+          banco = get(cols,'bank_name')||get(cols,'Nombre del banco')||cols[12]?.trim().replace(/"/g,'')||'';
+          comprobante = get(cols,'withdraw_id')||get(cols,'Número de retiro')||cols[1]?.trim().replace(/"/g,'')||'';
+          concepto = `Transferencia a ${proveedor}${banco?' ('+banco+')':''}`;
+        } else {
+          // Formato: settlement extracto general
+          const tipo = get(cols,'TRANSACTION_TYPE');
+          monto = parseFloat(get(cols,'TRANSACTION_AMOUNT')||0);
+          const neto = parseFloat(get(cols,'SETTLEMENT_NET_AMOUNT')||0);
+          const esEgreso = tipo==='PAYOUTS'||(tipo==='SETTLEMENT'&&monto<0);
+          if(!esEgreso) continue;
+          fecha = (get(cols,'TRANSACTION_DATE')||'').slice(0,10);
+          proveedor = get(cols,'PAYER_NAME')||'';
+          comprobante = get(cols,'SOURCE_ID')||'';
+          monto = Math.abs(Math.round(neto));
+          concepto = tipo==='PAYOUTS'?`Retiro MP`:`Pago a ${proveedor||'proveedor'} vía MP`;
+        }
 
-        const esRetiro = tipo==='PAYOUTS';
-        const concepto = esRetiro
-          ? `Retiro MP${taxes>0?' (imp. '+fmt(taxes)+')':''}`
-          : `Pago a ${payer||'proveedor'} vía MP`;
+        if(!monto||monto<=0) continue;
 
-        impEgresos.push({
-          concepto, fecha,
-          monto: Math.abs(Math.round(neto)),
-          monto_original: Math.abs(monto),
-          comprobante_nro: source,
-          proveedor: payer,
-          tipo_mp: tipo,
-          origen: 'Mercado Pago'
-        });
-        incluidos++;
+        impEgresos.push({ concepto, fecha, monto:Math.round(monto), proveedor, comprobante_nro:comprobante, origen:'Mercado Pago' });
       }
 
       if(!impEgresos.length){ notify('No se encontraron egresos en el archivo', false); return; }
 
       const total = impEgresos.reduce((s,r)=>s+r.monto,0);
       document.getElementById('imp-resumen').innerHTML = `
-        <div class="metric"><div class="metric-label">Egresos encontrados</div><div class="metric-value" style="font-size:20px;color:var(--red)">${incluidos}</div><div class="metric-sub">${excluidos} ingresos excluidos</div></div>
-        <div class="metric"><div class="metric-label">Total egresos</div><div class="metric-value" style="font-size:20px">${fmt(total)}</div></div>
+        <div class="metric"><div class="metric-label">Egresos encontrados</div><div class="metric-value" style="font-size:20px;color:var(--red)">${impEgresos.length}</div></div>
+        <div class="metric"><div class="metric-label">Total</div><div class="metric-value" style="font-size:20px">${fmt(total)}</div></div>
         <div class="metric"><div class="metric-label">Estado</div><div class="metric-value" style="font-size:14px;color:var(--accent)">Pendientes de clasificar</div></div>`;
 
       document.getElementById('imp-preview-tabla').innerHTML =
-        `<thead><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th>Monto</th></tr></thead>
+        `<thead><tr><th>Fecha</th><th>Destinatario</th><th>Comprobante</th><th>Monto</th></tr></thead>
         <tbody>${impEgresos.slice(0,10).map(r=>`<tr>
-          <td>${r.fecha}</td>
-          <td style="font-size:12px">${r.concepto}</td>
-          <td><span class="badge ${r.tipo_mp==='PAYOUTS'?'badge-amber':'badge-red'}">${r.tipo_mp==='PAYOUTS'?'Retiro':'Pago prov.'}</span></td>
+          <td>${r.fecha||'-'}</td>
+          <td style="font-size:12px">${r.proveedor||r.concepto}</td>
+          <td style="color:var(--muted);font-size:11px">${r.comprobante_nro||'-'}</td>
           <td style="font-weight:500;color:var(--red)">${fmt(r.monto)}</td>
         </tr>`).join('')}
         ${impEgresos.length>10?`<tr><td colspan="4" style="text-align:center;color:var(--muted);font-size:12px">... y ${impEgresos.length-10} más</td></tr>`:''}
@@ -2515,7 +2526,7 @@ function procesarCSVEgresos(input){
 
       document.getElementById('imp-paso1').style.display='none';
       document.getElementById('imp-paso2').style.display='block';
-    } catch(err){ console.error(err); notify('Error al leer el archivo', false); }
+    } catch(err){ console.error(err); notify('Error al leer: '+err.message, false); }
   };
   reader.readAsText(file,'UTF-8');
 }
