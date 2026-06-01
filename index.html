@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v4.3</title>
+<title>ObraControl v4.4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -369,6 +369,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="view-proyectos" class="view">
       <div id="lista-proyectos">
         <div class="topbar"><h1>Proyectos</h1><button class="btn btn-primary" id="btn-nueva-obra2" onclick="openModal('modal-proyecto')">+ Nueva Obra</button></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn btn-ghost" id="filtro-estado-todos" onclick="filtrarProyectos('todos')" style="border-color:var(--accent);color:var(--accent)">Todos</button>
+          <button class="btn btn-ghost" id="filtro-estado-En curso" onclick="filtrarProyectos('En curso')">En curso</button>
+          <button class="btn btn-ghost" id="filtro-estado-Planificación" onclick="filtrarProyectos('Planificación')">Planificación</button>
+          <button class="btn btn-ghost" id="filtro-estado-Finalizado" onclick="filtrarProyectos('Finalizado')">Finalizados</button>
+          <button class="btn btn-ghost" id="filtro-estado-Suspendido" onclick="filtrarProyectos('Suspendido')">Suspendidos</button>
+        </div>
         <div class="project-cards" id="project-cards"></div>
       </div>
       <div id="detalle-proyecto" style="display:none"></div>
@@ -563,6 +570,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
       <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
+      <div class="form-group"><label>Cuenta bancaria</label><select id="g-cuenta"><option value="">Sin cuenta</option></select></div>
       <div class="form-group full"><label>Observaciones</label><textarea id="g-obs"></textarea></div>
     </div>
     <div class="form-actions">
@@ -1260,12 +1268,27 @@ async function renderDashboard(){
 }
 
 // ── PROYECTOS ──────────────────────────────
+let filtroEstadoActual = 'todos';
+
+function filtrarProyectos(estado){
+  filtroEstadoActual = estado;
+  // Actualizar botones
+  document.querySelectorAll('[id^="filtro-estado-"]').forEach(btn => {
+    btn.style.borderColor = '';
+    btn.style.color = '';
+  });
+  const btn = document.getElementById('filtro-estado-'+estado);
+  if(btn){ btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
+  renderProyectos();
+}
+
 function renderProyectos(){
-  const p=cache.proyectos;
+  let p = cache.proyectos;
+  if(filtroEstadoActual !== 'todos') p = p.filter(x => x.estado === filtroEstadoActual);
   document.getElementById('lista-proyectos').style.display='block';
   document.getElementById('detalle-proyecto').style.display='none';
   const cont=document.getElementById('project-cards');
-  if(!p.length){cont.innerHTML='<div class="empty"><p>No hay obras. Crea la primera.</p></div>';return;}
+  if(!p.length){cont.innerHTML=`<div class="empty"><p>No hay obras con estado "${filtroEstadoActual === 'todos' ? 'ninguno' : filtroEstadoActual}".</p></div>`;return;}
   cont.innerHTML=p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
     return `<div class="project-card" onclick="verDetalle('${x.id}')">
@@ -1695,6 +1718,12 @@ async function poblarSelectGasto(){
   const sel=document.getElementById('g-proyecto');
   sel.innerHTML=(data||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
   if(data?.length) await cargarPartidasSelect();
+  // Poblar cuentas bancarias
+  const selCuenta=document.getElementById('g-cuenta');
+  if(selCuenta){
+    const cuentas=cacheFin?.cuentas||[];
+    selCuenta.innerHTML='<option value="">Sin cuenta</option>'+cuentas.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  }
 }
 
 async function abrirGastoProyecto(pid){
@@ -1714,12 +1743,14 @@ async function guardarGasto(){
   const data={proyecto_id:pid,partida_id:partidaId,categoria:document.getElementById('g-cat').value,
     descripcion:desc,monto,fecha:document.getElementById('g-fecha').value,
     comprobante_nro:document.getElementById('g-comp').value,observaciones:document.getElementById('g-obs').value,
+    cuenta_id:document.getElementById('g-cuenta').value||null,
     created_by:currentUser.id,pagado_por:currentUser.id};
   const {error}=await sb.from('gastos').insert(data);
   if(error){notify('Error: '+error.message,false);return;}
   notify('Gasto registrado');
   closeModal('modal-gasto');
   ['g-monto','g-desc','g-comp','g-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('g-cuenta').value='';
   await fetchGastos();
   renderGastos(); renderDashboard();
   if(currentProyectoId===pid) verDetalle(pid);
