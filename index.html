@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v4.5</title>
+<title>ObraControl v4.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -301,7 +301,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v4.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v4.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -576,7 +576,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Ubicación</label><input id="p-ubicacion" placeholder="Ciudad, Departamento"/></div>
       <div class="form-group"><label>Cliente / Contratante</label><input id="p-cliente" placeholder="Nombre del cliente"/></div>
       <div class="form-group"><label>Presupuesto total ($)</label><input type="number" id="p-presupuesto" placeholder="0"/></div>
-      <div class="form-group"><label>Estado</label>
+      <div class="form-group" id="p-estado-group"><label>Estado</label>
         <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option></select>
       </div>
       <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio"/></div>
@@ -1173,7 +1173,7 @@ async function cargarPerfil(){
       document.getElementById('user-rol').textContent=rolLabel(currentPerfil.rol);
       document.getElementById('user-avatar').textContent=(currentPerfil.nombre||'?')[0].toUpperCase();
       if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; }
-      if(!puedeEditar()){
+      if(!puedeEditar() && !esSupervisor()){
         document.getElementById('btn-nueva-obra').style.display='none';
         document.getElementById('btn-nueva-obra2').style.display='none';
       }
@@ -1768,7 +1768,7 @@ async function guardarProyecto(){
     ubicacion:document.getElementById('p-ubicacion').value,
     cliente:document.getElementById('p-cliente').value,
     presupuesto_total:Number(document.getElementById('p-presupuesto').value)||0,
-    estado:document.getElementById('p-estado').value,
+    estado:esSupervisor()?'Planificación':document.getElementById('p-estado').value,
     fecha_inicio:document.getElementById('p-inicio').value||null,
     fecha_fin_estimada:document.getElementById('p-fin').value||null,
     avance_fisico:Number(document.getElementById('p-avance').value)||0,
@@ -2777,7 +2777,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v4.5';
+    const CACHE = 'obracontrol-v4.6';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -2862,6 +2862,9 @@ document.getElementById('p-presupuesto').addEventListener('input', calcularMarge
 function actualizarVisibilidadAdmin(){
   const sec=document.getElementById('p-admin-section');
   if(sec) sec.style.display=esAdmin()?'block':'none';
+  // Supervisor: ocultar selector de estado (siempre será Planificación)
+  const estadoGrp=document.getElementById('p-estado-group');
+  if(estadoGrp) estadoGrp.style.display=esSupervisor()?'none':'';
 }
 
 // Cargar cobros cuando se activa tab rentabilidad
