@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v4.4</title>
+<title>ObraControl v4.5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -301,7 +301,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v4.2</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v4.5</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -668,7 +668,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <label>Rol del usuario</label>
       <select id="rol-nuevo">
         <option value="visor">Visor</option>
-        <option value="capataz">Capataz</option>
+        <option value="supervisor">Supervisor</option>
         <option value="administrativo">Administrativo</option>
         <option value="ingeniero">Ingeniero</option>
         <option value="director">Director</option>
@@ -702,7 +702,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Rol</label>
         <select id="cu-rol">
           <option value="visor">Visor</option>
-          <option value="capataz">Capataz</option>
+          <option value="supervisor">Supervisor</option>
           <option value="administrativo">Administrativo</option>
           <option value="ingeniero">Ingeniero</option>
           <option value="director">Director</option>
@@ -989,10 +989,10 @@ const estadoBadge = e => {
   const m={'En curso':'badge-blue','Planificación':'badge-amber','Finalizado':'badge-green','Suspendido':'badge-red','Para Presupuesto':'badge-purple'};
   return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
 };
-const rolLabel = r => ({admin:'Administrador',director:'Director',ingeniero:'Ingeniero',administrativo:'Administrativo',capataz:'Capataz',visor:'Visor'}[r]||r);
+const rolLabel = r => ({admin:'Administrador',director:'Director',ingeniero:'Ingeniero',administrativo:'Administrativo',supervisor:'Supervisor',visor:'Visor'}[r]||r);
 const puedeEditar = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
 const esAdmin = () => currentPerfil?.rol === 'admin';
-const esCapataz = () => currentPerfil?.rol === 'capataz';
+const esSupervisor = () => currentPerfil?.rol === 'supervisor';
 const esAdministrativoOSuperior = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
 
 function notify(msg, ok=true){
@@ -1365,10 +1365,10 @@ function renderProyectos(){
 
   let p = cache.proyectos;
 
-  // Restricción por rol: Capataz solo ve proyectos en Planificación
-  if(esCapataz()){
+  // Restricción por rol: Supervisor solo ve proyectos en Planificación
+  if(esSupervisor()){
     p = p.filter(x => x.estado === 'Planificación');
-    // Ocultar filtros de estado para capataz (no los necesita)
+    // Ocultar filtros de estado para supervisor (no los necesita)
     const filtroBar = document.querySelector('[id^="filtro-estado-todos"]')?.parentElement;
     if(filtroBar) filtroBar.style.display = 'none';
   } else {
@@ -1527,7 +1527,7 @@ async function verDetalle(id){
         ${puedeEditar()?`<button class="btn btn-ghost btn-sm" onclick="editarProyecto('${id}')">✏️ Editar</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirModalPartida('${id}')">+ Partida</button>
         <button class="btn btn-primary btn-sm" onclick="abrirGastoProyecto('${id}')">+ Gasto</button>`:''}
-        ${esCapataz() && p.estado==='Planificación'?`<button class="btn btn-primary btn-sm" onclick="marcarTerminadoCapataz('${id}')" style="background:var(--green);border-color:var(--green)">✅ Marcar como terminado</button>`:''}
+        ${esSupervisor() && p.estado==='Planificación'?`<button class="btn btn-primary btn-sm" onclick="marcarTerminadoSupervisor('${id}')" style="background:var(--green);border-color:var(--green)">✅ Marcar como terminado</button>`:''}
         ${esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarProyecto('${id}')">Eliminar</button>`:''}
       </div>
       </div>
@@ -1848,7 +1848,7 @@ async function eliminarProyecto(id){
 }
 
 // ── CAPATAZ: Marcar terminado → Para Presupuesto ──
-async function marcarTerminadoCapataz(id){
+async function marcarTerminadoSupervisor(id){
   if(!confirm('¿Marcar esta obra como terminada? Pasará al estado "Para Presupuesto" para que el área administrativa la complete.')) return;
   const {error}=await sb.from('proyectos').update({estado:'Para Presupuesto'}).eq('id',id);
   if(error){notify('Error: '+error.message,false);return;}
@@ -1866,7 +1866,7 @@ function renderParaPresupuestoHTML(p, id){
       <span style="font-size:20px">📋</span>
       <div>
         <div style="font-weight:600;color:#c084fc">Obra lista para presupuestar</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">El Capataz marcó esta obra como terminada. Completá los datos adicionales y cambiá el estado.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">El Supervisor marcó esta obra como terminada. Completá los datos adicionales y cambiá el estado.</div>
       </div>
     </div>
     <div class="form-grid">
@@ -2777,7 +2777,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v4.2';
+    const CACHE = 'obracontrol-v4.5';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
