@@ -89,6 +89,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .badge-blue{background:rgba(59,130,246,.15);color:var(--accent2)}
 .badge-red{background:rgba(239,68,68,.15);color:var(--red)}
 .badge-gray{background:rgba(122,128,153,.15);color:var(--muted)}
+.badge-purple{background:rgba(168,85,247,.15);color:#c084fc}
 /* ── PROGRESS ── */
 .progress-wrap{background:rgba(255,255,255,.06);border-radius:4px;height:5px;width:100%;overflow:hidden}
 .progress-bar{height:100%;border-radius:4px;transition:width .3s}
@@ -377,6 +378,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <button class="btn btn-ghost" id="filtro-estado-todos" onclick="filtrarProyectos('todos')" style="border-color:var(--accent);color:var(--accent);font-size:12px;padding:5px 12px">Todos</button>
             <button class="btn btn-ghost" id="filtro-estado-En curso" onclick="filtrarProyectos('En curso')" style="font-size:12px;padding:5px 12px">En curso</button>
             <button class="btn btn-ghost" id="filtro-estado-Planificación" onclick="filtrarProyectos('Planificación')" style="font-size:12px;padding:5px 12px">Planificación</button>
+            <button class="btn btn-ghost" id="filtro-estado-Para Presupuesto" onclick="filtrarProyectos('Para Presupuesto')" style="font-size:12px;padding:5px 12px">Para Presupuesto</button>
             <button class="btn btn-ghost" id="filtro-estado-Finalizado" onclick="filtrarProyectos('Finalizado')" style="font-size:12px;padding:5px 12px">Finalizados</button>
             <button class="btn btn-ghost" id="filtro-estado-Suspendido" onclick="filtrarProyectos('Suspendido')" style="font-size:12px;padding:5px 12px">Suspendidos</button>
           </div>
@@ -575,7 +577,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Cliente / Contratante</label><input id="p-cliente" placeholder="Nombre del cliente"/></div>
       <div class="form-group"><label>Presupuesto total ($)</label><input type="number" id="p-presupuesto" placeholder="0"/></div>
       <div class="form-group"><label>Estado</label>
-        <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option></select>
+        <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option></select>
       </div>
       <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio"/></div>
       <div class="form-group"><label>Fecha fin estimada</label><input type="date" id="p-fin"/></div>
@@ -984,12 +986,14 @@ const fmtN = n => new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).forma
 const pct = (a,b) => b>0?Math.round(a/b*100):0;
 const colorPct = p => p>90?'var(--red)':p>70?'var(--orange)':p>50?'var(--accent)':'var(--green)';
 const estadoBadge = e => {
-  const m={'En curso':'badge-blue','Planificación':'badge-amber','Finalizado':'badge-green','Suspendido':'badge-red'};
+  const m={'En curso':'badge-blue','Planificación':'badge-amber','Finalizado':'badge-green','Suspendido':'badge-red','Para Presupuesto':'badge-purple'};
   return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
 };
 const rolLabel = r => ({admin:'Administrador',director:'Director',ingeniero:'Ingeniero',administrativo:'Administrativo',capataz:'Capataz',visor:'Visor'}[r]||r);
 const puedeEditar = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
 const esAdmin = () => currentPerfil?.rol === 'admin';
+const esCapataz = () => currentPerfil?.rol === 'capataz';
+const esAdministrativoOSuperior = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
 
 function notify(msg, ok=true){
   const n=document.getElementById('notif');
@@ -1361,6 +1365,17 @@ function renderProyectos(){
 
   let p = cache.proyectos;
 
+  // Restricción por rol: Capataz solo ve proyectos en Planificación
+  if(esCapataz()){
+    p = p.filter(x => x.estado === 'Planificación');
+    // Ocultar filtros de estado para capataz (no los necesita)
+    const filtroBar = document.querySelector('[id^="filtro-estado-todos"]')?.parentElement;
+    if(filtroBar) filtroBar.style.display = 'none';
+  } else {
+    const filtroBar = document.querySelector('[id^="filtro-estado-todos"]')?.parentElement;
+    if(filtroBar) filtroBar.style.display = '';
+  }
+
   // Poblar dropdown de clientes con todos los proyectos
   _poblarClientesFiltro(p);
 
@@ -1454,7 +1469,7 @@ function _renderProyTabla(p){
 function _renderProyLista(p){
   const rows = p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
-    const dotCol = x.estado==='En curso'?'var(--green)':x.estado==='Suspendido'?'var(--orange)':x.estado==='Finalizado'?'var(--accent2)':'var(--muted)';
+    const dotCol = x.estado==='En curso'?'var(--green)':x.estado==='Suspendido'?'var(--orange)':x.estado==='Finalizado'?'var(--accent2)':x.estado==='Para Presupuesto'?'#c084fc':'var(--muted)';
     return `<div onclick="verDetalle('${x.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
       <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0"></div>
       <div style="flex:1.8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px">${x.nombre}</div>
@@ -1512,7 +1527,9 @@ async function verDetalle(id){
         ${puedeEditar()?`<button class="btn btn-ghost btn-sm" onclick="editarProyecto('${id}')">✏️ Editar</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirModalPartida('${id}')">+ Partida</button>
         <button class="btn btn-primary btn-sm" onclick="abrirGastoProyecto('${id}')">+ Gasto</button>`:''}
+        ${esCapataz() && p.estado==='Planificación'?`<button class="btn btn-primary btn-sm" onclick="marcarTerminadoCapataz('${id}')" style="background:var(--green);border-color:var(--green)">✅ Marcar como terminado</button>`:''}
         ${esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarProyecto('${id}')">Eliminar</button>`:''}
+      </div>
       </div>
     </div>
     <div class="metrics" style="margin-bottom:18px">
@@ -1525,11 +1542,13 @@ async function verDetalle(id){
       <div class="tab active" onclick="switchTab(this,'tp')">Partidas (${partidas.length})</div>
       <div class="tab" onclick="switchTab(this,'tg')">Gastos (${gastos.length})</div>
       <div class="tab" onclick="switchTab(this,'ti')">Información</div>
+      ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div class="tab" style="color:var(--accent);font-weight:600" onclick="switchTab(this,'tpp')">📋 Para Presupuesto</div>`:''}
       ${esAdmin()?`<div class="tab" onclick="switchTab(this,'tr')">💰 Rentabilidad</div>`:''}
     </div>
     <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar())}</div>
     <div id="tg" class="tab-panel">${renderGastosDetHTML(gastos,partidas,puedeEditar())}</div>
     <div id="ti" class="tab-panel">${renderInfoHTML(p)}</div>
+    ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div id="tpp" class="tab-panel">${renderParaPresupuestoHTML(p,id)}</div>`:''}
     ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id)}</div>`:''}`;
 }
 
@@ -1799,7 +1818,16 @@ async function editarProyecto(id){
   document.getElementById('p-ubicacion').value=p.ubicacion||'';
   document.getElementById('p-cliente').value=p.cliente||'';
   document.getElementById('p-presupuesto').value=p.presupuesto_total||0;
-  document.getElementById('p-estado').value=p.estado||'Planificación';
+  // Ajustar opciones de estado según rol
+  const selEstado=document.getElementById('p-estado');
+  if(esAdministrativoOSuperior()){
+    // Admin/ingeniero/director/administrativo: todos los estados
+    selEstado.innerHTML='<option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option>';
+  } else {
+    // Otros roles: solo Planificación y En curso
+    selEstado.innerHTML='<option>Planificación</option><option>En curso</option>';
+  }
+  selEstado.value=p.estado||'Planificación';
   document.getElementById('p-inicio').value=p.fecha_inicio||'';
   document.getElementById('p-fin').value=p.fecha_fin_estimada||'';
   document.getElementById('p-avance').value=p.avance_fisico||0;
@@ -1818,6 +1846,66 @@ async function eliminarProyecto(id){
   await Promise.all([fetchProyectos(),fetchGastos()]);
   renderProyectos();
 }
+
+// ── CAPATAZ: Marcar terminado → Para Presupuesto ──
+async function marcarTerminadoCapataz(id){
+  if(!confirm('¿Marcar esta obra como terminada? Pasará al estado "Para Presupuesto" para que el área administrativa la complete.')) return;
+  const {error}=await sb.from('proyectos').update({estado:'Para Presupuesto'}).eq('id',id);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Obra marcada como terminada. Ahora está en estado "Para Presupuesto".');
+  await fetchProyectos();
+  renderProyectos();
+}
+
+// ── PANEL: Para Presupuesto (Administrativo o superior) ──
+function renderParaPresupuestoHTML(p, id){
+  const ESTADOS=['En curso','Planificación','Para Presupuesto','Suspendido','Finalizado'];
+  return `
+  <div class="card" style="margin-bottom:16px;border:1px solid rgba(168,85,247,.3);background:rgba(168,85,247,.05)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:20px">📋</span>
+      <div>
+        <div style="font-weight:600;color:#c084fc">Obra lista para presupuestar</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">El Capataz marcó esta obra como terminada. Completá los datos adicionales y cambiá el estado.</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Observaciones del área administrativa</label>
+        <textarea id="pp-observaciones" placeholder="Notas, condiciones, datos relevantes para el presupuesto..." style="min-height:80px">${p.obs_presupuesto||''}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Fecha de revisión</label>
+        <input type="date" id="pp-fecha-revision" value="${p.fecha_revision_presupuesto||''}"/>
+      </div>
+      <div class="form-group">
+        <label>Cambiar estado a</label>
+        <select id="pp-nuevo-estado">
+          ${ESTADOS.filter(e=>e!=='Para Presupuesto').map(e=>`<option value="${e}">${e}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="guardarDatosPresupuesto('${id}')">💾 Guardar y cambiar estado</button>
+      <button class="btn btn-ghost" onclick="guardarDatosPresupuesto('${id}', true)">Guardar sin cambiar estado</button>
+    </div>
+  </div>`;
+}
+
+async function guardarDatosPresupuesto(id, soloGuardar=false){
+  if(!esAdministrativoOSuperior()){notify('Sin permisos',false);return;}
+  const observaciones=document.getElementById('pp-observaciones')?.value||'';
+  const fechaRevision=document.getElementById('pp-fecha-revision')?.value||null;
+  const nuevoEstado=soloGuardar?'Para Presupuesto':(document.getElementById('pp-nuevo-estado')?.value||'Para Presupuesto');
+  const upd={obs_presupuesto:observaciones, fecha_revision_presupuesto:fechaRevision||null, estado:nuevoEstado};
+  const {error}=await sb.from('proyectos').update(upd).eq('id',id);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify(soloGuardar?'Datos guardados':'Estado actualizado correctamente');
+  await fetchProyectos();
+  verDetalle(id);
+}
+
+
 
 // ── PARTIDAS ──────────────────────────────
 function abrirModalPartida(pid){
