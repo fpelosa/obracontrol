@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v5.7</title>
+<title>ObraControl v5.8</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -309,7 +309,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.7</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.8</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -1145,7 +1145,7 @@ function showLogin(){
   hideLoading();
   document.getElementById('app').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
-  currentUser=null; currentPerfil=null;
+  currentUser=null; currentPerfil=null; _perfilYaRenderizado=false;
 }
 
 // Auth state listener — con timeout para evitar cuelgues
@@ -1215,6 +1215,8 @@ authTimeout = setTimeout(() => {
   }
 })();
 
+let _perfilYaRenderizado = false;
+
 async function cargarPerfil(){
   try {
     const result = await Promise.race([
@@ -1245,14 +1247,11 @@ async function cargarPerfil(){
         document.getElementById('btn-nueva-obra2').style.display='none';
       }
       actualizarVisibilidadAdmin();
-      // Re-renderizar la vista activa para que los botones reflejen el rol correcto
-      const vistaActiva = document.querySelector('.view.active')?.id?.replace('view-','');
-      if(vistaActiva === 'proyectos'){
-        // Si está en detalle de proyecto, re-renderizarlo
+      // Si hay un detalle de proyecto abierto sin perfil, re-renderizarlo ahora
+      if(!_perfilYaRenderizado){
+        _perfilYaRenderizado = true;
         if(currentProyectoId && document.getElementById('detalle-proyecto')?.style.display !== 'none'){
           verDetalle(currentProyectoId);
-        } else {
-          renderProyectos();
         }
       }
     }
@@ -1601,6 +1600,14 @@ function irADetalle(id){
 }
 
 async function verDetalle(id){
+  // Esperar a que el perfil esté disponible (máx 15s)
+  if(!currentPerfil){
+    let espera = 0;
+    while(!currentPerfil && espera < 150){
+      await new Promise(r=>setTimeout(r,100));
+      espera++;
+    }
+  }
   currentProyectoId=id;
   document.getElementById('lista-proyectos').style.display='none';
   const det=document.getElementById('detalle-proyecto');
@@ -3295,7 +3302,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v5.7';
+    const CACHE = 'obracontrol-v5.8';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
