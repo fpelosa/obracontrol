@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v6.5</title>
+<title>ObraControl v6.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -572,7 +572,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
 
     <div id="view-admin" class="view">
-      <div class="topbar"><h1>Gestión de usuarios</h1><button class="btn btn-primary" onclick="openModal('modal-crear-usuario')">+ Agregar usuario</button></div>
+      <div class="topbar"><h1>Gestión de usuarios</h1>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="openModal('modal-changelog')" style="font-size:12px">📋 Historial de cambios</button>
+          <button class="btn btn-primary" onclick="openModal('modal-crear-usuario')">+ Agregar usuario</button>
+        </div>
+      </div>
       <div class="card"><div class="table-wrap"><table id="tabla-usuarios"></table></div></div>
     </div>
   </main>
@@ -652,6 +657,71 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-gasto')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarGasto()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Changelog -->
+<div class="modal-overlay" id="modal-changelog">
+  <div class="modal" style="max-width:620px;max-height:80vh;overflow-y:auto">
+    <div class="modal-title">📋 Historial de cambios<button class="modal-close" onclick="closeModal('modal-changelog')">✕</button></div>
+    <div style="display:flex;flex-direction:column;gap:20px;padding-top:4px">
+
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v6.6</span>
+          <span style="font-size:12px;color:var(--muted)">Actual</span>
+        </div>
+        <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
+          <li>Dashboard del Supervisor con métricas propias, bandeja de planificación con días de demora</li>
+          <li>Sidebar del Supervisor muestra solo Dashboard, Proyectos y Reportes</li>
+          <li>Nuevo estado "Esperando aprobación" (badge cyan) con panel dedicado</li>
+          <li>Generación de presupuesto desde proyecto en estado "Para Presupuesto"</li>
+          <li>Botón "Actualizar presupuesto" al modificar partidas estando en "Esperando aprobación"</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;background:var(--bg3);color:var(--muted);padding:2px 8px;border-radius:12px">v6.2–6.4</span>
+        </div>
+        <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
+          <li>Pestaña "📎 Adjuntos" dedicada en detalle de proyecto con documentos, adjuntos de partidas y comprobantes de gastos</li>
+          <li>Fix: modal "Agregar Partida" no abría (estaba anidado dentro del modal de gastos)</li>
+          <li>Políticas RLS de Supabase para subir y leer adjuntos</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;background:var(--bg3);color:var(--muted);padding:2px 8px;border-radius:12px">v5.4–6.1</span>
+        </div>
+        <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
+          <li>Adjuntos en proyectos, gastos y partidas (Supabase Storage bucket "adjuntos")</li>
+          <li>Registro fotográfico en presupuestos — hoja adicional en el PDF</li>
+          <li>Costo por ítem en presupuesto con cálculo de utilidad estimada (solo pantalla, no PDF)</li>
+          <li>Estado de aprobación en gastos: por aprobar / aprobado / rechazado</li>
+          <li>Marca visual en listado de proyectos cuando hay gastos por aprobar</li>
+          <li>Precio de venta en partidas con calculadora (%, importe adicional o directo)</li>
+          <li>Recálculo automático de presupuesto y precio cliente desde partidas</li>
+        </ul>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;background:var(--bg3);color:var(--muted);padding:2px 8px;border-radius:12px">v4.5–5.3</span>
+        </div>
+        <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
+          <li>Rol "Supervisor" reemplaza a "Capataz" — acceso a Planificación y En curso</li>
+          <li>Estado "Para Presupuesto" con panel administrativo y botón "Aprobar → En curso"</li>
+          <li>Supervisor puede crear proyectos (siempre en Planificación), editar y agregar partidas</li>
+          <li>Supervisor puede cargar gastos en estado "Por aprobar"</li>
+          <li>Gasto desde detalle de proyecto — obra se autocompleta</li>
+          <li>Filtros de estado en listado de proyectos para Supervisor</li>
+          <li>Tres vistas de proyectos: cards, tabla y lista compacta</li>
+        </ul>
+      </div>
+
     </div>
   </div>
 </div>
@@ -3539,7 +3609,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v6.5';
+    const CACHE = 'obracontrol-v6.6';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -3633,7 +3703,7 @@ function actualizarVisibilidadAdmin(){
   });
   // Supervisor: ocultar nav items que no corresponden
   if(esSupervisor()){
-    ['nav-gastos','nav-finanzas','nav-section-empresa','nav-presupuestos'].forEach(id=>{
+    ['nav-gastos','nav-finanzas','nav-section-empresa','nav-presupuestos','nav-rentabilidad','nav-admin'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.style.display='none';
     });
