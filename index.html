@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v5.5</title>
+<title>ObraControl v5.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -309,7 +309,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -2694,7 +2694,8 @@ async function nuevoPresupuesto() {
     descuento: 0, notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
     estado: 'borrador', incluye_iva: false
   };
-  presItems = [{desc:'', cantidad:1, precio:0}];
+  presItems = [{desc:'', cantidad:1, precio:0, costo:0}];
+  presupuestoFotos = [];
   mostrarEditorPresupuesto();
 }
 
@@ -2704,6 +2705,8 @@ async function editarPresupuesto(id) {
   presActual = p;
   presItems = items?.length ? items.map(it=>({...it, desc:it.descripcion||it.desc||'',costo:it.costo||0})) : [{desc:'',cantidad:1,precio:0,costo:0}];
   mostrarEditorPresupuesto();
+  // Cargar fotos existentes (async, después de renderizar el editor)
+  setTimeout(()=>cargarFotosPresupuesto(id), 100);
 }
 
 function mostrarEditorPresupuesto() {
@@ -2766,6 +2769,18 @@ function mostrarEditorPresupuesto() {
       <textarea id="pe-notas" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:10px;resize:vertical">${presActual.notas||''}</textarea>
     </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:0">📷 Registro fotográfico</div>
+        <span style="font-size:12px;color:var(--muted)">Las fotos se incluirán como hoja adicional en el PDF</span>
+      </div>
+      <div id="pe-fotos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px"></div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;border:1px dashed var(--border2);border-radius:8px;color:var(--muted);font-size:13px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+        <span style="font-size:18px">📷</span> Agregar fotos del relevamiento
+        <input type="file" id="pe-fotos-input" multiple accept="image/*" style="display:none" onchange="agregarFotosPresupuesto()"/>
+      </label>
+    </div>
+
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:30px">
       <button class="btn btn-ghost" onclick="renderPresupuestos()">Cancelar</button>
       <button class="btn btn-ghost" onclick="guardarYPrevisualizar()">👁 Vista previa</button>
@@ -2774,6 +2789,7 @@ function mostrarEditorPresupuesto() {
 
   renderItems();
   recalcularTotales();
+  renderFotosPresupuesto();
 }
 
 function renderItems() {
@@ -2902,6 +2918,8 @@ async function guardarPresupuesto() {
   // Guardar items
   const items = presItems.map((it,i)=>({presupuesto_id:presId,descripcion:it.desc,cantidad:it.cantidad||1,precio:it.precio||0,costo:it.costo||0,orden:i}));
   await sb.from('presupuestos_items').insert(items);
+  // Subir fotos si hay nuevas
+  await subirFotosPresupuesto(presId);
   notify('Presupuesto guardado');
   renderPresupuestos();
 }
@@ -2911,11 +2929,109 @@ async function guardarYPrevisualizar() {
   if(presActual?.id) previsualizarPresupuesto(presActual.id);
 }
 
+// ── FOTOS PRESUPUESTO ──────────────────────
+let presupuestoFotos = []; // {file, dataUrl, caption, id (si ya guardada)}
+
+function agregarFotosPresupuesto(){
+  const input = document.getElementById('pe-fotos-input');
+  Array.from(input.files).forEach(f=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      presupuestoFotos.push({file:f, dataUrl:e.target.result, caption:''});
+      renderFotosPresupuesto();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value='';
+}
+
+function renderFotosPresupuesto(){
+  const grid = document.getElementById('pe-fotos-grid');
+  if(!grid) return;
+  if(!presupuestoFotos.length){ grid.innerHTML=''; return; }
+  grid.innerHTML = presupuestoFotos.map((f,i)=>`
+    <div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border2)">
+      <img src="${f.dataUrl||f.url}" style="width:100%;height:110px;object-fit:cover;display:block"/>
+      <div style="padding:6px">
+        <input value="${f.caption||''}" placeholder="Descripción (opcional)" 
+          oninput="presupuestoFotos[${i}].caption=this.value"
+          style="width:100%;font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:4px 6px"/>
+      </div>
+      <button onclick="quitarFotoPresupuesto(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1;padding:0">✕</button>
+    </div>`).join('');
+}
+
+function quitarFotoPresupuesto(i){
+  presupuestoFotos.splice(i,1);
+  renderFotosPresupuesto();
+}
+
+async function subirFotosPresupuesto(presId){
+  const nuevas = presupuestoFotos.filter(f=>f.file);
+  for(const f of nuevas){
+    const path = `presupuesto/${presId}/${Date.now()}_${f.file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const {error} = await sb.storage.from('adjuntos').upload(path, f.file);
+    if(error) continue;
+    const url = STORAGE_URL + path;
+    await sb.from('adjuntos').insert({
+      entidad_tipo:'presupuesto_foto', entidad_id:presId,
+      nombre_archivo:f.caption||f.file.name, url, storage_path:path,
+      es_factura:false, created_by:currentUser.id
+    });
+    // Reemplazar dataUrl con url definitiva
+    f.url = url; f.file = null;
+  }
+}
+
+async function cargarFotosPresupuesto(presId){
+  const {data} = await sb.from('adjuntos').select('*')
+    .eq('entidad_tipo','presupuesto_foto').eq('entidad_id',presId)
+    .order('created_at');
+  presupuestoFotos = (data||[]).map(a=>({url:a.url, caption:a.nombre_archivo, id:a.id, storage_path:a.storage_path}));
+  renderFotosPresupuesto();
+}
+
+function generarPaginaFotos(fotos){
+  if(!fotos.length) return '';
+  // Grilla de 2 columnas, máx 6 fotos por página (3 filas)
+  const paginas = [];
+  for(let i=0;i<fotos.length;i+=6) paginas.push(fotos.slice(i,i+6));
+  return paginas.map(grupo=>`
+  <div style="page-break-before:always;font-family:'Arial',sans-serif;padding:0;background:#fff;min-height:297mm;box-sizing:border-box">
+    <!-- HEADER igual al presupuesto -->
+    <div style="background:#1a2035;padding:14px 32px;display:flex;justify-content:space-between;align-items:center">
+      <img src="${LOGO_B64}" style="width:130px;height:auto;display:block"/>
+      <div style="text-align:right;color:#fff">
+        <div style="font-size:16pt;font-weight:700;letter-spacing:1px;color:#f5a623">REGISTRO FOTOGRÁFICO</div>
+        <div style="font-size:10pt;color:#aaa;margin-top:2px">Relevamiento de obra</div>
+      </div>
+    </div>
+    <div style="padding:24px 28px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        ${grupo.map(f=>`
+        <div style="border:1px solid #ddd;border-radius:6px;overflow:hidden">
+          <img src="${f.dataUrl||f.url}" style="width:100%;height:200px;object-fit:cover;display:block"/>
+          ${f.caption?`<div style="padding:7px 10px;font-size:9pt;color:#555;background:#f8f9fa;border-top:1px solid #eee">${f.caption}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>
+    <!-- FOOTER -->
+    <div style="background:#1a2035;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;position:absolute;bottom:0;left:0;right:0">
+      <div style="color:#aaa;font-size:9pt">${EMPRESA.email} · ${EMPRESA.telefono}</div>
+      <div style="color:#666;font-size:9pt">Registro fotográfico</div>
+    </div>
+  </div>`).join('');
+}
+
 async function previsualizarPresupuesto(id) {
   const {data:p} = await sb.from('presupuestos').select('*').eq('id',id).single();
   const {data:items} = await sb.from('presupuestos_items').select('id,descripcion,cantidad,precio,costo,orden').eq('presupuesto_id',id).order('orden');
   presActual = p;
   presItems = (items||[]).map(it=>({...it, desc:it.descripcion||it.desc||'',costo:it.costo||0}));
+  // Cargar fotos guardadas
+  const {data:fotosData} = await sb.from('adjuntos').select('*')
+    .eq('entidad_tipo','presupuesto_foto').eq('entidad_id',id).order('created_at');
+  const fotosPreview = (fotosData||[]).map(a=>({url:a.url, caption:a.nombre_archivo}));
 
   document.getElementById('pres-lista-cont').style.display='none';
   document.getElementById('pres-editor-cont').style.display='none';
@@ -2929,6 +3045,7 @@ async function previsualizarPresupuesto(id) {
     </div>
     <div id="pres-doc" style="background:#fff;color:#000;max-width:800px;margin:0 auto;padding:0;border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3)">
       ${generarHTMLPresupuesto(p, items||[])}
+      ${fotosPreview.length ? generarPaginaFotos(fotosPreview) : ''}
     </div>`;
 }
 
@@ -3168,7 +3285,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v5.5';
+    const CACHE = 'obracontrol-v5.6';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
