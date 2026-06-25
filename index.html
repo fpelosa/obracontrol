@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v4.9</title>
+<title>ObraControl v5.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -301,7 +301,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v4.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.0</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -627,10 +627,22 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <input type="hidden" id="part-proy-id"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nombre *</label><input id="part-nombre" placeholder="Ej: Estructura hormigón"/></div>
-      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="part-ppto" placeholder="0"/></div>
+      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part')"/></div>
       <div class="form-group"><label>Unidad</label><input id="part-unidad" placeholder="m², m³, gl..."/></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0"/></div>
       <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0"/></div>
+      <div class="form-group full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <button type="button" id="part-modo-pct" class="btn btn-ghost btn-sm" onclick="setModoVenta('part','pct')" style="border-color:var(--accent);color:var(--accent)">% sobre presupuesto</button>
+          <button type="button" id="part-modo-imp" class="btn btn-ghost btn-sm" onclick="setModoVenta('part','imp')">+ Importe adicional</button>
+          <button type="button" id="part-modo-man" class="btn btn-ghost btn-sm" onclick="setModoVenta('part','man')">Importe directo</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group" id="part-extra-group"><label id="part-extra-label">% adicional</label><input type="number" id="part-extra" placeholder="0" oninput="calcularPrecioVentaPartida('part')"/></div>
+          <div class="form-group"><label>Precio de venta ($)</label><input type="number" id="part-pventa" placeholder="0" oninput="onManualPventa('part')"/></div>
+        </div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-partida')">Cancelar</button>
@@ -647,10 +659,22 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <input type="hidden" id="ep-proy-id"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nombre *</label><input id="ep-nombre" placeholder="Ej: Estructura hormigón"/></div>
-      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="ep-ppto" placeholder="0"/></div>
+      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep')"/></div>
       <div class="form-group"><label>Unidad</label><input id="ep-unidad" placeholder="m², m³, gl..."/></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="ep-cant" placeholder="0"/></div>
       <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="ep-precio" placeholder="0"/></div>
+      <div class="form-group full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <button type="button" id="ep-modo-pct" class="btn btn-ghost btn-sm" onclick="setModoVenta('ep','pct')" style="border-color:var(--accent);color:var(--accent)">% sobre presupuesto</button>
+          <button type="button" id="ep-modo-imp" class="btn btn-ghost btn-sm" onclick="setModoVenta('ep','imp')">+ Importe adicional</button>
+          <button type="button" id="ep-modo-man" class="btn btn-ghost btn-sm" onclick="setModoVenta('ep','man')">Importe directo</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group" id="ep-extra-group"><label id="ep-extra-label">% adicional</label><input type="number" id="ep-extra" placeholder="0" oninput="calcularPrecioVentaPartida('ep')"/></div>
+          <div class="form-group"><label>Precio de venta ($)</label><input type="number" id="ep-pventa" placeholder="0" oninput="onManualPventa('ep')"/></div>
+        </div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-editar-partida')">Cancelar</button>
@@ -1561,12 +1585,17 @@ function renderPartidasHTML(partidas,pid,editar){
   if(!partidas.length) return `<div class="empty"><p>Sin partidas. ${editar?'Agrega partidas al presupuesto.':''}</p></div>`;
   return partidas.map(pa=>{
     const av=Number(pa.pct_ejecutado),col=colorPct(av);
+    const pventa=Number(pa.precio_venta)||0;
+    const ppto=Number(pa.presupuesto)||0;
     return `<div class="partida-row">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <span style="font-weight:500">${pa.nombre}</span>
-        <span style="font-size:12px;color:var(--muted)">${pa.unidad||''}</span>
-        <div style="display:flex;align-items:center;gap:14px">
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmt(pa.presupuesto)}</div></div>
+        <div style="flex:1;min-width:120px">
+          <span style="font-weight:500">${pa.nombre}</span>
+          ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmt(ppto)}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${pventa>0?fmt(pventa):'—'}</div></div>
           <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmt(pa.total_gastado)}</div></div>
           <div style="text-align:right;min-width:44px"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:13px;color:${col}">${av}%</div></div>
           ${editar?`<button class="btn btn-ghost btn-sm" onclick="editarPartida('${pa.id}','${pid}')">✏️</button><button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>`:''}
@@ -1917,18 +1946,76 @@ function abrirModalPartida(pid){
   openModal('modal-partida');
 }
 
+// ── PRECIO VENTA PARTIDA: calculadora ──
+const _modoVenta = {part:'pct', ep:'pct'};
+
+function setModoVenta(prefix, modo){
+  _modoVenta[prefix]=modo;
+  ['pct','imp','man'].forEach(m=>{
+    const btn=document.getElementById(`${prefix}-modo-${m}`);
+    if(btn){ btn.style.borderColor=''; btn.style.color=''; }
+  });
+  const active=document.getElementById(`${prefix}-modo-${modo}`);
+  if(active){ active.style.borderColor='var(--accent)'; active.style.color='var(--accent)'; }
+  const extraGrp=document.getElementById(`${prefix}-extra-group`);
+  const extraLbl=document.getElementById(`${prefix}-extra-label`);
+  const pventaEl=document.getElementById(`${prefix}-pventa`);
+  if(modo==='man'){
+    if(extraGrp) extraGrp.style.display='none';
+    if(pventaEl) pventaEl.removeAttribute('readonly');
+  } else {
+    if(extraGrp) extraGrp.style.display='';
+    if(extraLbl) extraLbl.textContent=modo==='pct'?'% adicional':'Importe adicional ($)';
+    if(pventaEl) pventaEl.setAttribute('readonly','readonly');
+    calcularPrecioVentaPartida(prefix);
+  }
+}
+
+function calcularPrecioVentaPartida(prefix){
+  const modo=_modoVenta[prefix]||'pct';
+  if(modo==='man') return;
+  const ppto=Number(document.getElementById(`${prefix}-ppto`)?.value)||0;
+  const extra=Number(document.getElementById(`${prefix}-extra`)?.value)||0;
+  const pventaEl=document.getElementById(`${prefix}-pventa`);
+  if(!pventaEl) return;
+  if(modo==='pct') pventaEl.value=(ppto*(1+extra/100)).toFixed(2);
+  else pventaEl.value=(ppto+extra).toFixed(2);
+}
+
+function onManualPventa(prefix){
+  // Si el usuario escribe directo en precio venta, cambiar a modo manual
+  setModoVenta(prefix,'man');
+}
+
+// ── RECALCULAR TOTALES PROYECTO DESDE PARTIDAS ──
+async function recalcularTotalesProyecto(pid){
+  const {data:partidas}=await sb.from('partidas').select('presupuesto,precio_venta').eq('proyecto_id',pid);
+  if(!partidas) return;
+  const totalPpto=partidas.reduce((s,p)=>s+Number(p.presupuesto||0),0);
+  const totalPventa=partidas.reduce((s,p)=>s+Number(p.precio_venta||0),0);
+  await sb.from('proyectos').update({
+    presupuesto_total: totalPpto,
+    precio_cliente: totalPventa>0?totalPventa:undefined
+  }).eq('id',pid);
+  await fetchProyectos();
+}
+
 async function guardarPartida(){
   const pid=document.getElementById('part-proy-id').value;
   const nombre=document.getElementById('part-nombre').value.trim();
   if(!nombre){notify('Nombre obligatorio',false);return;}
-  const data={proyecto_id:pid,nombre,presupuesto:Number(document.getElementById('part-ppto').value)||0,
-    unidad:document.getElementById('part-unidad').value,cantidad:Number(document.getElementById('part-cant').value)||0,
+  const data={proyecto_id:pid,nombre,
+    presupuesto:Number(document.getElementById('part-ppto').value)||0,
+    precio_venta:Number(document.getElementById('part-pventa').value)||0,
+    unidad:document.getElementById('part-unidad').value,
+    cantidad:Number(document.getElementById('part-cant').value)||0,
     precio_unitario:Number(document.getElementById('part-precio').value)||0};
   const {error}=await sb.from('partidas').insert(data);
   if(error){notify('Error: '+error.message,false);return;}
   notify('Partida agregada');
   closeModal('modal-partida');
-  ['part-nombre','part-ppto','part-unidad','part-cant','part-precio'].forEach(id=>document.getElementById(id).value='');
+  ['part-nombre','part-ppto','part-unidad','part-cant','part-precio','part-extra','part-pventa'].forEach(id=>document.getElementById(id).value='');
+  await recalcularTotalesProyecto(pid);
   verDetalle(pid);
 }
 
@@ -1942,6 +2029,9 @@ async function editarPartida(partId, pid){
   document.getElementById('ep-unidad').value=pa.unidad||'';
   document.getElementById('ep-cant').value=pa.cantidad||0;
   document.getElementById('ep-precio').value=pa.precio_unitario||0;
+  document.getElementById('ep-pventa').value=pa.precio_venta||0;
+  document.getElementById('ep-extra').value='';
+  setModoVenta('ep','pct');
   openModal('modal-editar-partida');
 }
 
@@ -1953,6 +2043,7 @@ async function guardarPartidaEdicion(){
   const {error}=await sb.from('partidas').update({
     nombre,
     presupuesto:Number(document.getElementById('ep-ppto').value)||0,
+    precio_venta:Number(document.getElementById('ep-pventa').value)||0,
     unidad:document.getElementById('ep-unidad').value,
     cantidad:Number(document.getElementById('ep-cant').value)||0,
     precio_unitario:Number(document.getElementById('ep-precio').value)||0
@@ -1960,6 +2051,7 @@ async function guardarPartidaEdicion(){
   if(error){notify('Error: '+error.message,false);return;}
   notify('Partida actualizada');
   closeModal('modal-editar-partida');
+  await recalcularTotalesProyecto(pid);
   verDetalle(pid);
 }
 
@@ -1967,6 +2059,7 @@ async function eliminarPartida(partId,pid){
   if(!confirm('¿Eliminar esta partida?')) return;
   await sb.from('partidas').delete().eq('id',partId);
   notify('Partida eliminada');
+  await recalcularTotalesProyecto(pid);
   verDetalle(pid);
 }
 
@@ -2781,7 +2874,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v4.9';
+    const CACHE = 'obracontrol-v5.0';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
