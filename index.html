@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v6.3</title>
+<title>ObraControl v6.4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -90,6 +90,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .badge-red{background:rgba(239,68,68,.15);color:var(--red)}
 .badge-gray{background:rgba(122,128,153,.15);color:var(--muted)}
 .badge-purple{background:rgba(168,85,247,.15);color:#c084fc}
+.badge-cyan{background:rgba(6,182,212,.15);color:#22d3ee}
 .adjunto-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--text);cursor:pointer;transition:border-color .15s;max-width:200px}
 .adjunto-chip:hover{border-color:var(--accent)}
 .adjunto-chip .adj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
@@ -309,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.3</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.4</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -387,6 +388,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <button class="btn btn-ghost" id="filtro-estado-En curso" onclick="filtrarProyectos('En curso')" style="font-size:12px;padding:5px 12px">En curso</button>
             <button class="btn btn-ghost" id="filtro-estado-Planificación" onclick="filtrarProyectos('Planificación')" style="font-size:12px;padding:5px 12px">Planificación</button>
             <button class="btn btn-ghost" id="filtro-estado-Para Presupuesto" onclick="filtrarProyectos('Para Presupuesto')" style="font-size:12px;padding:5px 12px">Para Presupuesto</button>
+            <button class="btn btn-ghost" id="filtro-estado-Esperando aprobación" onclick="filtrarProyectos('Esperando aprobación')" style="font-size:12px;padding:5px 12px">Esp. aprobación</button>
             <button class="btn btn-ghost" id="filtro-estado-Finalizado" onclick="filtrarProyectos('Finalizado')" style="font-size:12px;padding:5px 12px">Finalizados</button>
             <button class="btn btn-ghost" id="filtro-estado-Suspendido" onclick="filtrarProyectos('Suspendido')" style="font-size:12px;padding:5px 12px">Suspendidos</button>
           </div>
@@ -585,7 +587,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Cliente / Contratante</label><input id="p-cliente" placeholder="Nombre del cliente"/></div>
       <div class="form-group"><label>Presupuesto total ($)</label><input type="number" id="p-presupuesto" placeholder="0"/></div>
       <div class="form-group" id="p-estado-group"><label>Estado</label>
-        <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option></select>
+        <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option><option>Esperando aprobación</option></select>
       </div>
       <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio"/></div>
       <div class="form-group"><label>Fecha fin estimada</label><input type="date" id="p-fin"/></div>
@@ -1057,7 +1059,7 @@ const fmtN = n => new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).forma
 const pct = (a,b) => b>0?Math.round(a/b*100):0;
 const colorPct = p => p>90?'var(--red)':p>70?'var(--orange)':p>50?'var(--accent)':'var(--green)';
 const estadoBadge = e => {
-  const m={'En curso':'badge-blue','Planificación':'badge-amber','Finalizado':'badge-green','Suspendido':'badge-red','Para Presupuesto':'badge-purple'};
+  const m={'En curso':'badge-blue','Planificación':'badge-amber','Finalizado':'badge-green','Suspendido':'badge-red','Para Presupuesto':'badge-purple','Esperando aprobación':'badge-cyan'};
   return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
 };
 const rolLabel = r => ({admin:'Administrador',director:'Director',ingeniero:'Ingeniero',administrativo:'Administrativo',supervisor:'Supervisor',visor:'Visor'}[r]||r);
@@ -1580,7 +1582,7 @@ function _renderProyTabla(p){
 function _renderProyLista(p){
   const rows = p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
-    const dotCol = x.estado==='En curso'?'var(--green)':x.estado==='Suspendido'?'var(--orange)':x.estado==='Finalizado'?'var(--accent2)':x.estado==='Para Presupuesto'?'#c084fc':'var(--muted)';
+    const dotCol = x.estado==='En curso'?'var(--green)':x.estado==='Suspendido'?'var(--orange)':x.estado==='Finalizado'?'var(--accent2)':x.estado==='Para Presupuesto'?'#c084fc':x.estado==='Esperando aprobación'?'#22d3ee':'var(--muted)';
     return `<div onclick="verDetalle('${x.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;${x.gastos_pendientes>0&&puedeEditar()?'border-left:3px solid #f87171':''}" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
       <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0"></div>
       <div style="flex:1.8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px">${x.nombre}${x.gastos_pendientes>0&&puedeEditar()?` <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:8px;padding:1px 6px">⚠️ ${x.gastos_pendientes}</span>`:''}</div>
@@ -1665,6 +1667,7 @@ async function verDetalle(id){
       <div class="tab" onclick="switchTab(this,'ti')">Información</div>
       <div class="tab" onclick="switchTab(this,'tadj')">📎 Adjuntos</div>
       ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div class="tab" style="color:var(--accent);font-weight:600" onclick="switchTab(this,'tpp')">📋 Para Presupuesto</div>`:''}
+      ${p.estado==='Esperando aprobación' && esAdministrativoOSuperior()?`<div class="tab" style="color:#22d3ee;font-weight:600" onclick="switchTab(this,'tea')">⏳ Esperando aprobación</div>`:''}
       ${esAdmin()?`<div class="tab" onclick="switchTab(this,'tr')">💰 Rentabilidad</div>`:''}
     </div>
     <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar()||esSupervisor())}</div>
@@ -1685,6 +1688,7 @@ async function verDetalle(id){
       </div>
     </div>
     ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div id="tpp" class="tab-panel">${renderParaPresupuestoHTML(p,id)}</div>`:''}
+    ${p.estado==='Esperando aprobación' && esAdministrativoOSuperior()?`<div id="tea" class="tab-panel">${renderEsperandoAprobacionHTML(p,id)}</div>`:''}
     ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id)}</div>`:''}`;
   // Cargar adjuntos en pestaña dedicada (async)
   setTimeout(async ()=>{
@@ -2073,8 +2077,74 @@ async function marcarTerminadoSupervisor(id){
 }
 
 // ── PANEL: Para Presupuesto (Administrativo o superior) ──
+function renderEsperandoAprobacionHTML(p, id){
+  const ESTADOS=['En curso','Planificación','Para Presupuesto','Suspendido','Finalizado','Esperando aprobación'];
+  const tienePresupuesto = !!p.presupuesto_ref_id;
+  return `
+  <div class="card" style="margin-bottom:16px;border:1px solid rgba(6,182,212,.3);background:rgba(6,182,212,.05)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">⏳</span>
+        <div>
+          <div style="font-weight:600;color:#22d3ee">Esperando aprobación del cliente</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">El presupuesto fue enviado al cliente. Podés actualizar el presupuesto si hay cambios en las partidas.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${tienePresupuesto?`<button class="btn btn-ghost btn-sm" style="border-color:#22d3ee;color:#22d3ee" onclick="actualizarPresupuestoDesdeProyecto('${id}','${p.presupuesto_ref_id}')">🔄 Actualizar presupuesto</button>
+        <button class="btn btn-ghost btn-sm" onclick="verPresupuestoDeProyecto('${p.presupuesto_ref_id}')">👁 Ver presupuesto</button>`:'<span style="font-size:12px;color:var(--muted)">Sin presupuesto vinculado</span>'}
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Cambiar estado</label>
+        <select id="ea-nuevo-estado">
+          ${ESTADOS.filter(e=>e!=='Esperando aprobación').map(e=>`<option value="${e}">${e}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end">
+        <button class="btn btn-primary" onclick="cambiarEstadoDesdeEsperando('${id}')">Cambiar estado</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function actualizarPresupuestoDesdeProyecto(proyId, presId){
+  if(!confirm('¿Actualizar los ítems del presupuesto con las partidas actuales del proyecto?')) return;
+  const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('created_at');
+  const items = (partidas||[]).map((pa,i)=>({
+    presupuesto_id:presId,
+    descripcion:pa.nombre||'',
+    cantidad:pa.cantidad||1,
+    precio:pa.precio_venta||pa.presupuesto||0,
+    costo:pa.presupuesto||0,
+    orden:i
+  }));
+  await sb.from('presupuestos_items').delete().eq('presupuesto_id',presId);
+  if(items.length) await sb.from('presupuestos_items').insert(items);
+  notify('✅ Presupuesto actualizado con las partidas del proyecto');
+}
+
+async function verPresupuestoDeProyecto(presId){
+  showView('presupuestos');
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.querySelector('.nav-item[onclick*="presupuestos"]')?.classList.add('active');
+  previsualizarPresupuesto(presId);
+}
+
+async function cambiarEstadoDesdeEsperando(proyId){
+  const nuevoEstado = document.getElementById('ea-nuevo-estado')?.value;
+  if(!nuevoEstado){notify('Seleccioná un estado',false);return;}
+  if(!confirm(`¿Cambiar el proyecto a "${nuevoEstado}"?`)) return;
+  const {error} = await sb.from('proyectos').update({estado:nuevoEstado}).eq('id',proyId);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify(`Proyecto pasado a "${nuevoEstado}"`);
+  await fetchProyectos();
+  verDetalle(proyId);
+}
+
 function renderParaPresupuestoHTML(p, id){
-  const ESTADOS=['En curso','Planificación','Para Presupuesto','Suspendido','Finalizado'];
+  const ESTADOS=['En curso','Planificación','Para Presupuesto','Suspendido','Finalizado','Esperando aprobación'];
   return `
   <div class="card" style="margin-bottom:16px;border:1px solid rgba(168,85,247,.3);background:rgba(168,85,247,.05)">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
@@ -2764,7 +2834,7 @@ async function renderPresupuestos() {
 }
 
 async function generarPresupuestoDesdeProyecto(proyId) {
-  if(!confirm('¿Generar un presupuesto a partir de este proyecto? Se pre-completará con los datos del proyecto y sus partidas.')) return;
+  if(!confirm('¿Generar un presupuesto a partir de este proyecto? El proyecto pasará a estado "Esperando aprobación".')) return;
 
   const {data:proy} = await sb.from('proyectos').select('*').eq('id',proyId).single();
   const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('created_at');
@@ -2772,6 +2842,10 @@ async function generarPresupuestoDesdeProyecto(proyId) {
   const {data:last} = await sb.from('presupuestos').select('numero').order('created_at',{ascending:false}).limit(1);
   const lastNum = last?.[0]?.numero || '270000';
   const nextNum = String(parseInt(lastNum.replace(/\D/g,'')) + 1);
+
+  // Cambiar estado del proyecto a Esperando aprobación
+  await sb.from('proyectos').update({estado:'Esperando aprobación', presupuesto_ref_id: null}).eq('id',proyId);
+  await fetchProyectos();
 
   presActual = {
     id: null, numero: nextNum,
@@ -2782,7 +2856,8 @@ async function generarPresupuestoDesdeProyecto(proyId) {
     representante: 'jpelosa@nor-tel.com',
     moneda: 'USD', tipo_cambio: '', descuento: 0,
     notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
-    estado: 'borrador', incluye_iva: false
+    estado: 'borrador', incluye_iva: false,
+    proyecto_origen_id: proyId
   };
 
   presItems = (partidas||[]).length
@@ -2796,14 +2871,13 @@ async function generarPresupuestoDesdeProyecto(proyId) {
 
   presupuestoFotos = [];
 
-  // Navegar al módulo presupuestos
   showView('presupuestos');
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   document.querySelector('.nav-item[onclick*="presupuestos"]')?.classList.add('active');
   document.getElementById('pres-lista-cont').style.display='none';
   document.getElementById('pres-preview-cont').style.display='none';
   mostrarEditorPresupuesto();
-  notify('✅ Presupuesto pre-completado con datos del proyecto');
+  notify('✅ Presupuesto pre-completado — proyecto en "Esperando aprobación"');
 }
 
 async function nuevoPresupuesto() {
@@ -3044,6 +3118,11 @@ async function guardarPresupuesto() {
   await sb.from('presupuestos_items').insert(items);
   // Subir fotos si hay nuevas
   await subirFotosPresupuesto(presId);
+  // Vincular con proyecto origen si corresponde
+  if(presActual?.proyecto_origen_id){
+    await sb.from('proyectos').update({presupuesto_ref_id: presId}).eq('id', presActual.proyecto_origen_id);
+    await fetchProyectos();
+  }
   notify('Presupuesto guardado');
   renderPresupuestos();
 }
@@ -3409,7 +3488,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v6.3';
+    const CACHE = 'obracontrol-v6.4';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
