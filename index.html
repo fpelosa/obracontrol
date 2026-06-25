@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v6.2</title>
+<title>ObraControl v6.3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -309,7 +309,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.2</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.3</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -2085,7 +2085,10 @@ function renderParaPresupuestoHTML(p, id){
           <div style="font-size:12px;color:var(--muted);margin-top:2px">El Supervisor marcó esta obra como terminada. Completá los datos y aprobá para iniciarla.</div>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="aprobarParaPresupuesto('${id}')" style="background:var(--green);border-color:var(--green);font-size:13px;padding:8px 18px">✅ Aprobar → En curso</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="generarPresupuestoDesdeProyecto('${id}')" style="font-size:13px;padding:8px 18px">📄 Generar Presupuesto</button>
+        <button class="btn btn-primary" onclick="aprobarParaPresupuesto('${id}')" style="background:var(--green);border-color:var(--green);font-size:13px;padding:8px 18px">✅ Aprobar → En curso</button>
+      </div>
     </div>
     <div class="form-grid">
       <div class="form-group full">
@@ -2760,8 +2763,50 @@ async function renderPresupuestos() {
     </div>`;
 }
 
+async function generarPresupuestoDesdeProyecto(proyId) {
+  if(!confirm('¿Generar un presupuesto a partir de este proyecto? Se pre-completará con los datos del proyecto y sus partidas.')) return;
+
+  const {data:proy} = await sb.from('proyectos').select('*').eq('id',proyId).single();
+  const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('created_at');
+
+  const {data:last} = await sb.from('presupuestos').select('numero').order('created_at',{ascending:false}).limit(1);
+  const lastNum = last?.[0]?.numero || '270000';
+  const nextNum = String(parseInt(lastNum.replace(/\D/g,'')) + 1);
+
+  presActual = {
+    id: null, numero: nextNum,
+    fecha: new Date().toISOString().split('T')[0],
+    fecha_validez: '',
+    cliente_nombre: proy.cliente || '',
+    cliente_dir: '', cliente_cuit: '', cliente_ciudad: '',
+    representante: 'jpelosa@nor-tel.com',
+    moneda: 'USD', tipo_cambio: '', descuento: 0,
+    notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
+    estado: 'borrador', incluye_iva: false
+  };
+
+  presItems = (partidas||[]).length
+    ? partidas.map(pa=>({
+        desc: pa.nombre||'',
+        cantidad: pa.cantidad||1,
+        precio: pa.precio_venta||pa.presupuesto||0,
+        costo: pa.presupuesto||0
+      }))
+    : [{desc:'', cantidad:1, precio:0, costo:0}];
+
+  presupuestoFotos = [];
+
+  // Navegar al módulo presupuestos
+  showView('presupuestos');
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.querySelector('.nav-item[onclick*="presupuestos"]')?.classList.add('active');
+  document.getElementById('pres-lista-cont').style.display='none';
+  document.getElementById('pres-preview-cont').style.display='none';
+  mostrarEditorPresupuesto();
+  notify('✅ Presupuesto pre-completado con datos del proyecto');
+}
+
 async function nuevoPresupuesto() {
-  // Generar número correlativo
   const {data:last} = await sb.from('presupuestos').select('numero').order('created_at',{ascending:false}).limit(1);
   const lastNum = last?.[0]?.numero || '270000';
   const nextNum = String(parseInt(lastNum.replace(/\D/g,'')) + 1);
@@ -3364,7 +3409,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v6.2';
+    const CACHE = 'obracontrol-v6.3';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
