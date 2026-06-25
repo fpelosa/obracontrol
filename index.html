@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v5.1</title>
+<title>ObraControl v5.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -301,7 +301,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.1</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.2</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -1403,9 +1403,9 @@ function renderProyectos(){
 
   let p = cache.proyectos;
 
-  // Restricción por rol: Supervisor solo ve proyectos en Planificación
+  // Restricción por rol: Supervisor ve proyectos en Planificación y En curso
   if(esSupervisor()){
-    p = p.filter(x => x.estado === 'Planificación');
+    p = p.filter(x => x.estado === 'Planificación' || x.estado === 'En curso');
     // Ocultar filtros de estado para supervisor (no los necesita)
     const filtroBar = document.querySelector('[id^="filtro-estado-todos"]')?.parentElement;
     if(filtroBar) filtroBar.style.display = 'none';
@@ -2930,7 +2930,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v5.1';
+    const CACHE = 'obracontrol-v5.2';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
