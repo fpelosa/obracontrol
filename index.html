@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v6.1</title>
+<title>ObraControl v6.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -309,7 +309,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.1</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.2</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -1663,32 +1663,84 @@ async function verDetalle(id){
       <div class="tab active" onclick="switchTab(this,'tp')">Partidas (${partidas.length})</div>
       <div class="tab" onclick="switchTab(this,'tg')">Gastos (${gastos.length})</div>
       <div class="tab" onclick="switchTab(this,'ti')">Información</div>
+      <div class="tab" onclick="switchTab(this,'tadj')">📎 Adjuntos</div>
       ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div class="tab" style="color:var(--accent);font-weight:600" onclick="switchTab(this,'tpp')">📋 Para Presupuesto</div>`:''}
       ${esAdmin()?`<div class="tab" onclick="switchTab(this,'tr')">💰 Rentabilidad</div>`:''}
     </div>
     <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar()||esSupervisor())}</div>
     <div id="tg" class="tab-panel">${renderGastosDetHTML(gastos,partidas,puedeEditar())}</div>
     <div id="ti" class="tab-panel">${renderInfoHTML(p)}</div>
+    <div id="tadj" class="tab-panel">
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-weight:600;margin-bottom:14px">📎 Documentos del proyecto</div>
+        <div id="adj-proyecto-${id}" style="display:flex;flex-wrap:wrap;gap:8px;min-height:24px"><span style="color:var(--muted);font-size:13px">Cargando...</span></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-weight:600;margin-bottom:14px">📎 Adjuntos por partida</div>
+        <div id="adj-partidas-${id}"><span style="color:var(--muted);font-size:13px">Cargando...</span></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:14px">📎 Comprobantes de gastos</div>
+        <div id="adj-gastos-${id}"><span style="color:var(--muted);font-size:13px">Cargando...</span></div>
+      </div>
+    </div>
     ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div id="tpp" class="tab-panel">${renderParaPresupuestoHTML(p,id)}</div>`:''}
     ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id)}</div>`:''}`;
-  // Cargar adjuntos del proyecto en pestaña Información (async, no bloquea render)
-  setTimeout(()=>{
-    renderPanelAdjuntos('proyecto',id,`adj-proyecto-${id}`,puedeEditar()||esSupervisor());
-    // Cargar adjuntos de cada gasto
-    gastos.forEach(g=>{
-      const el=document.getElementById(`adj-g-${g.id}`);
-      if(el) cargarAdjuntos('gasto',g.id).then(adj=>{
-        el.innerHTML=adj.length?renderAdjuntosHTML(adj,`adj-g-${g.id}`,puedeEditar()):'<span style="color:var(--muted);font-size:11px">—</span>';
-      });
-    });
-    // Cargar adjuntos de cada partida
+  // Cargar adjuntos en pestaña dedicada (async)
+  setTimeout(async ()=>{
+    const canDelete = puedeEditar()||esSupervisor();
+    // Adjuntos del proyecto
+    renderPanelAdjuntos('proyecto', id, `adj-proyecto-${id}`, canDelete);
+
+    // Adjuntos de partidas agrupados
+    const contPartidas = document.getElementById(`adj-partidas-${id}`);
+    if(contPartidas){
+      if(!partidas.length){ contPartidas.innerHTML='<span style="color:var(--muted);font-size:13px">Sin partidas</span>'; }
+      else {
+        let html = '';
+        for(const pa of partidas){
+          const adj = await cargarAdjuntos('partida', pa.id);
+          if(adj.length){
+            html += `<div style="margin-bottom:12px">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500">${pa.nombre}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">${renderAdjuntosHTML(adj,`adj-pa-${pa.id}`,canDelete)}</div>
+            </div>`;
+          }
+        }
+        contPartidas.innerHTML = html || '<span style="color:var(--muted);font-size:13px">Sin adjuntos en partidas</span>';
+      }
+    }
+
+    // Adjuntos de gastos agrupados
+    const contGastos = document.getElementById(`adj-gastos-${id}`);
+    if(contGastos){
+      if(!gastos.length){ contGastos.innerHTML='<span style="color:var(--muted);font-size:13px">Sin gastos</span>'; }
+      else {
+        let html = '';
+        for(const g of gastos){
+          const adj = await cargarAdjuntos('gasto', g.id);
+          if(adj.length){
+            html += `<div style="margin-bottom:12px">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500">${g.descripcion} — ${g.fecha||''}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">${renderAdjuntosHTML(adj,`adj-g-${g.id}`,canDelete)}</div>
+            </div>`;
+          }
+          // También actualizar la columna en tabla gastos si está visible
+          const elG = document.getElementById(`adj-g-${g.id}`);
+          if(elG) elG.innerHTML = adj.length ? renderAdjuntosHTML(adj,`adj-g-${g.id}`,canDelete) : '<span style="color:var(--muted);font-size:11px">—</span>';
+        }
+        contGastos.innerHTML = html || '<span style="color:var(--muted);font-size:13px">Sin comprobantes</span>';
+      }
+    }
+
+    // Adjuntos inline en partidas (pestaña Partidas)
     partidas.forEach(pa=>{
       const el=document.getElementById(`adj-pa-${pa.id}`);
       if(el) cargarAdjuntos('partida',pa.id).then(adj=>{
-        el.innerHTML=adj.length?renderAdjuntosHTML(adj,`adj-pa-${pa.id}`,puedeEditar()||esSupervisor()):'';
+        el.innerHTML=adj.length?renderAdjuntosHTML(adj,`adj-pa-${pa.id}`,canDelete):'';
       });
     });
-  },50);
+  }, 50);
 }
 
 function renderPartidasHTML(partidas,pid,editar){
@@ -1902,7 +1954,6 @@ function calcularMargen(){
 }
 
 function renderInfoHTML(p){
-  const canDelete=puedeEditar()||esSupervisor();
   return `<div class="card"><div class="form-grid">
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Cliente</div><div>${p.cliente||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Responsable</div><div>${p.perfiles?.nombre||'—'}</div></div>
@@ -1910,11 +1961,7 @@ function renderInfoHTML(p){
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Fin estimado</div><div>${p.fecha_fin_estimada||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Avance físico</div><div>${p.avance_fisico||0}%</div></div>
     <div class="full"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Descripción</div><div>${p.descripcion||'—'}</div></div>
-  </div></div>
-  <div class="card adj-section">
-    <div class="adj-section-title">📎 Documentos del proyecto</div>
-    <div id="adj-proyecto-${p.id}" style="display:flex;flex-wrap:wrap;gap:8px;min-height:24px"><span style="color:var(--muted);font-size:13px">Cargando...</span></div>
-  </div>`;
+  </div></div>`;
 }
 
 
@@ -3317,7 +3364,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v6.1';
+    const CACHE = 'obracontrol-v6.2';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
