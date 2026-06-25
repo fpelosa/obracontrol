@@ -1661,7 +1661,6 @@ async function verDetalle(id){
     });
   },50);
 }
-}
 
 function renderPartidasHTML(partidas,pid,editar){
   if(!partidas.length) return `<div class="empty"><p>Sin partidas. ${editar?'Agrega partidas al presupuesto.':''}</p></div>`;
@@ -1888,7 +1887,7 @@ function renderInfoHTML(p){
     <div id="adj-proyecto-${p.id}" style="display:flex;flex-wrap:wrap;gap:8px;min-height:24px"><span style="color:var(--muted);font-size:13px">Cargando...</span></div>
   </div>`;
 }
-}
+
 
 function switchTab(el,panelId){
   el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
