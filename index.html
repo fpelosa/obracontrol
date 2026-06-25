@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v5.0</title>
+<title>ObraControl v5.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -301,7 +301,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v5.1</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -631,7 +631,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Unidad</label><input id="part-unidad" placeholder="m², m³, gl..."/></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0"/></div>
       <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0"/></div>
-      <div class="form-group full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div class="form-group full" id="part-pventa-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <button type="button" id="part-modo-pct" class="btn btn-ghost btn-sm" onclick="setModoVenta('part','pct')" style="border-color:var(--accent);color:var(--accent)">% sobre presupuesto</button>
@@ -663,7 +663,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Unidad</label><input id="ep-unidad" placeholder="m², m³, gl..."/></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="ep-cant" placeholder="0"/></div>
       <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="ep-precio" placeholder="0"/></div>
-      <div class="form-group full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div class="form-group full" id="ep-pventa-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <button type="button" id="ep-modo-pct" class="btn btn-ghost btn-sm" onclick="setModoVenta('ep','pct')" style="border-color:var(--accent);color:var(--accent)">% sobre presupuesto</button>
@@ -1018,6 +1018,7 @@ const puedeEditar = () => currentPerfil && ['admin','director','ingeniero','admi
 const esAdmin = () => currentPerfil?.rol === 'admin';
 const esSupervisor = () => currentPerfil?.rol === 'supervisor';
 const esAdministrativoOSuperior = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
+const puedeVerPrecioCliente = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
 
 function notify(msg, ok=true){
   const n=document.getElementById('notif');
@@ -1255,11 +1256,17 @@ async function fetchProyectos(){
   const {data, error}=await sb.from('proyectos').select('*').order('created_at',{ascending:false});
   console.log('fetchProyectos:', data?.length, error);
   if(!data) { cache.proyectos=[]; return; }
-  // Calcular totales de gastos por proyecto
-  const {data:gastos}=await sb.from('gastos').select('proyecto_id, monto');
+  // Calcular totales de gastos por proyecto — solo gastos APROBADOS impactan en saldo
+  const {data:gastos}=await sb.from('gastos').select('proyecto_id, monto, estado_aprobacion');
   const gastosPorProy={};
+  const gastosPendientesPorProy={};
   (gastos||[]).forEach(g=>{
-    gastosPorProy[g.proyecto_id]=(gastosPorProy[g.proyecto_id]||0)+Number(g.monto);
+    if(g.estado_aprobacion==='aprobado' || !g.estado_aprobacion){
+      gastosPorProy[g.proyecto_id]=(gastosPorProy[g.proyecto_id]||0)+Number(g.monto);
+    }
+    if(g.estado_aprobacion==='por_aprobar'){
+      gastosPendientesPorProy[g.proyecto_id]=(gastosPendientesPorProy[g.proyecto_id]||0)+1;
+    }
   });
   const {data:partidas}=await sb.from('partidas').select('proyecto_id');
   const partidasPorProy={};
@@ -1273,6 +1280,7 @@ async function fetchProyectos(){
     pct_ejecutado: p.presupuesto_total>0?Math.round((gastosPorProy[p.id]||0)*100/p.presupuesto_total):0,
     total_partidas: partidasPorProy[p.id]||0,
     total_gastos: 0,
+    gastos_pendientes: gastosPendientesPorProy[p.id]||0,
     responsable_nombre: ''
   }));
   } catch(e){ console.error('fetchProyectos error:',e); cache.proyectos=[]; }
@@ -1293,10 +1301,11 @@ async function fetchPartidas(proyId){
   const {data:partidas, error}=await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('orden');
   console.log('fetchPartidas:', partidas?.length, error);
   if(!partidas) return [];
-  const {data:gastos}=await sb.from('gastos').select('partida_id, monto').eq('proyecto_id',proyId);
+  const {data:gastos}=await sb.from('gastos').select('partida_id, monto, estado_aprobacion').eq('proyecto_id',proyId);
   const gastosPorPart={};
   (gastos||[]).forEach(g=>{
-    if(g.partida_id) gastosPorPart[g.partida_id]=(gastosPorPart[g.partida_id]||0)+Number(g.monto);
+    if(g.partida_id && (g.estado_aprobacion==='aprobado' || !g.estado_aprobacion))
+      gastosPorPart[g.partida_id]=(gastosPorPart[g.partida_id]||0)+Number(g.monto);
   });
   return partidas.map(p=>({
     ...p,
@@ -1450,9 +1459,10 @@ function renderProyectos(){
 function _renderProyCards(p){
   return `<div class="project-cards">${p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
-    return `<div class="project-card" onclick="verDetalle('${x.id}')">
+    const pendBadge=x.gastos_pendientes>0&&puedeEditar()?`<div style="font-size:11px;background:rgba(239,68,68,.15);color:#f87171;border-radius:12px;padding:2px 8px;margin-top:6px;display:inline-flex;align-items:center;gap:4px">⚠️ ${x.gastos_pendientes} gasto${x.gastos_pendientes>1?'s':''} por aprobar</div>`:'';
+    return `<div class="project-card" onclick="verDetalle('${x.id}')" style="${x.gastos_pendientes>0&&puedeEditar()?'border-color:rgba(239,68,68,.4)':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <div><div class="pc-name">${x.nombre}</div><div class="pc-loc">📍 ${x.ubicacion||'Sin ubicación'}</div></div>
+        <div><div class="pc-name">${x.nombre}</div><div class="pc-loc">📍 ${x.ubicacion||'Sin ubicación'}</div>${pendBadge}</div>
         ${estadoBadge(x.estado)}
       </div>
       ${x.cliente?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">👤 ${x.cliente}</div>`:''}
@@ -1470,8 +1480,8 @@ function _renderProyCards(p){
 function _renderProyTabla(p){
   const rows = p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
-    return `<tr style="cursor:pointer" onclick="verDetalle('${x.id}')">
-      <td><div style="font-weight:500">${x.nombre}</div><div style="font-size:11px;color:var(--muted)">${x.ubicacion||''}</div></td>
+    return `<tr style="cursor:pointer;${x.gastos_pendientes>0&&puedeEditar()?'border-left:3px solid #f87171':''}" onclick="verDetalle('${x.id}')">
+      <td><div style="font-weight:500">${x.nombre}${x.gastos_pendientes>0&&puedeEditar()?` <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:8px;padding:1px 6px;margin-left:4px">⚠️ ${x.gastos_pendientes}</span>`:''}</div><div style="font-size:11px;color:var(--muted)">${x.ubicacion||''}</div></td>
       <td style="color:var(--muted)">${x.cliente||'—'}</td>
       <td>${estadoBadge(x.estado)}</td>
       <td style="text-align:right">${fmt(x.presupuesto_total)}</td>
@@ -1499,9 +1509,9 @@ function _renderProyLista(p){
   const rows = p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
     const dotCol = x.estado==='En curso'?'var(--green)':x.estado==='Suspendido'?'var(--orange)':x.estado==='Finalizado'?'var(--accent2)':x.estado==='Para Presupuesto'?'#c084fc':'var(--muted)';
-    return `<div onclick="verDetalle('${x.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
+    return `<div onclick="verDetalle('${x.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;${x.gastos_pendientes>0&&puedeEditar()?'border-left:3px solid #f87171':''}" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
       <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0"></div>
-      <div style="flex:1.8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px">${x.nombre}</div>
+      <div style="flex:1.8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px">${x.nombre}${x.gastos_pendientes>0&&puedeEditar()?` <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:8px;padding:1px 6px">⚠️ ${x.gastos_pendientes}</span>`:''}</div>
       <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${x.cliente||'—'}</div>
       <div style="min-width:100px;text-align:right;font-size:12px;color:var(--muted)">${fmt(x.presupuesto_total)}</div>
       <div style="min-width:100px;text-align:right;font-size:12px;color:${col}">${fmt(x.total_gastado)}</div>
@@ -1544,18 +1554,20 @@ async function verDetalle(id){
   const p=proyRes.data;
   const partidas=partidasData;
   const gastos=gastosData.data||[];
-  const totalGasto=gastos.reduce((s,g)=>s+Number(g.monto),0);
+  const totalGasto=gastos.filter(g=>!g.estado_aprobacion||g.estado_aprobacion==="aprobado").reduce((s,g)=>s+Number(g.monto),0);
+  const gastosXAprobar=gastos.filter(g=>g.estado_aprobacion==="por_aprobar").length;
   const av=pct(totalGasto,p.presupuesto_total),col=colorPct(av);
   const saldo=p.presupuesto_total-totalGasto;
 
   det.innerHTML=`
     <div class="detail-back" onclick="renderProyectos()">← Volver</div>
+    ${gastosXAprobar>0&&puedeEditar()?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><span style="color:#f87171;font-size:13px">⚠️ <strong>${gastosXAprobar} gasto${gastosXAprobar>1?'s':''} por aprobar</strong> — Revisá la pestaña de Gastos para aprobar o rechazar.</span><button class="btn btn-ghost btn-sm" style="color:#f87171;border-color:#f87171" onclick="switchTabById('tg')">Ver gastos →</button></div>`:''}
     <div class="topbar">
       <div><h1 style="font-size:19px">${p.nombre}</h1><div style="color:var(--muted);font-size:13px;margin-top:3px">📍 ${p.ubicacion||''} &nbsp;·&nbsp; ${estadoBadge(p.estado)}</div></div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         ${puedeEditar() || esSupervisor()?`<button class="btn btn-ghost btn-sm" onclick="editarProyecto('${id}')">✏️ Editar</button>`:''}
         ${puedeEditar() || esSupervisor()?`<button class="btn btn-ghost btn-sm" onclick="abrirModalPartida('${id}')">+ Partida</button>`:''}
-        ${puedeEditar()?`<button class="btn btn-primary btn-sm" onclick="abrirGastoProyecto('${id}')">+ Gasto</button>`:''}
+        ${puedeEditar()||esSupervisor()?`<button class="btn btn-primary btn-sm" onclick="abrirGastoProyecto('${id}')">+ Gasto</button>`:''}
         ${esSupervisor() && p.estado==='Planificación'?`<button class="btn btn-primary btn-sm" onclick="marcarTerminadoSupervisor('${id}')" style="background:var(--green);border-color:var(--green)">✅ Marcar como terminado</button>`:''}
         ${esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarProyecto('${id}')">Eliminar</button>`:''}
       </div>
@@ -1595,7 +1607,7 @@ function renderPartidasHTML(partidas,pid,editar){
         </div>
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmt(ppto)}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${pventa>0?fmt(pventa):'—'}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${puedeVerPrecioCliente()&&pventa>0?fmt(pventa):'—'}</div></div>
           <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmt(pa.total_gastado)}</div></div>
           <div style="text-align:right;min-width:44px"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:13px;color:${col}">${av}%</div></div>
           ${editar?`<button class="btn btn-ghost btn-sm" onclick="editarPartida('${pa.id}','${pid}')">✏️</button><button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>`:''}
@@ -1608,14 +1620,29 @@ function renderPartidasHTML(partidas,pid,editar){
 
 function renderGastosDetHTML(gastos,partidas,editar){
   if(!gastos.length) return '<div class="empty"><p>No hay gastos registrados.</p></div>';
-  return `<table><thead><tr><th>Fecha</th><th>Descripción</th><th>Partida</th><th>Categoría</th><th>Comp.</th><th>Monto</th>${editar?'<th></th>':''}</tr></thead><tbody>${gastos.map(g=>`<tr>
-    <td>${g.fecha||'-'}</td><td>${g.descripcion}</td>
-    <td style="color:var(--muted)">${g.partidas?.nombre||'-'}</td>
-    <td><span class="badge badge-gray">${g.categoria}</span></td>
-    <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
-    <td style="font-weight:500">${fmt(g.monto)}</td>
-    ${editar?`<td><button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button></td>`:''}
-  </tr>`).join('')}</tbody></table>`;
+  const badgeEstado = ea => {
+    if(ea==='por_aprobar') return `<span class="badge" style="background:rgba(245,166,35,.15);color:var(--accent)">⏳ Por aprobar</span>`;
+    if(ea==='rechazado') return `<span class="badge badge-red">✕ Rechazado</span>`;
+    return `<span class="badge badge-green">✓ Aprobado</span>`;
+  };
+  return `<table><thead><tr><th>Fecha</th><th>Descripción</th><th>Partida</th><th>Categoría</th><th>Comp.</th><th>Estado</th><th>Monto</th>${editar?'<th></th>':''}</tr></thead><tbody>${gastos.map(g=>{
+    const ea=g.estado_aprobacion||'aprobado';
+    const aprobado=ea==='aprobado';
+    const acciones=puedeEditar()&&!aprobado?`
+      ${ea==='por_aprobar'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="cambiarEstadoGasto('${g.id}','aprobado','${g.proyecto_id}')">✓ Aprobar</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="cambiarEstadoGasto('${g.id}','rechazado','${g.proyecto_id}')">✕ Rechazar</button>`:''}
+      ${ea==='rechazado'?`<button class="btn btn-ghost btn-sm" onclick="cambiarEstadoGasto('${g.id}','por_aprobar','${g.proyecto_id}')">↩ Reenviar</button>`:''}
+    `:'';
+    return `<tr style="${ea==='por_aprobar'?'background:rgba(245,166,35,.05)':ea==='rechazado'?'opacity:.6':''}">
+      <td>${g.fecha||'-'}</td><td>${g.descripcion}</td>
+      <td style="color:var(--muted)">${g.partidas?.nombre||'-'}</td>
+      <td><span class="badge badge-gray">${g.categoria}</span></td>
+      <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
+      <td>${badgeEstado(ea)}</td>
+      <td style="font-weight:500;${ea==='rechazado'?'text-decoration:line-through;color:var(--muted)':''}">${fmt(g.monto)}</td>
+      ${editar?`<td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}${!aprobado&&editar?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}${aprobado&&editar&&esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}</td>`:''}
+    </tr>`;
+  }).join('')}</tbody></table>`;
 }
 
 
@@ -2098,14 +2125,17 @@ async function guardarGasto(){
   const desc=document.getElementById('g-desc').value.trim();
   if(!pid||!monto||!desc){notify('Completá obra, monto y descripción',false);return;}
   const partidaId=document.getElementById('g-partida').value||null;
+  // Supervisor siempre carga en "por_aprobar"; admin y superiores en "aprobado"
+  const estadoAprobacion = esSupervisor() ? 'por_aprobar' : 'aprobado';
   const data={proyecto_id:pid,partida_id:partidaId,categoria:document.getElementById('g-cat').value,
     descripcion:desc,monto,fecha:document.getElementById('g-fecha').value,
     comprobante_nro:document.getElementById('g-comp').value,observaciones:document.getElementById('g-obs').value,
     cuenta_id:document.getElementById('g-cuenta').value||null,
+    estado_aprobacion:estadoAprobacion,
     created_by:currentUser.id,pagado_por:currentUser.id};
   const {error}=await sb.from('gastos').insert(data);
   if(error){notify('Error: '+error.message,false);return;}
-  notify('Gasto registrado');
+  notify(esSupervisor()?'Gasto enviado para aprobación':'Gasto registrado');
   closeModal('modal-gasto');
   ['g-monto','g-desc','g-comp','g-obs'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('g-cuenta').value='';
@@ -2119,6 +2149,32 @@ async function eliminarGasto(gid,pid){
   await sb.from('gastos').delete().eq('id',gid);
   notify('Gasto eliminado');
   await fetchGastos();
+  renderGastos(); renderDashboard();
+  if(currentProyectoId===pid) verDetalle(pid);
+}
+
+function switchTabById(panelId){
+  const panel=document.getElementById(panelId);
+  if(!panel) return;
+  const tabs=panel.closest('.view')||document;
+  tabs.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  panel.classList.add('active');
+  // Activate the corresponding tab button
+  panel.closest('[id^="detalle"]')?.querySelectorAll('.tab').forEach((t,i)=>{
+    const panels=['tp','tg','ti','tpp','tr'];
+    if(panels[i]===panelId) t.classList.add('active');
+    else t.classList.remove('active');
+  });
+}
+
+async function cambiarEstadoGasto(gid, nuevoEstado, pid){
+  const msgs={aprobado:'¿Aprobar este gasto? Una vez aprobado no podrá modificarse.',rechazado:'¿Rechazar este gasto?',por_aprobar:'¿Reenviar este gasto a revisión?'};
+  if(!confirm(msgs[nuevoEstado])) return;
+  const {error}=await sb.from('gastos').update({estado_aprobacion:nuevoEstado}).eq('id',gid);
+  if(error){notify('Error: '+error.message,false);return;}
+  const labels={aprobado:'Gasto aprobado',rechazado:'Gasto rechazado',por_aprobar:'Gasto reenviado a revisión'};
+  notify(labels[nuevoEstado]);
+  await Promise.all([fetchGastos(),fetchProyectos()]);
   renderGastos(); renderDashboard();
   if(currentProyectoId===pid) verDetalle(pid);
 }
@@ -2874,7 +2930,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v5.0';
+    const CACHE = 'obracontrol-v5.1';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -2962,6 +3018,12 @@ function actualizarVisibilidadAdmin(){
   // Supervisor: ocultar selector de estado (siempre será Planificación)
   const estadoGrp=document.getElementById('p-estado-group');
   if(estadoGrp) estadoGrp.style.display=esSupervisor()?'none':'';
+  // Supervisor: ocultar secciones de precio de venta en partidas
+  const pventaSecs=['part-pventa-section','ep-pventa-section'];
+  pventaSecs.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=puedeVerPrecioCliente()?'':'none';
+  });
 }
 
 // Cargar cobros cuando se activa tab rentabilidad
