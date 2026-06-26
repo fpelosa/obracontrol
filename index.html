@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v6.9</title>
+<title>ObraControl v7.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v6.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.0</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -696,7 +696,30 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
-<!-- Changelog -->
+<!-- Editar Gasto (solo Admin) -->
+<div class="modal-overlay" id="modal-editar-gasto">
+  <div class="modal">
+    <div class="modal-title">Editar Gasto<button class="modal-close" onclick="closeModal('modal-editar-gasto')">✕</button></div>
+    <input type="hidden" id="eg-id"/>
+    <input type="hidden" id="eg-pid"/>
+    <div class="form-grid">
+      <div class="form-group"><label>Partida</label><select id="eg-partida"><option value="">Sin partida</option></select></div>
+      <div class="form-group"><label>Categoría</label><select id="eg-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="number" id="eg-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Fecha *</label><input type="date" id="eg-fecha"/></div>
+      <div class="form-group full"><label>Descripción / Proveedor *</label><input id="eg-desc" placeholder="Nombre proveedor o descripción"/></div>
+      <div class="form-group"><label>Comprobante N°</label><input id="eg-comp" placeholder="Factura / Recibo"/></div>
+      <div class="form-group"><label>Estado</label><select id="eg-estado"><option value="por_aprobar">⏳ Por aprobar</option><option value="aprobado">✓ Aprobado</option><option value="rechazado">✕ Rechazado</option></select></div>
+      <div class="form-group full"><label>Observaciones</label><textarea id="eg-obs" style="min-height:60px"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-editar-gasto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEdicionGasto()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay" id="modal-changelog">
   <div class="modal" style="max-width:620px;max-height:80vh;overflow-y:auto">
     <div class="modal-title">📋 Historial de cambios<button class="modal-close" onclick="closeModal('modal-changelog')">✕</button></div>
@@ -704,7 +727,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v6.9</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.0</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1952,7 +1975,7 @@ function renderGastosDetHTML(gastos,partidas,editar){
       <td>${badgeEstado(ea)}</td>
       <td style="font-weight:500;${ea==='rechazado'?'text-decoration:line-through;color:var(--muted)':''}">${fmt(g.monto)}</td>
       <td><div id="adj-g-${g.id}" style="display:flex;flex-wrap:wrap;gap:4px;min-width:80px"><span style="color:var(--muted);font-size:11px">...</span></div></td>
-      ${editar?`<td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}${!aprobado&&editar?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}${aprobado&&editar&&esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}</td>`:''}
+      ${editar?`<td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}${esAdmin()?`<button class="btn btn-ghost btn-sm" onclick="editarGasto('${g.id}','${g.proyecto_id}')">✏️</button>`:''}${!aprobado&&editar?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}${aprobado&&editar&&esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}</td>`:''}
     </tr>`;
   }).join('')}</tbody></table>`;
 }
@@ -2704,8 +2727,50 @@ async function guardarGasto(){
   if(currentProyectoId===pid) verDetalle(pid);
 }
 
+async function editarGasto(gid, pid){
+  if(!esAdmin()){notify('Solo administradores pueden editar gastos',false);return;}
+  const {data:g} = await sb.from('gastos').select('*').eq('id',gid).single();
+  if(!g){notify('Error al cargar el gasto',false);return;}
+  document.getElementById('eg-id').value=g.id;
+  document.getElementById('eg-pid').value=pid;
+  const {data:partidas} = await sb.from('partidas').select('id,nombre').eq('proyecto_id',pid).order('nombre');
+  const selPart = document.getElementById('eg-partida');
+  selPart.innerHTML='<option value="">Sin partida</option>'+(partidas||[]).map(p=>`<option value="${p.id}" ${p.id===g.partida_id?'selected':''}>${p.nombre}</option>`).join('');
+  document.getElementById('eg-cat').value=g.categoria||'Materiales';
+  document.getElementById('eg-monto').value=g.monto||0;
+  document.getElementById('eg-fecha').value=g.fecha||'';
+  document.getElementById('eg-desc').value=g.descripcion||'';
+  document.getElementById('eg-comp').value=g.comprobante_nro||'';
+  document.getElementById('eg-obs').value=g.observaciones||'';
+  document.getElementById('eg-estado').value=g.estado_aprobacion||'aprobado';
+  openModal('modal-editar-gasto');
+}
+
+async function guardarEdicionGasto(){
+  const gid=document.getElementById('eg-id').value;
+  const pid=document.getElementById('eg-pid').value;
+  const monto=Number(document.getElementById('eg-monto').value);
+  const desc=document.getElementById('eg-desc').value.trim();
+  if(!monto||!desc){notify('Monto y descripción son obligatorios',false);return;}
+  const {error}=await sb.from('gastos').update({
+    partida_id:document.getElementById('eg-partida').value||null,
+    categoria:document.getElementById('eg-cat').value,
+    monto,
+    fecha:document.getElementById('eg-fecha').value,
+    descripcion:desc,
+    comprobante_nro:document.getElementById('eg-comp').value||null,
+    observaciones:document.getElementById('eg-obs').value||null,
+    estado_aprobacion:document.getElementById('eg-estado').value
+  }).eq('id',gid);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify('Gasto actualizado');
+  closeModal('modal-editar-gasto');
+  await Promise.all([fetchGastos(),fetchProyectos()]);
+  renderGastos(); renderDashboard();
+  if(currentProyectoId===pid) verDetalle(pid);
+}
+
 async function eliminarGasto(gid,pid){
-  if(!confirm('¿Eliminar este gasto?')) return;
   await sb.from('gastos').delete().eq('id',gid);
   notify('Gasto eliminado');
   await fetchGastos();
@@ -3814,7 +3879,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v6.9';
+    const CACHE = 'obracontrol-v7.0';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
