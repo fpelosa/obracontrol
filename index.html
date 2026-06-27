@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v7.8</title>
+<title>ObraControl v7.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.8</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -415,6 +415,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <option value="presupuesto">Ordenar: Presupuesto</option>
               <option value="gastado">Ordenar: Gastado</option>
               <option value="avance">Ordenar: Avance</option>
+              <option value="fecha_aprobacion">Ordenar: F. Aprobación</option>
+              <option value="fecha_fin">Ordenar: F. Fin estimada</option>
             </select>
             <button id="proy-sort-dir-btn" onclick="toggleSortDir()" title="Cambiar dirección" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;padding:7px 10px;cursor:pointer;font-family:var(--fb);transition:all .15s;white-space:nowrap" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='var(--bg3)'">↑ Asc</button>
             <!-- Botones de vista -->
@@ -761,7 +763,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.8</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.9</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1758,6 +1760,8 @@ function renderProyectos(){
     else if(campo==='cliente'){ va=a.cliente||''; vb=b.cliente||''; }
     else if(campo==='presupuesto'){ va=Number(a.presupuesto_total)||0; vb=Number(b.presupuesto_total)||0; }
     else if(campo==='gastado'){ va=Number(a.total_gastado)||0; vb=Number(b.total_gastado)||0; }
+    else if(campo==='fecha_aprobacion'){ va=a.fecha_aprobacion||''; vb=b.fecha_aprobacion||''; }
+    else if(campo==='fecha_fin'){ va=a.fecha_fin_calculada||''; vb=b.fecha_fin_calculada||''; }
     else { va=Number(a.pct_ejecutado)||0; vb=Number(b.pct_ejecutado)||0; }
     const cmp = va<vb?-1:va>vb?1:0;
     return proyOrdenDir==='asc'?cmp:-cmp;
@@ -1808,6 +1812,8 @@ function _renderProyTabla(p){
       <td>${estadoBadge(x.estado)}</td>
       <td style="text-align:right">${fmt(x.presupuesto_total)}</td>
       <td style="text-align:right;color:${col}">${fmt(x.total_gastado)}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${x.fecha_aprobacion?new Date(x.fecha_aprobacion).toLocaleDateString('es-AR'):'—'}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${x.fecha_fin_calculada||'—'}</td>
       <td>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="progress-wrap" style="width:70px"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div>
@@ -1821,6 +1827,8 @@ function _renderProyTabla(p){
       <th>Proyecto</th><th>Cliente</th><th>Estado</th>
       <th style="text-align:right">Presupuesto</th>
       <th style="text-align:right">Gastado</th>
+      <th>F. Aprobación</th>
+      <th>F. Fin estimada</th>
       <th style="min-width:130px">Avance</th>
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -2211,7 +2219,8 @@ function renderInfoHTML(p){
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Cliente</div><div>${p.cliente||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Responsable</div><div>${p.perfiles?.nombre||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Inicio</div><div>${p.fecha_inicio||'—'}</div></div>
-    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Fin estimado</div><div>${p.fecha_fin_estimada||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Aprobación</div><div>${p.fecha_aprobacion?new Date(p.fecha_aprobacion).toLocaleDateString('es-AR'):'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Fin estimado</div><div>${p.fecha_fin_calculada||p.fecha_fin_estimada||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Avance físico</div><div>${p.avance_fisico||0}%</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Solicitado por</div><div>${p.solicitado_por||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Orden de pedido N°</div><div>${p.orden_pedido||'—'}</div></div>
@@ -2233,6 +2242,18 @@ async function guardarProyecto(){
   const nombre=document.getElementById('p-nombre').value.trim();
   if(!nombre){notify('El nombre es obligatorio',false);return;}
   const pid=document.getElementById('p-id').value;
+  // Calcular fecha_fin_calculada desde fecha_inicio + tiempo_estimado
+  const fechaInicio = document.getElementById('p-inicio').value;
+  const tiempoEst = document.getElementById('p-tiempo-estimado').value||'';
+  let fechaFinCalc = null;
+  if(fechaInicio && tiempoEst){
+    const match = tiempoEst.match(/\d+/);
+    if(match){
+      const d = new Date(fechaInicio);
+      d.setDate(d.getDate()+parseInt(match[0]));
+      fechaFinCalc = d.toISOString().split('T')[0];
+    }
+  }
   const data={
     nombre,
     ubicacion:document.getElementById('p-ubicacion').value,
@@ -2246,6 +2267,7 @@ async function guardarProyecto(){
     solicitado_por:document.getElementById('p-solicitado-por').value||null,
     orden_pedido:document.getElementById('p-orden-pedido').value||null,
     tiempo_estimado_obra:document.getElementById('p-tiempo-estimado').value||null,
+    fecha_fin_calculada: fechaFinCalc,
     descripcion:document.getElementById('p-desc').value,
     precio_cliente:esAdmin()?Number(document.getElementById('p-precio-cliente').value)||0:undefined
   };
@@ -2400,7 +2422,18 @@ async function editarProyecto(id){
     selEstado.innerHTML='<option>Planificación</option><option>En curso</option>';
   }
   selEstado.value=p.estado||'Planificación';
-  document.getElementById('p-inicio').value=p.fecha_inicio||'';
+  const inicioEl = document.getElementById('p-inicio');
+  inicioEl.value=p.fecha_inicio||'';
+  // Solo admin puede cambiar fecha_inicio cuando está En curso
+  if(p.estado==='En curso' && !esAdmin()){
+    inicioEl.setAttribute('readonly','readonly');
+    inicioEl.title='Solo administradores pueden cambiar la fecha de inicio de una obra en curso';
+    inicioEl.style.opacity='.5';
+  } else {
+    inicioEl.removeAttribute('readonly');
+    inicioEl.title='';
+    inicioEl.style.opacity='';
+  }
   document.getElementById('p-fin').value=p.fecha_fin_estimada||'';
   document.getElementById('p-avance').value=p.avance_fisico||0;
   document.getElementById('p-solicitado-por').value=p.solicitado_por||'';
@@ -2492,7 +2525,23 @@ async function cambiarEstadoDesdeEsperando(proyId){
   const nuevoEstado = document.getElementById('ea-nuevo-estado')?.value;
   if(!nuevoEstado){notify('Seleccioná un estado',false);return;}
   if(!confirm(`¿Cambiar el proyecto a "${nuevoEstado}"?`)) return;
-  const {error} = await sb.from('proyectos').update({estado:nuevoEstado}).eq('id',proyId);
+  const upd = {estado:nuevoEstado};
+  if(nuevoEstado==='En curso'){
+    const fechaInicio = prompt('Fecha de inicio de la obra (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if(fechaInicio===null) return;
+    upd.fecha_inicio = fechaInicio||null;
+    upd.fecha_aprobacion = new Date().toISOString();
+    const proy = cache.proyectos.find(p=>p.id===proyId);
+    if(fechaInicio && proy?.tiempo_estimado_obra){
+      const match = proy.tiempo_estimado_obra.match(/\d+/);
+      if(match){
+        const d = new Date(fechaInicio);
+        d.setDate(d.getDate()+parseInt(match[0]));
+        upd.fecha_fin_calculada = d.toISOString().split('T')[0];
+      }
+    }
+  }
+  const {error} = await sb.from('proyectos').update(upd).eq('id',proyId);
   if(error){notify('Error: '+error.message,false);return;}
   notify(`Proyecto pasado a "${nuevoEstado}"`);
   await fetchProyectos();
@@ -2556,10 +2605,27 @@ async function aprobarParaPresupuesto(id){
   if(!confirm('¿Aprobar esta obra y pasarla a "En curso"?')) return;
   const observaciones=document.getElementById('pp-observaciones')?.value||'';
   const fechaRevision=document.getElementById('pp-fecha-revision')?.value||null;
+  // Pedir fecha de inicio al aprobar
+  const fechaInicio = prompt('Fecha de inicio de la obra (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+  if(fechaInicio===null) return; // canceló
+  // Calcular fecha fin
+  const proy = cache.proyectos.find(p=>p.id===id);
+  let fechaFin = null;
+  if(fechaInicio && proy?.tiempo_estimado_obra){
+    const match = proy.tiempo_estimado_obra.match(/\d+/);
+    if(match){
+      const d = new Date(fechaInicio);
+      d.setDate(d.getDate()+parseInt(match[0]));
+      fechaFin = d.toISOString().split('T')[0];
+    }
+  }
   const {error}=await sb.from('proyectos').update({
     estado:'En curso',
     obs_presupuesto:observaciones||null,
-    fecha_revision_presupuesto:fechaRevision||null
+    fecha_revision_presupuesto:fechaRevision||null,
+    fecha_inicio: fechaInicio||null,
+    fecha_fin_calculada: fechaFin,
+    fecha_aprobacion: new Date().toISOString()
   }).eq('id',id);
   if(error){notify('Error: '+error.message,false);return;}
   notify('✅ Obra aprobada y puesta En curso');
@@ -4122,7 +4188,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v7.8';
+    const CACHE = 'obracontrol-v7.9';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
