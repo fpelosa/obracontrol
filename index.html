@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.2</title>
+<title>ObraControl v8.3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.2</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.3</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -753,6 +753,59 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </div>
 
 
+<!-- Modal Item de Obra -->
+<div class="modal-overlay" id="modal-item-obra">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title" id="io-modal-title">Agregar Item de Obra<button class="modal-close" onclick="closeModal('modal-item-obra')">✕</button></div>
+    <input type="hidden" id="io-id"/>
+    <input type="hidden" id="io-proy-id"/>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nombre *</label><input id="io-nombre" placeholder="Ej: Excavación, Mampostería..."/></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="io-tipo">
+          <option value="mano_de_obra">Mano de obra</option>
+          <option value="material">Material</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Cantidad total</label><input type="number" id="io-cantidad" placeholder="1" min="0.01" step="0.01"/></div>
+      <div class="form-group"><label>Fecha de inicio</label><input type="date" id="io-fecha-inicio"/></div>
+      <div class="form-group"><label>Días de duración</label><input type="number" id="io-dias" placeholder="Ej: 10"/></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-item-obra')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarItemObra()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Certificado de Obra -->
+<div class="modal-overlay" id="modal-certificado">
+  <div class="modal" style="max-width:680px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title" id="cert-modal-title">Nuevo Certificado<button class="modal-close" onclick="closeModal('modal-certificado')">✕</button></div>
+    <input type="hidden" id="cert-id"/>
+    <input type="hidden" id="cert-proy-id"/>
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="form-group"><label>N° Certificado</label><input type="number" id="cert-numero" placeholder="Auto"/></div>
+      <div class="form-group"><label>Fecha *</label><input type="date" id="cert-fecha"/></div>
+      <div class="form-group full"><label>Descripción</label><input id="cert-desc" placeholder="Resumen del período certificado"/></div>
+    </div>
+    <div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:600">Avances por ítem</div>
+    <div id="cert-items-lista" style="margin-bottom:16px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📎 Archivos adjuntos</div>
+      <div id="cert-adjuntos-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;border:1px dashed var(--border2);border-radius:8px;color:var(--muted);font-size:13px">
+        <span style="font-size:18px">+</span> Adjuntar comprobantes
+        <input type="file" id="cert-adjuntos" multiple style="display:none" onchange="previewAdjuntos('cert')"/>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-certificado')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCertificado()">Guardar certificado</button>
+    </div>
+  </div>
+</div>
+
 <!-- Calculadora -->
 <div class="modal-overlay" id="modal-calc" style="z-index:10000">
   <div class="modal" style="max-width:280px">
@@ -789,7 +842,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.2</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.3</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1951,6 +2004,8 @@ async function verDetalle(id){
     <div class="tabs">
       <div class="tab active" onclick="switchTab(this,'tp')">Partidas (${partidas.length})</div>
       <div class="tab" onclick="switchTab(this,'tg')">Gastos (${gastos.length})</div>
+      <div class="tab" onclick="switchTab(this,'tio')">🏗️ Items de obra</div>
+      <div class="tab" onclick="switchTab(this,'tce')">📋 Certificados</div>
       <div class="tab" onclick="switchTab(this,'ti')">Información</div>
       <div class="tab" onclick="switchTab(this,'tadj')">📎 Adjuntos</div>
       ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div class="tab" style="color:var(--accent);font-weight:600" onclick="switchTab(this,'tpp')">📋 Para Presupuesto</div>`:''}
@@ -1959,6 +2014,8 @@ async function verDetalle(id){
     </div>
     <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar()||esSupervisor())}</div>
     <div id="tg" class="tab-panel">${renderGastosDetHTML(gastos,partidas,puedeEditar())}</div>
+    <div id="tio" class="tab-panel"><div id="items-obra-cont-${id}" class="loading">Cargando...</div></div>
+    <div id="tce" class="tab-panel"><div id="certificados-cont-${id}" class="loading">Cargando...</div></div>
     <div id="ti" class="tab-panel">${renderInfoHTML(p)}</div>
     <div id="tadj" class="tab-panel">
       <div class="card" style="margin-bottom:16px">
@@ -1979,6 +2036,8 @@ async function verDetalle(id){
     ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id)}</div>`:''}`;
   // Cargar adjuntos en pestaña dedicada (async)
   setTimeout(async ()=>{
+    renderItemsObra(id);
+    renderCertificados(id);
     const canDelete = puedeEditar()||esSupervisor();
     // Adjuntos del proyecto
     renderPanelAdjuntos('proyecto', id, `adj-proyecto-${id}`, canDelete);
@@ -4157,6 +4216,252 @@ async function log(accion, entidadTipo, entidadId, entidadNombre, detalle={}){
   } catch(e){ console.warn('Log error:', e); }
 }
 
+// ══════════════════════════════════════════
+// MÓDULO ITEMS DE OBRA
+// ══════════════════════════════════════════
+
+async function renderItemsObra(proyId){
+  const cont = document.getElementById(`items-obra-cont-${proyId}`);
+  if(!cont) return;
+  const canEdit = puedeEditar()||esSupervisor();
+
+  const {data:items} = await sb.from('items_obra').select('*').eq('proyecto_id',proyId).order('orden');
+  // Calcular avance acumulado de cada item desde certificados
+  const {data:certItems} = await sb.from('certificado_items')
+    .select('item_id, cantidad_ejecutada')
+    .in('item_id', (items||[]).map(i=>i.id));
+
+  const avancePorItem = {};
+  (certItems||[]).forEach(ci=>{
+    avancePorItem[ci.item_id] = (avancePorItem[ci.item_id]||0) + Number(ci.cantidad_ejecutada||0);
+  });
+
+  const hoy = new Date();
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--muted)">${(items||[]).length} ítems de obra</div>
+      ${canEdit?`<button class="btn btn-primary btn-sm" onclick="abrirModalItemObra('${proyId}')">+ Agregar ítem</button>`:''}
+    </div>
+    ${!(items||[]).length?'<div class="empty"><p>No hay ítems de obra. Agregá el primero.</p></div>':
+    items.map(item=>{
+      const ejec = avancePorItem[item.id]||0;
+      const total = Number(item.cantidad)||1;
+      const pct = Math.min(100, Math.round(ejec/total*100));
+      const col = colorPct(pct);
+      const tipoLabel = item.tipo==='mano_de_obra'?'👷 Mano de obra':'📦 Material';
+      const finEst = item.fecha_fin_estimada;
+      const vencido = finEst && new Date(finEst) < hoy && pct < 100;
+      return `<div class="partida-row" style="${vencido?'border-left:3px solid var(--red)':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div style="flex:1;min-width:150px">
+            <div style="font-weight:500;font-size:14px">${item.nombre}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">${tipoLabel}${item.fecha_inicio?` · Inicio: ${item.fecha_inicio}`:''}${finEst?` · Fin: ${finEst}`:''}${vencido?` <span style="color:var(--red)">⚠️ Vencido</span>`:''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><div style="font-size:13px">${ejec} / ${total}</div></div>
+            <div style="text-align:right;min-width:52px"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:14px;font-weight:600;color:${col}">${pct}%</div></div>
+            ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="editarItemObra('${item.id}','${proyId}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarItemObra('${item.id}','${proyId}')">✕</button>`:''}
+          </div>
+        </div>
+        <div style="margin-top:8px"><div class="progress-wrap"><div class="progress-bar" style="width:${pct}%;background:${col}"></div></div></div>
+      </div>`;
+    }).join('')}`;
+}
+
+function abrirModalItemObra(proyId, item=null){
+  document.getElementById('io-id').value = item?.id||'';
+  document.getElementById('io-proy-id').value = proyId;
+  document.getElementById('io-modal-title').innerHTML = (item?'Editar':'Agregar')+' Item de Obra<button class="modal-close" onclick="closeModal(\'modal-item-obra\')">✕</button>';
+  document.getElementById('io-nombre').value = item?.nombre||'';
+  document.getElementById('io-tipo').value = item?.tipo||'mano_de_obra';
+  document.getElementById('io-cantidad').value = item?.cantidad||1;
+  document.getElementById('io-fecha-inicio').value = item?.fecha_inicio||'';
+  document.getElementById('io-dias').value = item?.dias_duracion||'';
+  openModal('modal-item-obra');
+}
+
+async function editarItemObra(itemId, proyId){
+  const {data:item} = await sb.from('items_obra').select('*').eq('id',itemId).single();
+  if(item) abrirModalItemObra(proyId, item);
+}
+
+async function guardarItemObra(){
+  const id = document.getElementById('io-id').value;
+  const proyId = document.getElementById('io-proy-id').value;
+  const nombre = document.getElementById('io-nombre').value.trim();
+  if(!nombre){notify('El nombre es obligatorio',false);return;}
+  const data = {
+    nombre,
+    tipo: document.getElementById('io-tipo').value,
+    cantidad: Number(document.getElementById('io-cantidad').value)||1,
+    fecha_inicio: document.getElementById('io-fecha-inicio').value||null,
+    dias_duracion: Number(document.getElementById('io-dias').value)||null,
+    proyecto_id: proyId
+  };
+  if(id){
+    const {error}=await sb.from('items_obra').update(data).eq('id',id);
+    if(error){notify('Error: '+error.message,false);return;}
+  } else {
+    const {data:items}=await sb.from('items_obra').select('orden').eq('proyecto_id',proyId).order('orden',{ascending:false}).limit(1);
+    data.orden=(items?.[0]?.orden||0)+1;
+    const {error}=await sb.from('items_obra').insert(data);
+    if(error){notify('Error: '+error.message,false);return;}
+  }
+  notify(id?'Item actualizado':'Item agregado');
+  closeModal('modal-item-obra');
+  renderItemsObra(proyId);
+}
+
+async function eliminarItemObra(itemId, proyId){
+  if(!confirm('¿Eliminar este ítem? Se eliminarán también sus avances en los certificados.')) return;
+  await sb.from('items_obra').delete().eq('id',itemId);
+  notify('Item eliminado');
+  renderItemsObra(proyId);
+}
+
+// ══════════════════════════════════════════
+// MÓDULO CERTIFICADOS DE OBRA
+// ══════════════════════════════════════════
+
+async function renderCertificados(proyId){
+  const cont = document.getElementById(`certificados-cont-${proyId}`);
+  if(!cont) return;
+  const canEdit = puedeEditar()||esSupervisor();
+
+  const {data:certs} = await sb.from('certificados_obra').select('*').eq('proyecto_id',proyId).order('numero',{ascending:false});
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--muted)">${(certs||[]).length} certificados</div>
+      ${canEdit?`<button class="btn btn-primary btn-sm" onclick="abrirModalCertificado('${proyId}')">+ Nuevo certificado</button>`:''}
+    </div>
+    ${!(certs||[]).length?'<div class="empty"><p>No hay certificados de obra. Creá el primero.</p></div>':
+    certs.map(c=>`<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:600">Certificado N° ${c.numero||'—'} <span style="font-size:12px;color:var(--muted);font-weight:400">· ${c.fecha}</span></div>
+          ${c.descripcion?`<div style="font-size:12px;color:var(--muted);margin-top:3px">${c.descripcion}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="verDetalleCertificado('${c.id}','${proyId}')">👁 Ver</button>
+          ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="abrirModalCertificado('${proyId}','${c.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="eliminarCertificado('${c.id}','${proyId}')">✕</button>`:''}
+        </div>
+      </div>
+      <div id="cert-adj-${c.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+    </div>`).join('')}`;
+
+  // Cargar adjuntos de cada certificado
+  (certs||[]).forEach(c=>{
+    cargarAdjuntos('certificado', c.id).then(adj=>{
+      const el=document.getElementById(`cert-adj-${c.id}`);
+      if(el) el.innerHTML=adj.length?renderAdjuntosHTML(adj,`cert-adj-${c.id}`,canEdit):'';
+    });
+  });
+}
+
+async function abrirModalCertificado(proyId, certId=null){
+  document.getElementById('cert-proy-id').value=proyId;
+  document.getElementById('cert-id').value=certId||'';
+  document.getElementById('cert-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cert-desc').value='';
+  document.getElementById('cert-numero').value='';
+  document.getElementById('cert-adjuntos-preview').innerHTML='';
+
+  // Obtener items del proyecto para mostrar en el formulario
+  const {data:items}=await sb.from('items_obra').select('*').eq('proyecto_id',proyId).order('orden');
+  // Si es edición, cargar datos
+  let certItems={};
+  if(certId){
+    const {data:c}=await sb.from('certificados_obra').select('*').eq('id',certId).single();
+    if(c){ document.getElementById('cert-fecha').value=c.fecha; document.getElementById('cert-desc').value=c.descripcion||''; document.getElementById('cert-numero').value=c.numero||''; }
+    const {data:ci}=await sb.from('certificado_items').select('*').eq('certificado_id',certId);
+    (ci||[]).forEach(x=>{ certItems[x.item_id]={cantidad:x.cantidad_ejecutada,obs:x.observaciones,id:x.id}; });
+  } else {
+    // Próximo número
+    const {data:last}=await sb.from('certificados_obra').select('numero').eq('proyecto_id',proyId).order('numero',{ascending:false}).limit(1);
+    document.getElementById('cert-numero').value=(last?.[0]?.numero||0)+1;
+  }
+
+  const lista=document.getElementById('cert-items-lista');
+  if(!(items||[]).length){
+    lista.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">No hay ítems de obra en este proyecto. Agregá ítems primero.</div>';
+  } else {
+    lista.innerHTML=items.map(item=>{
+      const prev=certItems[item.id];
+      return `<div style="display:grid;grid-template-columns:1fr 120px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-weight:500;font-size:13px">${item.nombre}</div><div style="font-size:11px;color:var(--muted)">${item.tipo==='mano_de_obra'?'👷 Mano de obra':'📦 Material'} · Total: ${item.cantidad}</div></div>
+        <input type="number" data-item-id="${item.id}" data-cert-item-id="${prev?.id||''}" class="cert-item-cant" placeholder="0" value="${prev?.cantidad||''}" min="0" step="0.01" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;text-align:center" title="Cantidad ejecutada en este certificado"/>
+        <input type="text" data-item-id="${item.id}" class="cert-item-obs" placeholder="Observaciones" value="${prev?.obs||''}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('cert-modal-title').innerHTML=(certId?'Editar':'Nuevo')+' Certificado<button class="modal-close" onclick="closeModal(\'modal-certificado\')">✕</button>';
+  openModal('modal-certificado');
+}
+
+async function guardarCertificado(){
+  const proyId=document.getElementById('cert-proy-id').value;
+  const certId=document.getElementById('cert-id').value;
+  const fecha=document.getElementById('cert-fecha').value;
+  if(!fecha){notify('La fecha es obligatoria',false);return;}
+  const certData={
+    proyecto_id:proyId,
+    fecha,
+    descripcion:document.getElementById('cert-desc').value||null,
+    numero:Number(document.getElementById('cert-numero').value)||null,
+    created_by:currentUser.id
+  };
+  let cid=certId;
+  if(certId){
+    const {error}=await sb.from('certificados_obra').update(certData).eq('id',certId);
+    if(error){notify('Error: '+error.message,false);return;}
+  } else {
+    const {data:nuevo,error}=await sb.from('certificados_obra').insert(certData).select().single();
+    if(error){notify('Error: '+error.message,false);return;}
+    cid=nuevo.id;
+  }
+  // Guardar avances por item
+  const cantInputs=document.querySelectorAll('.cert-item-cant');
+  for(const inp of cantInputs){
+    const itemId=inp.dataset.itemId;
+    const certItemId=inp.dataset.certItemId;
+    const cant=Number(inp.value)||0;
+    const obs=document.querySelector(`.cert-item-obs[data-item-id="${itemId}"]`)?.value||'';
+    if(certItemId){
+      await sb.from('certificado_items').update({cantidad_ejecutada:cant,observaciones:obs}).eq('id',certItemId);
+    } else if(cant>0){
+      await sb.from('certificado_items').insert({certificado_id:cid,item_id:itemId,cantidad_ejecutada:cant,observaciones:obs});
+    }
+  }
+  // Subir adjuntos
+  await subirAdjuntos('certificado', cid, 'cert');
+  notify('Certificado guardado');
+  closeModal('modal-certificado');
+  renderCertificados(proyId);
+  renderItemsObra(proyId);
+}
+
+async function verDetalleCertificado(certId, proyId){
+  const {data:c}=await sb.from('certificados_obra').select('*').eq('id',certId).single();
+  const {data:ci}=await sb.from('certificado_items').select('*,items_obra(nombre,tipo,cantidad)').eq('certificado_id',certId);
+  const adj=await cargarAdjuntos('certificado',certId);
+  const canEdit=puedeEditar()||esSupervisor();
+  // Abrir modal en modo vista
+  await abrirModalCertificado(proyId, certId);
+}
+
+async function eliminarCertificado(certId, proyId){
+  if(!confirm('¿Eliminar este certificado y todos sus avances?')) return;
+  await sb.from('certificados_obra').delete().eq('id',certId);
+  notify('Certificado eliminado');
+  renderCertificados(proyId);
+  renderItemsObra(proyId);
+}
+
 async function renderLogs(){
   if(!esAdmin()) return;
   document.getElementById('log-buscar').value='';
@@ -4311,7 +4616,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.2';
+    const CACHE = 'obracontrol-v8.3';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
