@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v7.6</title>
+<title>ObraControl v7.7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.6</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.7</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -675,12 +675,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group full" id="g-proyecto-label" style="display:none"><label>Obra</label><div id="g-proyecto-nombre" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px"></div></div>
       <div class="form-group"><label>Partida</label><select id="g-partida"><option value="">Sin partida</option></select></div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
-      <div class="form-group"><label>Monto ($) *</label>
-        <div style="display:flex;gap:6px">
-          <input type="number" id="g-monto" placeholder="0" style="flex:1"/>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('g-monto')" title="Abrir calculadora" style="padding:0 10px;font-size:16px">🧮</button>
-        </div>
-      </div>
+      <div class="form-group"><label>Monto ($) *</label><input type="number" id="g-monto" placeholder="0"/></div>
       <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
       <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
@@ -766,7 +761,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.6</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.7</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -830,7 +825,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <input type="hidden" id="part-proy-id"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nombre *</label><input id="part-nombre" placeholder="Ej: Estructura hormigón"/></div>
-      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part')"/></div>
+      <div class="form-group"><label>Presupuesto ($)</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part')" style="flex:1"/>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('part-ppto')" style="padding:0 10px;font-size:16px" title="Calculadora">🧮</button>
+        </div>
+      </div>
       <div class="form-group"><label>Unidad</label><input id="part-unidad" placeholder="m², m³, gl..."/></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0"/></div>
       <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0"/></div>
@@ -870,7 +870,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <input type="hidden" id="ep-proy-id"/>
     <div class="form-grid">
       <div class="form-group full"><label>Nombre *</label><input id="ep-nombre" placeholder="Ej: Estructura hormigón"/></div>
-      <div class="form-group"><label>Presupuesto ($)</label><input type="number" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep')"/></div>
+      <div class="form-group"><label>Presupuesto ($)</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep')" style="flex:1"/>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('ep-ppto')" style="padding:0 10px;font-size:16px" title="Calculadora">🧮</button>
+        </div>
+      </div>
       <div class="form-group"><label>Unidad</label><input id="ep-unidad" placeholder="m², m³, gl..."/></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="ep-cant" placeholder="0"/></div>
       <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="ep-precio" placeholder="0"/></div>
@@ -2307,6 +2312,17 @@ function calcUsar(){
   closeModal('modal-calc');
 }
 
+function actualizarNotasValidez(){
+  const dias = document.getElementById('pe-valido-dias')?.value || 15;
+  const notas = document.getElementById('pe-notas');
+  if(!notas) return;
+  // Actualizar la línea de validez en las notas
+  notas.value = notas.value.replace(
+    /Presupuesto válido por \d+ días desde la fecha de emisión\./,
+    `Presupuesto válido por ${dias} días desde la fecha de emisión.`
+  );
+}
+
 function calcularFechaFin(){
   const inicio = document.getElementById('p-inicio')?.value;
   const tiempo = document.getElementById('p-tiempo-estimado')?.value||'';
@@ -2642,8 +2658,8 @@ function renderAdjuntosHTML(adjuntos, containerId, canDelete=false){
     const icon = ['pdf'].includes(ext)?'📄':['jpg','jpeg','png','gif','webp'].includes(ext)?'🖼️':'📎';
     const factBadge = a.es_factura?`<span style="font-size:10px;background:rgba(245,166,35,.15);color:var(--accent);border-radius:8px;padding:1px 5px">FACTURA</span>`:'';
     const privBadge = a.privado
-      ? `<span title="Privado — solo administradores" style="font-size:10px;background:rgba(239,68,68,.15);color:var(--red);border-radius:8px;padding:1px 5px;cursor:pointer" onclick="togglePrivadoAdjunto('${a.id}','${containerId}')">🔒</span>`
-      : `<span title="Público — visible para todos" style="font-size:10px;background:rgba(34,197,94,.15);color:var(--green);border-radius:8px;padding:1px 5px;cursor:pointer" onclick="togglePrivadoAdjunto('${a.id}','${containerId}')">🌐</span>`;
+      ? `<span data-priv-badge title="Privado — solo administradores" style="font-size:10px;background:rgba(239,68,68,.15);color:var(--red);border-radius:8px;padding:1px 5px;cursor:pointer" onclick="togglePrivadoAdjunto('${a.id}','${containerId}')">🔒</span>`
+      : `<span data-priv-badge title="Público — visible para todos" style="font-size:10px;background:rgba(34,197,94,.15);color:var(--green);border-radius:8px;padding:1px 5px;cursor:pointer" onclick="togglePrivadoAdjunto('${a.id}','${containerId}')">🌐</span>`;
     const del = canDelete?`<span class="adj-del" onclick="eliminarAdjunto('${a.id}','${a.storage_path}','${containerId}')">✕</span>`:'';
     return `<div class="adjunto-chip ${a.es_factura?'adj-factura':''}" data-adj-id="${a.id}">
       <a href="${a.url}" target="_blank" style="display:flex;align-items:center;gap:5px;color:inherit;text-decoration:none;max-width:140px">
@@ -2658,16 +2674,18 @@ async function togglePrivadoAdjunto(adjId, containerId){
   const {data:adj} = await sb.from('adjuntos').select('privado').eq('id',adjId).single();
   if(!adj) return;
   const nuevoValor = !adj.privado;
-  await sb.from('adjuntos').update({privado: nuevoValor}).eq('id',adjId);
-  notify(nuevoValor ? '🔒 Archivo marcado como privado' : '🌐 Archivo ahora es público');
-  // Actualizar el badge visualmente sin recargar todo
-  const chip = document.querySelector(`[data-adj-id="${adjId}"] span[onclick*="togglePrivado"]`);
-  if(chip){
-    chip.textContent = nuevoValor ? '🔒' : '🌐';
-    chip.title = nuevoValor ? 'Privado — solo administradores' : 'Público — visible para todos';
-    chip.style.background = nuevoValor ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)';
-    chip.style.color = nuevoValor ? 'var(--red)' : 'var(--green)';
-    chip.setAttribute('onclick', `togglePrivadoAdjunto('${adjId}','${containerId}')`);
+  const {error} = await sb.from('adjuntos').update({privado: nuevoValor}).eq('id',adjId);
+  if(error){notify('Error: '+error.message,false);return;}
+  notify(nuevoValor ? '🔒 Archivo privado' : '🌐 Archivo público');
+  // Actualizar badge directamente en el DOM
+  const badge = document.querySelector(`[data-adj-id="${adjId}"] [data-priv-badge]`);
+  if(badge){
+    badge.textContent = nuevoValor ? '🔒' : '🌐';
+    badge.title = nuevoValor ? 'Privado — solo administradores' : 'Público — visible para todos';
+    badge.style.background = nuevoValor ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)';
+    badge.style.color = nuevoValor ? 'var(--red)' : 'var(--green)';
+    // Actualizar onclick para el nuevo estado
+    badge.setAttribute('onclick', `togglePrivadoAdjunto('${adjId}','${containerId}')`);
   }
 }
 
@@ -3280,14 +3298,24 @@ async function generarPresupuestoDesdeProyecto(proyId) {
   await sb.from('proyectos').update({estado:'Esperando aprobación', presupuesto_ref_id: null}).eq('id',proyId);
   await fetchProyectos();
 
+  // Buscar nombre del cliente
+  let clienteNombre = proy.cliente || '';
+  if(proy.cliente_id){
+    if(!cacheClientes.length) await fetchClientes();
+    const c = cacheClientes.find(x=>x.id===proy.cliente_id);
+    if(c) clienteNombre = c.nombre;
+  }
+
   presActual = {
     id: null, numero: nextNum,
     fecha: new Date().toISOString().split('T')[0],
     fecha_validez: '',
-    cliente_nombre: proy.cliente || '',
+    valido_dias: 15,
+    cliente_nombre: clienteNombre,
+    cliente_id: proy.cliente_id || null,
     cliente_dir: '', cliente_cuit: '', cliente_ciudad: '',
     representante: 'jpelosa@nor-tel.com',
-    moneda: 'USD', tipo_cambio: '', descuento: 0,
+    moneda: 'ARS', tipo_cambio: '', descuento: 0,
     notas: 'Forma de pago: contra entrega.\nGarantía: 180 días para obras civiles por defectos constructivos.\nPresupuesto válido por 15 días desde la fecha de emisión.\nSujeto a aceptación en los términos y condiciones vigentes.',
     estado: 'borrador', incluye_iva: false,
     proyecto_origen_id: proyId,
@@ -3323,8 +3351,9 @@ async function nuevoPresupuesto() {
 
   presActual = {
     id: null, numero: nextNum, fecha: new Date().toISOString().split('T')[0],
-    fecha_validez: '', cliente_nombre: '', cliente_dir: '', cliente_cuit: '', cliente_ciudad: '',
-    representante: 'jpelosa@nor-tel.com', moneda: 'USD', tipo_cambio: '',
+    fecha_validez: '', valido_dias: 15,
+    cliente_nombre: '', cliente_dir: '', cliente_cuit: '', cliente_ciudad: '',
+    representante: 'jpelosa@nor-tel.com', moneda: 'ARS', tipo_cambio: '',
     descuento: 0, notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
     estado: 'borrador', incluye_iva: false
   };
@@ -3368,12 +3397,12 @@ function mostrarEditorPresupuesto() {
         <div class="form-grid">
           <div class="form-group"><label>N° Presupuesto</label><input id="pe-numero" value="${presActual.numero}"/></div>
           <div class="form-group"><label>Fecha</label><input type="date" id="pe-fecha" value="${presActual.fecha}"/></div>
-          <div class="form-group"><label>Válido hasta</label><input type="date" id="pe-validez" value="${presActual.fecha_validez||''}"/></div>
+          <div class="form-group"><label>Válido por (días)</label><input type="number" id="pe-valido-dias" value="${presActual.valido_dias||15}" min="1" placeholder="15" oninput="actualizarNotasValidez()"/></div>
           <div class="form-group"><label>Representante</label><input id="pe-representante" value="${presActual.representante||''}"/></div>
           <div class="form-group"><label>Moneda</label>
             <select id="pe-moneda" onchange="actualizarMoneda()">
+              <option value="ARS" ${(!presActual.moneda||presActual.moneda==='ARS')?'selected':''}>ARS - Pesos</option>
               <option value="USD" ${presActual.moneda==='USD'?'selected':''}>USD - Dólares</option>
-              <option value="ARS" ${presActual.moneda==='ARS'?'selected':''}>ARS - Pesos</option>
             </select>
           </div>
           <div class="form-group"><label>Tipo de cambio</label><input type="number" id="pe-tc" placeholder="(opcional)" value="${presActual.tipo_cambio||''}"/></div>
@@ -3546,7 +3575,8 @@ function recopilarDatosPresupuesto() {
   return {
     numero: document.getElementById('pe-numero').value,
     fecha: document.getElementById('pe-fecha').value,
-    fecha_validez: document.getElementById('pe-validez').value||null,
+    fecha_validez: null,
+    valido_dias: Number(document.getElementById('pe-valido-dias')?.value)||15,
     cliente_id: document.getElementById("pe-cli-id")?.value||null,
     cliente_nombre: document.getElementById('pe-cli-nombre').value,
     cliente_cuit: document.getElementById('pe-cli-cuit').value,
@@ -3742,7 +3772,7 @@ function generarHTMLPresupuesto(p, items) {
           <div style="font-size:22pt;font-weight:700;letter-spacing:1px;color:#f5a623">PRESUPUESTO</div>
           <div style="font-size:13pt;margin-top:4px">N° ${p.numero}</div>
           <div style="font-size:10pt;color:#aaa;margin-top:2px">Fecha: ${p.fecha}</div>
-          ${p.fecha_validez?`<div style="font-size:10pt;color:#aaa">Válido hasta: ${p.fecha_validez}</div>`:''}
+          ${p.valido_dias?`<div style="font-size:10pt;color:#aaa">Válido por: ${p.valido_dias} días</div>`:''}
           ${p.orden_pedido?`<div style="font-size:10pt;color:#aaa;margin-top:2px">O.P. N°: ${p.orden_pedido}</div>`:''}
         </div>
       </div>
@@ -4076,7 +4106,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v7.6';
+    const CACHE = 'obracontrol-v7.7';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
