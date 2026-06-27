@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v7.5</title>
+<title>ObraControl v7.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -633,13 +633,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group" id="p-estado-group"><label>Estado</label>
         <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option><option>Esperando aprobación</option></select>
       </div>
-      <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio"/></div>
-      <div class="form-group"><label>Fecha fin estimada</label><input type="date" id="p-fin"/></div>
-      <div class="form-group"><label>Avance físico (%)</label><input type="number" id="p-avance" min="0" max="100" placeholder="0"/></div>
+      <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio" oninput="calcularFechaFin()"/></div>
       <div class="form-group"><label>Solicitado por</label><input id="p-solicitado-por" placeholder="Nombre del solicitante"/></div>
       <div class="form-group"><label>Orden de pedido N°</label><input id="p-orden-pedido" placeholder="N° de orden"/></div>
-      <div class="form-group full"><label>Tiempo estimado de obra</label><input id="p-tiempo-estimado" placeholder="Ej: 30 días hábiles"/></div>
+      <div class="form-group full"><label>Tiempo estimado de obra</label><input id="p-tiempo-estimado" placeholder="Ej: 30 días hábiles" oninput="calcularFechaFin()"/></div>
       <div class="form-group full"><label>Descripción</label><textarea id="p-desc"></textarea></div>
+      <!-- Campos ocultos calculados -->
+      <input type="hidden" id="p-fin"/>
+      <input type="hidden" id="p-avance"/>
+      <input type="hidden" id="p-presupuesto" value="0"/>
       <div class="form-group full" id="p-admin-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔒 Solo administradores</div>
         <div class="form-grid">
@@ -673,7 +675,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group full" id="g-proyecto-label" style="display:none"><label>Obra</label><div id="g-proyecto-nombre" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px"></div></div>
       <div class="form-group"><label>Partida</label><select id="g-partida"><option value="">Sin partida</option></select></div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
-      <div class="form-group"><label>Monto ($) *</label><input type="number" id="g-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Monto ($) *</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="g-monto" placeholder="0" style="flex:1"/>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('g-monto')" title="Abrir calculadora" style="padding:0 10px;font-size:16px">🧮</button>
+        </div>
+      </div>
       <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
       <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
@@ -723,6 +730,35 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </div>
 
 
+<!-- Calculadora -->
+<div class="modal-overlay" id="modal-calc" style="z-index:10000">
+  <div class="modal" style="max-width:280px">
+    <div class="modal-title">Calculadora<button class="modal-close" onclick="closeModal('modal-calc')">✕</button></div>
+    <div id="calc-display" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-size:22px;font-weight:600;text-align:right;margin-bottom:12px;min-height:54px;word-break:break-all">0</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      <button class="btn btn-ghost" onclick="calcBtn('7')" style="font-size:16px;padding:12px">7</button>
+      <button class="btn btn-ghost" onclick="calcBtn('8')" style="font-size:16px;padding:12px">8</button>
+      <button class="btn btn-ghost" onclick="calcBtn('9')" style="font-size:16px;padding:12px">9</button>
+      <button class="btn btn-ghost" onclick="calcBtn('/')" style="font-size:16px;padding:12px;color:var(--accent)">÷</button>
+      <button class="btn btn-ghost" onclick="calcBtn('4')" style="font-size:16px;padding:12px">4</button>
+      <button class="btn btn-ghost" onclick="calcBtn('5')" style="font-size:16px;padding:12px">5</button>
+      <button class="btn btn-ghost" onclick="calcBtn('6')" style="font-size:16px;padding:12px">6</button>
+      <button class="btn btn-ghost" onclick="calcBtn('*')" style="font-size:16px;padding:12px;color:var(--accent)">×</button>
+      <button class="btn btn-ghost" onclick="calcBtn('1')" style="font-size:16px;padding:12px">1</button>
+      <button class="btn btn-ghost" onclick="calcBtn('2')" style="font-size:16px;padding:12px">2</button>
+      <button class="btn btn-ghost" onclick="calcBtn('3')" style="font-size:16px;padding:12px">3</button>
+      <button class="btn btn-ghost" onclick="calcBtn('-')" style="font-size:16px;padding:12px;color:var(--accent)">−</button>
+      <button class="btn btn-ghost" onclick="calcBtn('0')" style="font-size:16px;padding:12px">0</button>
+      <button class="btn btn-ghost" onclick="calcBtn('.')" style="font-size:16px;padding:12px">.</button>
+      <button class="btn btn-danger btn-sm" onclick="calcClear()" style="font-size:14px;padding:12px">C</button>
+      <button class="btn btn-ghost" onclick="calcBtn('+')" style="font-size:16px;padding:12px;color:var(--accent)">+</button>
+      <button class="btn btn-primary" onclick="calcEqual()" style="grid-column:span 4;font-size:16px;padding:12px;margin-top:2px">=</button>
+      <button class="btn btn-ghost" onclick="calcUsar()" style="grid-column:span 4;font-size:13px;padding:10px;border-color:var(--green);color:var(--green)">✓ Usar este valor</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay" id="modal-changelog">
   <div class="modal" style="max-width:620px;max-height:80vh;overflow-y:auto">
     <div class="modal-title">📋 Historial de cambios<button class="modal-close" onclick="closeModal('modal-changelog')">✕</button></div>
@@ -730,7 +766,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.5</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.6</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1848,6 +1884,7 @@ async function verDetalle(id){
         ${puedeEditar() || esSupervisor()?`<button class="btn btn-ghost btn-sm" onclick="abrirModalPartida('${id}')">+ Partida</button>`:''}
         ${puedeEditar()||esSupervisor()?`<button class="btn btn-primary btn-sm" onclick="abrirGastoProyecto('${id}')">+ Gasto</button>`:''}
         ${esSupervisor() && p.estado==='Planificación'?`<button class="btn btn-primary btn-sm" onclick="marcarTerminadoSupervisor('${id}')" style="background:var(--green);border-color:var(--green)">✅ Marcar como terminado</button>`:''}
+        ${esAdmin()?`<button class="btn btn-ghost btn-sm" onclick="generarPresupuestoDesdeProyecto('${id}')" style="border-color:var(--accent2);color:var(--accent2)">📄 Presupuesto</button>`:''}
         ${esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarProyecto('${id}')">Eliminar</button>`:''}
       </div>
       </div>
@@ -2230,6 +2267,60 @@ async function guardarProyecto(){
   }
 }
 
+// ── CALCULADORA ──────────────────────────────
+let _calcExpr = '';
+let _calcTargetId = '';
+
+function abrirCalculadora(targetId){
+  _calcTargetId = targetId;
+  _calcExpr = '';
+  document.getElementById('calc-display').textContent = '0';
+  openModal('modal-calc');
+}
+function calcBtn(v){
+  _calcExpr += v;
+  document.getElementById('calc-display').textContent = _calcExpr;
+}
+function calcClear(){
+  _calcExpr = '';
+  document.getElementById('calc-display').textContent = '0';
+}
+function calcEqual(){
+  try {
+    const result = Function('"use strict"; return (' + _calcExpr + ')')();
+    const rounded = Math.round(result * 100) / 100;
+    _calcExpr = String(rounded);
+    document.getElementById('calc-display').textContent = rounded.toLocaleString('es-AR');
+  } catch(e) {
+    document.getElementById('calc-display').textContent = 'Error';
+    _calcExpr = '';
+  }
+}
+function calcUsar(){
+  if(!_calcTargetId) return;
+  try {
+    const result = _calcExpr ? Function('"use strict"; return (' + _calcExpr + ')')() : 0;
+    const rounded = Math.round(result * 100) / 100;
+    const el = document.getElementById(_calcTargetId);
+    if(el){ el.value = rounded; el.dispatchEvent(new Event('input')); }
+  } catch(e){}
+  closeModal('modal-calc');
+}
+
+function calcularFechaFin(){
+  const inicio = document.getElementById('p-inicio')?.value;
+  const tiempo = document.getElementById('p-tiempo-estimado')?.value||'';
+  if(!inicio) return;
+  // Extraer número de días del texto (ej: "30 días hábiles" → 30)
+  const match = tiempo.match(/\d+/);
+  if(!match) return;
+  const dias = parseInt(match[0]);
+  const fecha = new Date(inicio);
+  fecha.setDate(fecha.getDate() + dias);
+  const fin = document.getElementById('p-fin');
+  if(fin) fin.value = fecha.toISOString().split('T')[0];
+}
+
 async function abrirModalNuevoProyecto(){
   if(!cacheClientes.length) await fetchClientes();
   document.getElementById('p-id').value='';
@@ -2569,18 +2660,14 @@ async function togglePrivadoAdjunto(adjId, containerId){
   const nuevoValor = !adj.privado;
   await sb.from('adjuntos').update({privado: nuevoValor}).eq('id',adjId);
   notify(nuevoValor ? '🔒 Archivo marcado como privado' : '🌐 Archivo ahora es público');
-  // Re-renderizar el contenedor
-  const el = document.getElementById(containerId);
-  if(el){
-    const entidad = el.closest('[data-entidad-tipo]');
-    // Refrescar simplemente recargando los adjuntos del panel
-    const chip = el.querySelector(`[data-adj-id="${adjId}"] span[title]`);
-    if(chip){
-      chip.textContent = nuevoValor ? '🔒' : '🌐';
-      chip.title = nuevoValor ? 'Privado — solo administradores' : 'Público — visible para todos';
-      chip.style.background = nuevoValor ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)';
-      chip.style.color = nuevoValor ? 'var(--red)' : 'var(--green)';
-    }
+  // Actualizar el badge visualmente sin recargar todo
+  const chip = document.querySelector(`[data-adj-id="${adjId}"] span[onclick*="togglePrivado"]`);
+  if(chip){
+    chip.textContent = nuevoValor ? '🔒' : '🌐';
+    chip.title = nuevoValor ? 'Privado — solo administradores' : 'Público — visible para todos';
+    chip.style.background = nuevoValor ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)';
+    chip.style.color = nuevoValor ? 'var(--red)' : 'var(--green)';
+    chip.setAttribute('onclick', `togglePrivadoAdjunto('${adjId}','${containerId}')`);
   }
 }
 
@@ -3989,7 +4076,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v7.5';
+    const CACHE = 'obracontrol-v7.6';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
