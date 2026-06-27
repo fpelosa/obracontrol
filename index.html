@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v9.0</title>
+<title>ObraControl v9.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.2</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.0</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.2</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1700,11 +1700,20 @@ async function renderDashboard(){
   (certItemsAll||[]).forEach(ci=>{
     cantEjecPorItem[ci.item_id] = (cantEjecPorItem[ci.item_id]||0) + Number(ci.cantidad_ejecutada||0);
   });
+  // Calcular % tiempo consumido por proyecto (fecha_inicio_min → fecha_fin_max de sus ítems)
   const avanceObraPorProy = {};
-  (itemsAll||[]).forEach(it=>{
-    if(!avanceObraPorProy[it.proyecto_id]) avanceObraPorProy[it.proyecto_id]={ejec:0,total:0};
-    avanceObraPorProy[it.proyecto_id].ejec += cantEjecPorItem[it.id]||0;
-    avanceObraPorProy[it.proyecto_id].total += Number(it.cantidad||0);
+  enCurso.forEach(x=>{
+    const itsProy = (itemsAll||[]).filter(it=>it.proyecto_id===x.id && it.fecha_inicio);
+    if(!itsProy.length){ avanceObraPorProy[x.id]=null; return; }
+    const fechasInicio = itsProy.map(it=>new Date(it.fecha_inicio)).filter(d=>!isNaN(d));
+    const fechasFin = itsProy.filter(it=>it.fecha_fin_estimada).map(it=>new Date(it.fecha_fin_estimada)).filter(d=>!isNaN(d));
+    if(!fechasInicio.length){ avanceObraPorProy[x.id]=null; return; }
+    const inicioMin = new Date(Math.min(...fechasInicio));
+    const finMax = fechasFin.length ? new Date(Math.max(...fechasFin)) : null;
+    if(!finMax || finMax<=inicioMin){ avanceObraPorProy[x.id]=null; return; }
+    const total = finMax - inicioMin;
+    const transcurrido = hoy - inicioMin;
+    avanceObraPorProy[x.id] = Math.min(100, Math.max(0, Math.round(transcurrido/total*100)));
   });
 
   // Último certificado por proyecto
@@ -1741,14 +1750,14 @@ async function renderDashboard(){
         ${thD('nombre','Obra')}
         ${thD('cliente','Cliente')}
         ${thD('aprobacion','F. Aprobación')}
-        ${thD('avance_obra','Avance obra','center')}
+        ${thD('avance_obra','Tiempo consumido','center')}
         ${thD('pct_gasto','% Gastado','center')}
         ${thD('dias_sin_avance','Días sin avance','center')}
       </tr></thead><tbody>${enCursoSorted.map(x=>{
         const pctGasto = x.presupuesto_total>0?Math.round(x.total_gastado/x.presupuesto_total*100):0;
         const colG = colorPct(pctGasto);
         const obraData = avanceObraPorProy[x.id];
-        const pctObra = obraData!=null?obraData:null;
+        const pctObra = obraData!==null&&obraData!==undefined ? obraData : null;
         const colO = pctObra!==null?colorPct(pctObra):null;
         const ultCert = ultimoCertPorProy[x.id];
         const diasSinAvance = ultCert?Math.floor((hoy-new Date(ultCert))/(1000*60*60*24)):null;
@@ -1765,7 +1774,7 @@ async function renderDashboard(){
                   <div class="progress-wrap" style="width:80px"><div class="progress-bar" style="width:${pctObra}%;background:${colO}"></div></div>
                   <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px;margin-top:2px" onclick="event.stopPropagation();irADetalle('${x.id}');setTimeout(()=>switchTabById('tio'),300)">ver ítems</button>
                 </div>`
-              : '<span style="color:var(--muted);font-size:12px">Sin ítems</span>'}
+              : '<span style="color:var(--muted);font-size:12px">Sin fechas</span>'}
           </td>
           <td style="text-align:center">
             <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
@@ -1784,7 +1793,7 @@ async function renderDashboard(){
     : '<tr><td colspan="6" style="padding:30px;color:var(--muted);text-align:center">No hay obras en curso</td></tr>';
 
   // ── GRÁFICO PROYECTADO vs CERTIFICADO (todos los usuarios) ──
-  const proyConItems = enCurso.filter(x=>avanceObraPorProy[x.id]?.total>0).slice(0,10);
+  const proyConItems = enCurso.filter(x=>avanceObraPorProy[x.id]!==null).slice(0,10);
 
   if(esSupervisor()){
     // DASHBOARD SUPERVISOR
@@ -1810,13 +1819,17 @@ async function renderDashboard(){
     if(chartBarras) chartBarras?.destroy();
     const ctx2s=document.getElementById('chart-dona');
     if(chartDona) chartDona.destroy();
-    // Para supervisor: calcular pctObraPorProy
+    // Para supervisor: calcular tiempo consumido igual que admin
     const pctObraSupv = {};
     enCurso.forEach(x=>{
-      const itsProy=(itemsAll||[]).filter(it=>it.proyecto_id===x.id);
+      const itsProy=(itemsAll||[]).filter(it=>it.proyecto_id===x.id&&it.fecha_inicio);
       if(!itsProy.length){pctObraSupv[x.id]=0;return;}
-      const pcts=itsProy.map(it=>Math.min(100,(cantEjecPorItem[it.id]||0)/(Number(it.cantidad)||1)*100));
-      pctObraSupv[x.id]=Math.round(pcts.reduce((s,v)=>s+v,0)/pcts.length);
+      const fIni=itsProy.map(it=>new Date(it.fecha_inicio)).filter(d=>!isNaN(d));
+      const fFin=itsProy.filter(it=>it.fecha_fin_estimada).map(it=>new Date(it.fecha_fin_estimada)).filter(d=>!isNaN(d));
+      if(!fIni.length||!fFin.length){pctObraSupv[x.id]=0;return;}
+      const ini=new Date(Math.min(...fIni)),fin=new Date(Math.max(...fFin));
+      if(fin<=ini){pctObraSupv[x.id]=0;return;}
+      pctObraSupv[x.id]=Math.min(100,Math.max(0,Math.round((hoy-ini)/(fin-ini)*100)));
     });
     const ctx3s=document.getElementById('chart-certificado');
     if(ctx3s){
@@ -1864,19 +1877,6 @@ async function renderDashboard(){
   const catVals=cats.map(c=>gEnCurso.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
   chartDona=new Chart(ctx2,{type:'doughnut',data:{labels:cats,datasets:[{data:catVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}}},cutout:'65%'}});
 
-  // Calcular % de avance de obra por proyecto (promedio de % de cada ítem)
-  const pctObraPorProy = {};
-  enCurso.forEach(x=>{
-    const itsProy = (itemsAll||[]).filter(it=>it.proyecto_id===x.id);
-    if(!itsProy.length){ pctObraPorProy[x.id]=0; return; }
-    const pcts = itsProy.map(it=>{
-      const total=Number(it.cantidad)||1;
-      const ejec=cantEjecPorItem[it.id]||0;
-      return Math.min(100, ejec/total*100);
-    });
-    pctObraPorProy[x.id] = Math.round(pcts.reduce((s,v)=>s+v,0)/pcts.length);
-  });
-
   // Gráfico Proyectado vs Certificado — % por proyecto (todos En curso)
   const ctx3=document.getElementById('chart-certificado');
   if(ctx3){
@@ -1885,10 +1885,9 @@ async function renderDashboard(){
     chartCertificado=new Chart(ctx3,{type:'bar',data:{
       labels:proyParaGrafico.map(x=>x.nombre.length>16?x.nombre.slice(0,16)+'…':x.nombre),
       datasets:[{
-        label:'Avance certificado (%)',
-        data:proyParaGrafico.map(x=>pctObraPorProy[x.id]||0),
-        backgroundColor:proyParaGrafico.map(x=>{const v=pctObraPorProy[x.id]||0;return v>=70?'rgba(34,197,94,.6)':v>=30?'rgba(245,166,35,.6)':'rgba(59,130,246,.6)';}),
-        borderColor:proyParaGrafico.map(x=>{const v=pctObraPorProy[x.id]||0;return v>=70?'#22c55e':v>=30?'#f5a623':'#3b82f6';}),
+        label:'Tiempo consumido (%)',
+        backgroundColor:proyParaGrafico.map(x=>{const v=avanceObraPorProy[x.id]??0;return v>=70?'rgba(34,197,94,.6)':v>=30?'rgba(245,166,35,.6)':'rgba(59,130,246,.6)';}),
+        borderColor:proyParaGrafico.map(x=>{const v=avanceObraPorProy[x.id]??0;return v>=70?'#22c55e':v>=30?'#f5a623':'#3b82f6';}),
         borderWidth:1
       }]},options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}},tooltip:{callbacks:{label:ctx=>`Avance: ${ctx.raw}%`}}},
@@ -4893,7 +4892,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v9.0';
+    const CACHE = 'obracontrol-v9.2';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
