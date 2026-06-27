@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v7.2</title>
+<title>ObraControl v7.3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.2</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.3</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -727,7 +727,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.2</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.3</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -2450,7 +2450,9 @@ function previewAdjuntos(prefix){
     const icon = ['pdf'].includes(ext)?'📄':['jpg','jpeg','png','gif','webp'].includes(ext)?'🖼️':'📎';
     const chip = document.createElement('div');
     chip.className='adjunto-chip';
-    chip.innerHTML=`<span>${icon}</span><span class="adj-name">${f.name}</span><span class="adj-del" onclick="quitarPreviewAdjunto('${prefix}',${i},this.parentElement)">✕</span>`;
+    chip.style.maxWidth='none';
+    chip.innerHTML=`<span>${icon}</span><span class="adj-name">${f.name}</span>${esAdmin()?`<span style="font-size:11px;color:var(--red);margin-left:4px">🔒 privado</span>`:''}
+      <span class="adj-del" onclick="quitarPreviewAdjunto('${prefix}',${i},this.parentElement)">✕</span>`;
     preview.appendChild(chip);
   });
 }
@@ -2470,6 +2472,7 @@ async function subirAdjuntos(entidadTipo, entidadId, prefix, esFactura=false){
   if(!input||!input.files.length) return;
   const archivos = Array.from(input.files);
   const errores = [];
+  const esPrivado = esAdmin(); // Admin sube privado por defecto
   for(const f of archivos){
     const path = `${entidadTipo}/${entidadId}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
     const {error:upErr} = await sb.storage.from('adjuntos').upload(path, f);
@@ -2482,21 +2485,25 @@ async function subirAdjuntos(entidadTipo, entidadId, prefix, esFactura=false){
       url,
       storage_path: path,
       es_factura: esFactura,
+      privado: esPrivado,
       created_by: currentUser.id
     });
   }
   if(errores.length) notify(`Error subiendo: ${errores.join(', ')}`, false);
-  // Limpiar input y preview
   input.value='';
   const preview = document.getElementById(`${prefix}-adjuntos-preview`);
   if(preview) preview.innerHTML='';
 }
 
-// Cargar adjuntos existentes de una entidad
+
+// Cargar adjuntos existentes de una entidad (filtra privados según rol)
 async function cargarAdjuntos(entidadTipo, entidadId){
-  const {data} = await sb.from('adjuntos').select('*')
+  let q = sb.from('adjuntos').select('*')
     .eq('entidad_tipo', entidadTipo).eq('entidad_id', entidadId)
     .order('created_at', {ascending:true});
+  // No-admin solo ve adjuntos públicos (privado = false)
+  if(!esAdmin()) q = q.eq('privado', false);
+  const {data} = await q;
   return data||[];
 }
 
@@ -2516,13 +2523,38 @@ function renderAdjuntosHTML(adjuntos, containerId, canDelete=false){
     const ext = a.nombre_archivo.split('.').pop().toLowerCase();
     const icon = ['pdf'].includes(ext)?'📄':['jpg','jpeg','png','gif','webp'].includes(ext)?'🖼️':'📎';
     const factBadge = a.es_factura?`<span style="font-size:10px;background:rgba(245,166,35,.15);color:var(--accent);border-radius:8px;padding:1px 5px">FACTURA</span>`:'';
+    const privBadge = a.privado
+      ? `<span title="Privado — solo administradores" style="font-size:10px;background:rgba(239,68,68,.15);color:var(--red);border-radius:8px;padding:1px 5px;cursor:pointer" onclick="togglePrivadoAdjunto('${a.id}','${containerId}')">🔒</span>`
+      : `<span title="Público — visible para todos" style="font-size:10px;background:rgba(34,197,94,.15);color:var(--green);border-radius:8px;padding:1px 5px;cursor:pointer" onclick="togglePrivadoAdjunto('${a.id}','${containerId}')">🌐</span>`;
     const del = canDelete?`<span class="adj-del" onclick="eliminarAdjunto('${a.id}','${a.storage_path}','${containerId}')">✕</span>`:'';
     return `<div class="adjunto-chip ${a.es_factura?'adj-factura':''}" data-adj-id="${a.id}">
-      <a href="${a.url}" target="_blank" style="display:flex;align-items:center;gap:5px;color:inherit;text-decoration:none;max-width:160px">
+      <a href="${a.url}" target="_blank" style="display:flex;align-items:center;gap:5px;color:inherit;text-decoration:none;max-width:140px">
         <span>${icon}</span><span class="adj-name">${a.nombre_archivo}</span>
-      </a>${factBadge}${del}
+      </a>${factBadge}${esAdmin()?privBadge:''}${del}
     </div>`;
   }).join('');
+}
+
+async function togglePrivadoAdjunto(adjId, containerId){
+  if(!esAdmin()) return;
+  const {data:adj} = await sb.from('adjuntos').select('privado').eq('id',adjId).single();
+  if(!adj) return;
+  const nuevoValor = !adj.privado;
+  await sb.from('adjuntos').update({privado: nuevoValor}).eq('id',adjId);
+  notify(nuevoValor ? '🔒 Archivo marcado como privado' : '🌐 Archivo ahora es público');
+  // Re-renderizar el contenedor
+  const el = document.getElementById(containerId);
+  if(el){
+    const entidad = el.closest('[data-entidad-tipo]');
+    // Refrescar simplemente recargando los adjuntos del panel
+    const chip = el.querySelector(`[data-adj-id="${adjId}"] span[title]`);
+    if(chip){
+      chip.textContent = nuevoValor ? '🔒' : '🌐';
+      chip.title = nuevoValor ? 'Privado — solo administradores' : 'Público — visible para todos';
+      chip.style.background = nuevoValor ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)';
+      chip.style.color = nuevoValor ? 'var(--red)' : 'var(--green)';
+    }
+  }
 }
 
 // Panel de adjuntos para mostrar en detalle (proyecto, partida, gasto)
@@ -3912,7 +3944,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v7.2';
+    const CACHE = 'obracontrol-v7.3';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
