@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.9</title>
+<title>ObraControl v9.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.0</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -377,10 +377,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
       <div class="metrics" id="dash-metrics"><div class="loading">Cargando...</div></div>
       <div class="grid-2">
-        <div class="card"><div class="card-title">Presupuesto vs Gasto (En curso)</div><div class="chart-box"><canvas id="chart-barras"></canvas></div></div>
         <div class="card"><div class="card-title">Gastos por categoría (En curso)</div><div class="chart-box"><canvas id="chart-dona"></canvas></div></div>
+        <div class="card"><div class="card-title">🏗️ Proyectado vs Certificado (%)</div><div class="chart-box"><canvas id="chart-certificado"></canvas></div></div>
       </div>
-      <div class="card" style="margin-bottom:16px"><div class="card-title">🏗️ Proyectado vs Certificado</div><div class="chart-box"><canvas id="chart-certificado"></canvas></div></div>
       <div class="card" id="dash-planif-card" style="display:none;margin-bottom:16px">
         <div class="card-title">📋 Bandeja de planificación</div>
         <div id="dash-planif-supervisor"><div class="loading">Cargando...</div></div>
@@ -849,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.9</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.0</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1655,6 +1654,15 @@ async function fetchPartidas(proyId){
 }
 
 // ── DASHBOARD ──────────────────────────────
+function _dashSortBy(campo){
+  if(window._dashSort?.campo===campo){
+    window._dashSort.dir = window._dashSort.dir==='asc'?'desc':'asc';
+  } else {
+    window._dashSort = {campo, dir:'asc'};
+  }
+  renderDashboard();
+}
+
 async function renderDashboard(){
   const p = cache.proyectos;
   const g = cache.gastos;
@@ -1707,24 +1715,49 @@ async function renderDashboard(){
   });
 
   // ── TABLA DE PROYECTOS EN CURSO (todos los usuarios) ──
-  const tablaEnCurso = enCurso.length
+  let _dashSort = window._dashSort || {campo:'nombre', dir:'asc'};
+  const thD = (campo, label, align='left') => {
+    const activo = _dashSort.campo===campo;
+    const arr = activo ? (_dashSort.dir==='asc'?'↑':'↓') : '';
+    return `<th style="cursor:pointer;user-select:none;text-align:${align};${activo?'color:var(--accent)':''}" onclick="_dashSortBy('${campo}')">${label}${activo?' '+arr:''}</th>`;
+  };
+  // Sort enCurso for table
+  const enCursoSorted = [...enCurso].sort((a,b)=>{
+    let va,vb;
+    if(_dashSort.campo==='nombre'){va=a.nombre||'';vb=b.nombre||'';}
+    else if(_dashSort.campo==='cliente'){va=a.cliente||'';vb=b.cliente||'';}
+    else if(_dashSort.campo==='aprobacion'){va=a.fecha_aprobacion||'';vb=b.fecha_aprobacion||'';}
+    else if(_dashSort.campo==='avance_obra'){va=avanceObraPorProy?.[a.id]??-1;vb=avanceObraPorProy?.[b.id]??-1;}
+    else if(_dashSort.campo==='pct_gasto'){va=a.presupuesto_total>0?a.total_gastado/a.presupuesto_total:0;vb=b.presupuesto_total>0?b.total_gastado/b.presupuesto_total:0;}
+    else if(_dashSort.campo==='dias_sin_avance'){va=ultimoCertPorProy[a.id]?Math.floor((hoy-new Date(ultimoCertPorProy[a.id]))/(864e5)):9999;vb=ultimoCertPorProy[b.id]?Math.floor((hoy-new Date(ultimoCertPorProy[b.id]))/(864e5)):9999;}
+    else{va=a.nombre;vb=b.nombre;}
+    if(va<vb) return _dashSort.dir==='asc'?-1:1;
+    if(va>vb) return _dashSort.dir==='asc'?1:-1;
+    return 0;
+  });
+
+  const tablaEnCurso = enCursoSorted.length
     ? `<thead><tr>
-        <th>Obra</th><th>Cliente</th>
-        <th style="text-align:center">Avance obra</th>
-        <th style="text-align:center">% Gastado</th>
-        <th style="text-align:center">Días sin avance</th>
-      </tr></thead><tbody>${enCurso.map(x=>{
+        ${thD('nombre','Obra')}
+        ${thD('cliente','Cliente')}
+        ${thD('aprobacion','F. Aprobación')}
+        ${thD('avance_obra','Avance obra','center')}
+        ${thD('pct_gasto','% Gastado','center')}
+        ${thD('dias_sin_avance','Días sin avance','center')}
+      </tr></thead><tbody>${enCursoSorted.map(x=>{
         const pctGasto = x.presupuesto_total>0?Math.round(x.total_gastado/x.presupuesto_total*100):0;
         const colG = colorPct(pctGasto);
         const obraData = avanceObraPorProy[x.id];
-        const pctObra = obraData&&obraData.total>0?Math.min(100,Math.round(obraData.ejec/obraData.total*100)):null;
+        const pctObra = obraData!=null?obraData:null;
         const colO = pctObra!==null?colorPct(pctObra):null;
         const ultCert = ultimoCertPorProy[x.id];
         const diasSinAvance = ultCert?Math.floor((hoy-new Date(ultCert))/(1000*60*60*24)):null;
         const diasCol = diasSinAvance===null?'var(--muted)':diasSinAvance>30?'var(--red)':diasSinAvance>14?'var(--accent)':'var(--green)';
+        const fAprobacion = x.fecha_aprobacion?new Date(x.fecha_aprobacion).toLocaleDateString('es-AR'):'—';
         return `<tr style="cursor:pointer" onclick="irADetalle('${x.id}')">
           <td><div style="font-weight:500">${x.nombre}</div><div style="font-size:11px;color:var(--muted)">${x.ubicacion||''}</div></td>
           <td style="color:var(--muted);font-size:12px">${x.cliente||'—'}</td>
+          <td style="font-size:12px;color:var(--muted);white-space:nowrap">${fAprobacion}</td>
           <td style="text-align:center">
             ${pctObra!==null
               ? `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
@@ -1748,7 +1781,7 @@ async function renderDashboard(){
           </td>
         </tr>`;
       }).join('')}</tbody>`
-    : '<tr><td colspan="5" style="padding:30px;color:var(--muted);text-align:center">No hay obras en curso</td></tr>';
+    : '<tr><td colspan="6" style="padding:30px;color:var(--muted);text-align:center">No hay obras en curso</td></tr>';
 
   // ── GRÁFICO PROYECTADO vs CERTIFICADO (todos los usuarios) ──
   const proyConItems = enCurso.filter(x=>avanceObraPorProy[x.id]?.total>0).slice(0,10);
@@ -1774,22 +1807,34 @@ async function renderDashboard(){
     document.getElementById('tabla-resumen').innerHTML=tablaEnCurso;
     // Gráfico proyectado vs certificado
     const ctx1=document.getElementById('chart-barras');
-    if(chartBarras) chartDona?.destroy(), chartBarras.destroy();
-    if(proyConItems.length){
-      chartBarras=new Chart(ctx1,{type:'bar',data:{
-        labels:proyConItems.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),
-        datasets:[
-          {label:'Cantidad total',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.total||0),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},
-          {label:'Certificado',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.ejec||0),backgroundColor:'rgba(34,197,94,.45)',borderColor:'#22c55e',borderWidth:1}
-        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}});
-    }
-    const ctx2=document.getElementById('chart-dona');
+    if(chartBarras) chartBarras?.destroy();
+    const ctx2s=document.getElementById('chart-dona');
     if(chartDona) chartDona.destroy();
-    // Avance % por proyecto para dona
-    chartDona=new Chart(ctx2,{type:'doughnut',data:{
-      labels:proyConItems.map(x=>x.nombre.length>18?x.nombre.slice(0,18)+'…':x.nombre),
-      datasets:[{data:proyConItems.map(x=>{const d=avanceObraPorProy[x.id];return d&&d.total>0?Math.round(d.ejec/d.total*100):0;}),backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444','#22d3ee','#fb923c','#a3e635','#f43f5e','#818cf8'],borderWidth:0}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}%`}}},cutout:'65%'}});
+    // Para supervisor: calcular pctObraPorProy
+    const pctObraSupv = {};
+    enCurso.forEach(x=>{
+      const itsProy=(itemsAll||[]).filter(it=>it.proyecto_id===x.id);
+      if(!itsProy.length){pctObraSupv[x.id]=0;return;}
+      const pcts=itsProy.map(it=>Math.min(100,(cantEjecPorItem[it.id]||0)/(Number(it.cantidad)||1)*100));
+      pctObraSupv[x.id]=Math.round(pcts.reduce((s,v)=>s+v,0)/pcts.length);
+    });
+    const ctx3s=document.getElementById('chart-certificado');
+    if(ctx3s){
+      if(chartCertificado) chartCertificado.destroy();
+      const proyGraf=enCurso.slice(0,15);
+      chartCertificado=new Chart(ctx3s,{type:'bar',data:{
+        labels:proyGraf.map(x=>x.nombre.length>16?x.nombre.slice(0,16)+'…':x.nombre),
+        datasets:[{label:'Avance certificado (%)',data:proyGraf.map(x=>pctObraSupv[x.id]||0),
+          backgroundColor:proyGraf.map(x=>{const v=pctObraSupv[x.id]||0;return v>=70?'rgba(34,197,94,.6)':v>=30?'rgba(245,166,35,.6)':'rgba(59,130,246,.6)';}),
+          borderColor:proyGraf.map(x=>{const v=pctObraSupv[x.id]||0;return v>=70?'#22c55e':v>=30?'#f5a623':'#3b82f6';}),borderWidth:1}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}},tooltip:{callbacks:{label:ctx=>`Avance: ${ctx.raw}%`}}},
+          scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{min:0,max:100,ticks:{color:'#7a8099',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.04)'}}}}});
+    }
+    // Dona: gastos por categoría en curso para supervisor
+    const gEnCursoS=g.filter(x=>enCurso.some(pr=>pr.id===x.proyecto_id));
+    const catsS=['Materiales','Mano de obra','Equipos','Subcontratos','Varios'];
+    const catValsS=catsS.map(c=>gEnCursoS.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
+    chartDona=new Chart(ctx2s,{type:'doughnut',data:{labels:catsS,datasets:[{data:catValsS,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}}},cutout:'65%'}});
     return;
   }
 
@@ -1812,16 +1857,6 @@ async function renderDashboard(){
 
   document.getElementById('tabla-resumen').innerHTML=tablaEnCurso;
 
-  // Gráfico Presupuesto vs Gasto (solo En curso)
-  const ctx1=document.getElementById('chart-barras');
-  if(chartBarras) chartBarras.destroy();
-  chartBarras=new Chart(ctx1,{type:'bar',data:{
-    labels:enCurso.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),
-    datasets:[
-      {label:'Presupuesto',data:enCurso.map(x=>Number(x.presupuesto_total)),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},
-      {label:'Gastado',data:enCurso.map(x=>Number(x.total_gastado)),backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
-
   // Gráfico Gastos por categoría (solo En curso)
   const ctx2=document.getElementById('chart-dona');
   if(chartDona) chartDona.destroy();
@@ -1829,18 +1864,38 @@ async function renderDashboard(){
   const catVals=cats.map(c=>gEnCurso.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
   chartDona=new Chart(ctx2,{type:'doughnut',data:{labels:cats,datasets:[{data:catVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}}},cutout:'65%'}});
 
-  // Gráfico Proyectado vs Certificado (tercer gráfico)
+  // Calcular % de avance de obra por proyecto (promedio de % de cada ítem)
+  const pctObraPorProy = {};
+  enCurso.forEach(x=>{
+    const itsProy = (itemsAll||[]).filter(it=>it.proyecto_id===x.id);
+    if(!itsProy.length){ pctObraPorProy[x.id]=0; return; }
+    const pcts = itsProy.map(it=>{
+      const total=Number(it.cantidad)||1;
+      const ejec=cantEjecPorItem[it.id]||0;
+      return Math.min(100, ejec/total*100);
+    });
+    pctObraPorProy[x.id] = Math.round(pcts.reduce((s,v)=>s+v,0)/pcts.length);
+  });
+
+  // Gráfico Proyectado vs Certificado — % por proyecto (todos En curso)
   const ctx3=document.getElementById('chart-certificado');
   if(ctx3){
     if(chartCertificado) chartCertificado.destroy();
-    if(proyConItems.length){
-      chartCertificado=new Chart(ctx3,{type:'bar',data:{
-        labels:proyConItems.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),
-        datasets:[
-          {label:'Proyectado',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.total||0),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},
-          {label:'Certificado',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.ejec||0),backgroundColor:'rgba(34,197,94,.45)',borderColor:'#22c55e',borderWidth:1}
-        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}});
-    }
+    const proyParaGrafico = enCurso.slice(0,15);
+    chartCertificado=new Chart(ctx3,{type:'bar',data:{
+      labels:proyParaGrafico.map(x=>x.nombre.length>16?x.nombre.slice(0,16)+'…':x.nombre),
+      datasets:[{
+        label:'Avance certificado (%)',
+        data:proyParaGrafico.map(x=>pctObraPorProy[x.id]||0),
+        backgroundColor:proyParaGrafico.map(x=>{const v=pctObraPorProy[x.id]||0;return v>=70?'rgba(34,197,94,.6)':v>=30?'rgba(245,166,35,.6)':'rgba(59,130,246,.6)';}),
+        borderColor:proyParaGrafico.map(x=>{const v=pctObraPorProy[x.id]||0;return v>=70?'#22c55e':v>=30?'#f5a623':'#3b82f6';}),
+        borderWidth:1
+      }]},options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}},tooltip:{callbacks:{label:ctx=>`Avance: ${ctx.raw}%`}}},
+        scales:{
+          x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+          y:{min:0,max:100,ticks:{color:'#7a8099',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.04)'}}
+        }}});
   }
 }
 
@@ -4838,7 +4893,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.9';
+    const CACHE = 'obracontrol-v9.0';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
