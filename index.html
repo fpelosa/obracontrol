@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.5</title>
+<title>ObraControl v8.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -842,7 +842,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.5</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.6</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -4393,18 +4393,61 @@ async function abrirModalCertificado(proyId, certId=null){
   if(!(items||[]).length){
     lista.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">No hay ítems de obra en este proyecto. Agregá ítems primero.</div>';
   } else {
-    lista.innerHTML=items.map(item=>{
-      const prev=certItems[item.id];
-      return `<div style="display:grid;grid-template-columns:1fr 120px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div><div style="font-weight:500;font-size:13px">${item.nombre}</div><div style="font-size:11px;color:var(--muted)">${item.tipo==='mano_de_obra'?'👷 Mano de obra':'📦 Material'} · Total: ${item.cantidad}</div></div>
-        <input type="number" data-item-id="${item.id}" data-cert-item-id="${prev?.id||''}" class="cert-item-cant" placeholder="0" value="${prev?.cantidad||''}" min="0" step="0.01" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;text-align:center" title="Cantidad ejecutada en este certificado"/>
-        <input type="text" data-item-id="${item.id}" class="cert-item-obs" placeholder="Observaciones" value="${prev?.obs||''}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    // Agrupar certItems existentes por item_id (puede haber múltiples filas)
+    const certItemsPorItem = {};
+    Object.entries(certItems).forEach(([itemId, ci])=>{
+      if(!certItemsPorItem[itemId]) certItemsPorItem[itemId]=[];
+      certItemsPorItem[itemId].push(ci);
+    });
+    // También cargar filas múltiples si hay más de una
+    if(certId){
+      const {data:ciAll}=await sb.from('certificado_items').select('*').eq('certificado_id',certId);
+      (ciAll||[]).forEach(ci=>{
+        if(!certItemsPorItem[ci.item_id]) certItemsPorItem[ci.item_id]=[];
+        if(!certItemsPorItem[ci.item_id].find(x=>x.id===ci.id))
+          certItemsPorItem[ci.item_id].push({id:ci.id,cantidad:ci.cantidad_ejecutada,obs:ci.observaciones});
+      });
+    }
+    lista.innerHTML = items.map(item=>{
+      const filas = certItemsPorItem[item.id]||[{cantidad:'',obs:''}];
+      return `<div class="cert-item-grupo" data-item-id="${item.id}" style="border-bottom:1px solid var(--border);padding:10px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <div style="font-weight:500;font-size:13px">${item.nombre}</div>
+            <div style="font-size:11px;color:var(--muted)">${item.tipo==='mano_de_obra'?'👷 Mano de obra':'📦 Material'} · Total: ${item.cantidad}</div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="agregarFilaCertItem('${item.id}')" style="font-size:11px">+ fila</button>
+        </div>
+        <div class="cert-filas" data-item-id="${item.id}">
+          ${filas.map((f,fi)=>`<div class="cert-fila" style="display:grid;grid-template-columns:110px 1fr 22px;gap:8px;align-items:center;margin-bottom:6px">
+            <input type="number" data-item-id="${item.id}" data-cert-item-id="${f.id||''}" class="cert-item-cant" placeholder="0" value="${f.cantidad||''}" min="0" step="0.01" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;text-align:center"/>
+            <input type="text" data-item-id="${item.id}" class="cert-item-obs" placeholder="Observaciones / tramo / sector..." value="${f.obs||''}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+            ${fi>0?`<button type="button" onclick="quitarFilaCertItem(this)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0;line-height:1">✕</button>`:'<span></span>'}
+          </div>`).join('')}
+        </div>
       </div>`;
     }).join('');
   }
 
   document.getElementById('cert-modal-title').innerHTML=(certId?'Editar':'Nuevo')+' Certificado<button class="modal-close" onclick="closeModal(\'modal-certificado\')">✕</button>';
   openModal('modal-certificado');
+}
+
+function agregarFilaCertItem(itemId){
+  const cont = document.querySelector(`.cert-filas[data-item-id="${itemId}"]`);
+  if(!cont) return;
+  const div = document.createElement('div');
+  div.className='cert-fila';
+  div.style.cssText='display:grid;grid-template-columns:110px 1fr 22px;gap:8px;align-items:center;margin-bottom:6px';
+  div.innerHTML=`
+    <input type="number" data-item-id="${itemId}" data-cert-item-id="" class="cert-item-cant" placeholder="0" min="0" step="0.01" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;text-align:center"/>
+    <input type="text" data-item-id="${itemId}" class="cert-item-obs" placeholder="Observaciones / tramo / sector..." style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    <button type="button" onclick="quitarFilaCertItem(this)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0;line-height:1">✕</button>`;
+  cont.appendChild(div);
+}
+
+function quitarFilaCertItem(btn){
+  btn.closest('.cert-fila')?.remove();
 }
 
 async function guardarCertificado(){
@@ -4423,25 +4466,26 @@ async function guardarCertificado(){
   if(certId){
     const {error}=await sb.from('certificados_obra').update(certData).eq('id',certId);
     if(error){notify('Error: '+error.message,false);return;}
+    // Borrar items existentes y re-insertar
+    await sb.from('certificado_items').delete().eq('certificado_id',certId);
   } else {
     const {data:nuevo,error}=await sb.from('certificados_obra').insert(certData).select().single();
     if(error){notify('Error: '+error.message,false);return;}
     cid=nuevo.id;
   }
-  // Guardar avances por item
-  const cantInputs=document.querySelectorAll('.cert-item-cant');
-  for(const inp of cantInputs){
-    const itemId=inp.dataset.itemId;
-    const certItemId=inp.dataset.certItemId;
-    const cant=Number(inp.value)||0;
-    const obs=document.querySelector(`.cert-item-obs[data-item-id="${itemId}"]`)?.value||'';
-    if(certItemId){
-      await sb.from('certificado_items').update({cantidad_ejecutada:cant,observaciones:obs}).eq('id',certItemId);
-    } else if(cant>0){
-      await sb.from('certificado_items').insert({certificado_id:cid,item_id:itemId,cantidad_ejecutada:cant,observaciones:obs});
+  // Insertar todas las filas (cada fila es un registro independiente)
+  const filas = document.querySelectorAll('.cert-fila');
+  const inserts = [];
+  filas.forEach(fila=>{
+    const cantEl = fila.querySelector('.cert-item-cant');
+    const obsEl = fila.querySelector('.cert-item-obs');
+    const itemId = cantEl?.dataset.itemId;
+    const cant = Number(cantEl?.value)||0;
+    if(itemId && cant>0){
+      inserts.push({certificado_id:cid, item_id:itemId, cantidad_ejecutada:cant, observaciones:obsEl?.value||null});
     }
-  }
-  // Subir adjuntos
+  });
+  if(inserts.length) await sb.from('certificado_items').insert(inserts);
   await subirAdjuntos('certificado', cid, 'cert');
   notify('Certificado guardado');
   closeModal('modal-certificado');
@@ -4620,7 +4664,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.5';
+    const CACHE = 'obracontrol-v8.6';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
