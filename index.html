@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.8</title>
+<title>ObraControl v8.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.8</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -377,14 +377,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
       <div class="metrics" id="dash-metrics"><div class="loading">Cargando...</div></div>
       <div class="grid-2">
-        <div class="card"><div class="card-title">Presupuesto vs Gasto</div><div class="chart-box"><canvas id="chart-barras"></canvas></div></div>
-        <div class="card"><div class="card-title">Gastos por categoría</div><div class="chart-box"><canvas id="chart-dona"></canvas></div></div>
+        <div class="card"><div class="card-title">Presupuesto vs Gasto (En curso)</div><div class="chart-box"><canvas id="chart-barras"></canvas></div></div>
+        <div class="card"><div class="card-title">Gastos por categoría (En curso)</div><div class="chart-box"><canvas id="chart-dona"></canvas></div></div>
       </div>
+      <div class="card" style="margin-bottom:16px"><div class="card-title">🏗️ Proyectado vs Certificado</div><div class="chart-box"><canvas id="chart-certificado"></canvas></div></div>
       <div class="card" id="dash-planif-card" style="display:none;margin-bottom:16px">
         <div class="card-title">📋 Bandeja de planificación</div>
         <div id="dash-planif-supervisor"><div class="loading">Cargando...</div></div>
       </div>
-      <div class="card"><div class="card-title">Obras activas</div><div class="table-wrap"><table id="tabla-resumen"></table></div></div>
+      <div class="card"><div class="card-title">Proyectos en curso</div><div class="table-wrap"><table id="tabla-resumen"></table></div></div>
     </div>
 
     <!-- PROYECTOS -->
@@ -848,7 +849,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.8</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.9</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1323,7 +1324,7 @@ try {
 let currentUser = null;
 let currentPerfil = null;
 let currentProyectoId = null;
-let chartBarras = null, chartDona = null, chartLineas = null, chartCateg = null;
+let chartBarras = null, chartDona = null, chartCertificado = null, chartLineas = null, chartCateg = null;
 let cache = { proyectos: [], gastos: [] };
 
 // ── HELPERS ──────────────────────────────
@@ -1655,82 +1656,194 @@ async function fetchPartidas(proyId){
 
 // ── DASHBOARD ──────────────────────────────
 async function renderDashboard(){
-  const p=cache.proyectos;
-  const g=cache.gastos;
+  const p = cache.proyectos;
+  const g = cache.gastos;
+  const enCurso = p.filter(x=>x.estado==='En curso');
+  const enPlanif = p.filter(x=>x.estado==='Planificación');
+  const espAprobacion = p.filter(x=>x.estado==='Esperando aprobación');
+  const hoy = new Date();
+  const gastosPorAprobar = g.filter(x=>x.estado_aprobacion==='por_aprobar');
+
+  // ── MÉTRICAS COMUNES (todos los usuarios) ──
+  const metricasComunes = `
+    <div class="metric" style="cursor:pointer" onclick="filtrarProyectos('En curso');showView('proyectos')">
+      <div class="metric-label">En curso</div>
+      <div class="metric-value" style="color:var(--green)">${enCurso.length}</div>
+      <div class="metric-sub">proyectos activos</div>
+    </div>
+    <div class="metric" style="cursor:pointer" onclick="filtrarProyectos('Planificación');showView('proyectos')">
+      <div class="metric-label">Planificación</div>
+      <div class="metric-value" style="color:var(--accent)">${enPlanif.length}</div>
+      <div class="metric-sub">en bandeja</div>
+    </div>
+    <div class="metric" style="cursor:pointer" onclick="filtrarProyectos('Esperando aprobación');showView('proyectos')">
+      <div class="metric-label">Esp. aprobación</div>
+      <div class="metric-value" style="color:#22d3ee">${espAprobacion.length}</div>
+      <div class="metric-sub">presupuesto enviado</div>
+    </div>`;
+
+  // Calcular avance de obra promedio por proyecto (desde certificados)
+  const {data:certItemsAll} = await sb.from('certificado_items')
+    .select('item_id, cantidad_ejecutada, es_libre')
+    .eq('es_libre', false);
+  const {data:itemsAll} = await sb.from('items_obra').select('id, proyecto_id, cantidad');
+  // Agrupar por proyecto
+  const cantEjecPorItem = {};
+  (certItemsAll||[]).forEach(ci=>{
+    cantEjecPorItem[ci.item_id] = (cantEjecPorItem[ci.item_id]||0) + Number(ci.cantidad_ejecutada||0);
+  });
+  const avanceObraPorProy = {};
+  (itemsAll||[]).forEach(it=>{
+    if(!avanceObraPorProy[it.proyecto_id]) avanceObraPorProy[it.proyecto_id]={ejec:0,total:0};
+    avanceObraPorProy[it.proyecto_id].ejec += cantEjecPorItem[it.id]||0;
+    avanceObraPorProy[it.proyecto_id].total += Number(it.cantidad||0);
+  });
+
+  // Último certificado por proyecto
+  const {data:ultimosCerts} = await sb.from('certificados_obra').select('proyecto_id, fecha').order('fecha',{ascending:false});
+  const ultimoCertPorProy = {};
+  (ultimosCerts||[]).forEach(c=>{
+    if(!ultimoCertPorProy[c.proyecto_id]) ultimoCertPorProy[c.proyecto_id]=c.fecha;
+  });
+
+  // ── TABLA DE PROYECTOS EN CURSO (todos los usuarios) ──
+  const tablaEnCurso = enCurso.length
+    ? `<thead><tr>
+        <th>Obra</th><th>Cliente</th>
+        <th style="text-align:center">Avance obra</th>
+        <th style="text-align:center">% Gastado</th>
+        <th style="text-align:center">Días sin avance</th>
+      </tr></thead><tbody>${enCurso.map(x=>{
+        const pctGasto = x.presupuesto_total>0?Math.round(x.total_gastado/x.presupuesto_total*100):0;
+        const colG = colorPct(pctGasto);
+        const obraData = avanceObraPorProy[x.id];
+        const pctObra = obraData&&obraData.total>0?Math.min(100,Math.round(obraData.ejec/obraData.total*100)):null;
+        const colO = pctObra!==null?colorPct(pctObra):null;
+        const ultCert = ultimoCertPorProy[x.id];
+        const diasSinAvance = ultCert?Math.floor((hoy-new Date(ultCert))/(1000*60*60*24)):null;
+        const diasCol = diasSinAvance===null?'var(--muted)':diasSinAvance>30?'var(--red)':diasSinAvance>14?'var(--accent)':'var(--green)';
+        return `<tr style="cursor:pointer" onclick="irADetalle('${x.id}')">
+          <td><div style="font-weight:500">${x.nombre}</div><div style="font-size:11px;color:var(--muted)">${x.ubicacion||''}</div></td>
+          <td style="color:var(--muted);font-size:12px">${x.cliente||'—'}</td>
+          <td style="text-align:center">
+            ${pctObra!==null
+              ? `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <span style="font-weight:600;color:${colO}">${pctObra}%</span>
+                  <div class="progress-wrap" style="width:80px"><div class="progress-bar" style="width:${pctObra}%;background:${colO}"></div></div>
+                  <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px;margin-top:2px" onclick="event.stopPropagation();irADetalle('${x.id}');setTimeout(()=>switchTabById('tio'),300)">ver ítems</button>
+                </div>`
+              : '<span style="color:var(--muted);font-size:12px">Sin ítems</span>'}
+          </td>
+          <td style="text-align:center">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font-weight:600;color:${colG}">${pctGasto}%</span>
+              <div class="progress-wrap" style="width:80px"><div class="progress-bar" style="width:${Math.min(pctGasto,100)}%;background:${colG}"></div></div>
+              <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px;margin-top:2px" onclick="event.stopPropagation();irADetalle('${x.id}');setTimeout(()=>switchTabById('tg'),300)">ver gastos</button>
+            </div>
+          </td>
+          <td style="text-align:center">
+            ${diasSinAvance!==null
+              ? `<span style="color:${diasCol};font-weight:600">${diasSinAvance}d</span>`
+              : '<span style="color:var(--muted)">—</span>'}
+          </td>
+        </tr>`;
+      }).join('')}</tbody>`
+    : '<tr><td colspan="5" style="padding:30px;color:var(--muted);text-align:center">No hay obras en curso</td></tr>';
+
+  // ── GRÁFICO PROYECTADO vs CERTIFICADO (todos los usuarios) ──
+  const proyConItems = enCurso.filter(x=>avanceObraPorProy[x.id]?.total>0).slice(0,10);
 
   if(esSupervisor()){
-    const enCurso=p.filter(x=>x.estado==='En curso');
-    const enPlanif=p.filter(x=>x.estado==='Planificación');
-    const hoy=new Date();
+    // DASHBOARD SUPERVISOR
+    const planifCard=document.getElementById('dash-planif-card');
+    if(planifCard) planifCard.style.display='block';
     const planifConDias=enPlanif.map(x=>{
       const inicio=x.created_at?new Date(x.created_at):null;
       const dias=inicio?Math.floor((hoy-inicio)/(1000*60*60*24)):null;
       return {...x,dias};
     }).sort((a,b)=>(b.dias||0)-(a.dias||0));
-
-    document.getElementById('dash-metrics').innerHTML=`
-      <div class="metric"><div class="metric-label">Obras en curso</div><div class="metric-value">${enCurso.length}</div><div class="metric-sub">proyectos activos</div></div>
-      <div class="metric"><div class="metric-label">En planificación</div><div class="metric-value" style="color:var(--accent)">${enPlanif.length}</div><div class="metric-sub">en bandeja</div></div>`;
-
     const planifPanel=document.getElementById('dash-planif-supervisor');
-    const planifCard=document.getElementById('dash-planif-card');
-    if(planifCard) planifCard.style.display='block';
     if(planifPanel){
       planifPanel.innerHTML=planifConDias.length
-        ?planifConDias.map(x=>`
-          <div onclick="irADetalle('${x.id}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
-            <div><div style="font-weight:500;font-size:13px">${x.nombre}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${x.cliente||'Sin cliente'}</div></div>
-            ${x.dias!==null?`<span style="font-size:12px;background:${x.dias>30?'rgba(239,68,68,.15)':x.dias>14?'rgba(245,166,35,.15)':'rgba(34,197,94,.15)'};color:${x.dias>30?'var(--red)':x.dias>14?'var(--accent)':'var(--green)'};padding:3px 10px;border-radius:12px;white-space:nowrap">${x.dias} días</span>`:''}
-          </div>`).join('')
+        ?planifConDias.map(x=>`<div onclick="irADetalle('${x.id}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
+          <div><div style="font-weight:500;font-size:13px">${x.nombre}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${x.cliente||'Sin cliente'}</div></div>
+          ${x.dias!==null?`<span style="font-size:12px;background:${x.dias>30?'rgba(239,68,68,.15)':x.dias>14?'rgba(245,166,35,.15)':'rgba(34,197,94,.15)'};color:${x.dias>30?'var(--red)':x.dias>14?'var(--accent)':'var(--green)'};padding:3px 10px;border-radius:12px;white-space:nowrap">${x.dias} días</span>`:''}</div>`).join('')
         :'<div style="padding:20px;color:var(--muted);font-size:13px;text-align:center">Sin proyectos en planificación</div>';
     }
-
-    document.getElementById('tabla-resumen').innerHTML=enCurso.length
-      ?`<thead><tr><th>Obra</th><th>Estado</th><th>Presupuesto</th><th>Gastado</th><th>Avance</th></tr></thead><tbody>${enCurso.map(x=>{
-          const av=Number(x.pct_ejecutado),col=colorPct(av);
-          return `<tr style="cursor:pointer" onclick="irADetalle('${x.id}')"><td><div style="font-weight:500">${x.nombre}</div><div style="font-size:12px;color:var(--muted)">${x.cliente||''}</div></td><td>${estadoBadge(x.estado)}</td><td>${fmt(x.presupuesto_total)}</td><td style="color:${col}">${fmt(x.total_gastado)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-wrap" style="width:70px"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div><span style="color:${col}">${av}%</span></div></td></tr>`;
-        }).join('')}</tbody>`
-      :'<tr><td style="padding:30px;color:var(--muted)">No hay obras en curso</td></tr>';
-
+    document.getElementById('dash-metrics').innerHTML=metricasComunes;
+    document.getElementById('tabla-resumen').innerHTML=tablaEnCurso;
+    // Gráfico proyectado vs certificado
     const ctx1=document.getElementById('chart-barras');
-    if(chartBarras) chartBarras.destroy();
-    if(enCurso.length) chartBarras=new Chart(ctx1,{type:'bar',data:{labels:enCurso.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),datasets:[{label:'Presupuesto',data:enCurso.map(x=>Number(x.presupuesto_total)),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},{label:'Gastado',data:enCurso.map(x=>Number(x.total_gastado)),backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+    if(chartBarras) chartDona?.destroy(), chartBarras.destroy();
+    if(proyConItems.length){
+      chartBarras=new Chart(ctx1,{type:'bar',data:{
+        labels:proyConItems.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),
+        datasets:[
+          {label:'Cantidad total',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.total||0),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},
+          {label:'Certificado',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.ejec||0),backgroundColor:'rgba(34,197,94,.45)',borderColor:'#22c55e',borderWidth:1}
+        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}});
+    }
     const ctx2=document.getElementById('chart-dona');
     if(chartDona) chartDona.destroy();
-    const cats=['Materiales','Mano de obra','Equipos','Subcontratos','Varios'];
-    const gEnCurso=g.filter(x=>enCurso.some(pr=>pr.id===x.proyecto_id));
-    const catVals=cats.map(c=>gEnCurso.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
-    chartDona=new Chart(ctx2,{type:'doughnut',data:{labels:cats,datasets:[{data:catVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}}},cutout:'65%'}});
+    // Avance % por proyecto para dona
+    chartDona=new Chart(ctx2,{type:'doughnut',data:{
+      labels:proyConItems.map(x=>x.nombre.length>18?x.nombre.slice(0,18)+'…':x.nombre),
+      datasets:[{data:proyConItems.map(x=>{const d=avanceObraPorProy[x.id];return d&&d.total>0?Math.round(d.ejec/d.total*100):0;}),backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444','#22d3ee','#fb923c','#a3e635','#f43f5e','#818cf8'],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}%`}}},cutout:'65%'}});
     return;
   }
 
   // DASHBOARD ADMIN
   const totalPpto=p.reduce((s,x)=>s+Number(x.presupuesto_total),0);
   const totalGasto=p.reduce((s,x)=>s+Number(x.total_gastado),0);
-  const activas=p.filter(x=>x.estado==='En curso').length;
-  document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Presupuesto total</div><div class="metric-value">${fmt(totalPpto)}</div><div class="metric-sub">${p.length} obras</div></div>
-    <div class="metric"><div class="metric-label">Total ejecutado</div><div class="metric-value" style="color:var(--accent)">${fmt(totalGasto)}</div><div class="metric-sub">${pct(totalGasto,totalPpto)}% del presupuesto</div></div>
-    <div class="metric"><div class="metric-label">Saldo global</div><div class="metric-value" style="color:${totalPpto-totalGasto>=0?'var(--green)':'var(--red)'}">${fmt(totalPpto-totalGasto)}</div></div>
-    <div class="metric"><div class="metric-label">Obras activas</div><div class="metric-value">${activas}</div><div class="metric-sub">${g.length} gastos registrados</div></div>`;
+  const gEnCurso=g.filter(x=>enCurso.some(pr=>pr.id===x.proyecto_id));
 
-  document.getElementById('tabla-resumen').innerHTML=p.length?
-    `<thead><tr><th>Obra</th><th>Estado</th><th>Presupuesto</th><th>Gastado</th><th>Avance</th></tr></thead><tbody>${p.map(x=>{
-      const av=Number(x.pct_ejecutado),col=colorPct(av);
-      return `<tr style="cursor:pointer" onclick="irADetalle('${x.id}')"><td><div style="font-weight:500">${x.nombre}</div><div style="font-size:12px;color:var(--muted)">${x.cliente||''}</div></td><td>${estadoBadge(x.estado)}</td><td>${fmt(x.presupuesto_total)}</td><td style="color:${col}">${fmt(x.total_gastado)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="progress-wrap" style="width:70px"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div><span style="color:${col}">${av}%</span></div></td></tr>`;
-    }).join('')}</tbody>`:
-    '<tr><td style="padding:30px;color:var(--muted)">No hay obras</td></tr>';
+  document.getElementById('dash-metrics').innerHTML=metricasComunes+`
+    <div class="metric" style="cursor:pointer" onclick="showView('gastos')">
+      <div class="metric-label">Gastos por aprobar</div>
+      <div class="metric-value" style="color:${gastosPorAprobar.length>0?'var(--red)':'var(--green)'}">${gastosPorAprobar.length}</div>
+      <div class="metric-sub">${gastosPorAprobar.length>0?'requieren revisión':'al día'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Presupuesto total</div>
+      <div class="metric-value" style="font-size:16px">${fmt(totalPpto)}</div>
+      <div class="metric-sub">Gastado: ${fmt(totalGasto)}</div>
+    </div>`;
 
+  document.getElementById('tabla-resumen').innerHTML=tablaEnCurso;
+
+  // Gráfico Presupuesto vs Gasto (solo En curso)
   const ctx1=document.getElementById('chart-barras');
   if(chartBarras) chartBarras.destroy();
-  chartBarras=new Chart(ctx1,{type:'bar',data:{labels:p.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),datasets:[{label:'Presupuesto',data:p.map(x=>Number(x.presupuesto_total)),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},{label:'Gastado',data:p.map(x=>Number(x.total_gastado)),backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
+  chartBarras=new Chart(ctx1,{type:'bar',data:{
+    labels:enCurso.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),
+    datasets:[
+      {label:'Presupuesto',data:enCurso.map(x=>Number(x.presupuesto_total)),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},
+      {label:'Gastado',data:enCurso.map(x=>Number(x.total_gastado)),backgroundColor:'rgba(245,166,35,.45)',borderColor:'#f5a623',borderWidth:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(255,255,255,.04)'}}}}});
 
+  // Gráfico Gastos por categoría (solo En curso)
   const ctx2=document.getElementById('chart-dona');
   if(chartDona) chartDona.destroy();
   const cats=['Materiales','Mano de obra','Equipos','Subcontratos','Varios'];
-  const catVals=cats.map(c=>g.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
+  const catVals=cats.map(c=>gEnCurso.filter(x=>x.categoria===c).reduce((s,x)=>s+Number(x.monto),0));
   chartDona=new Chart(ctx2,{type:'doughnut',data:{labels:cats,datasets:[{data:catVals,backgroundColor:['#3b82f6','#f5a623','#22c55e','#a855f7','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a8099',font:{size:11},padding:10}}},cutout:'65%'}});
+
+  // Gráfico Proyectado vs Certificado (tercer gráfico)
+  const ctx3=document.getElementById('chart-certificado');
+  if(ctx3){
+    if(chartCertificado) chartCertificado.destroy();
+    if(proyConItems.length){
+      chartCertificado=new Chart(ctx3,{type:'bar',data:{
+        labels:proyConItems.map(x=>x.nombre.length>14?x.nombre.slice(0,14)+'…':x.nombre),
+        datasets:[
+          {label:'Proyectado',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.total||0),backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1},
+          {label:'Certificado',data:proyConItems.map(x=>avanceObraPorProy[x.id]?.ejec||0),backgroundColor:'rgba(34,197,94,.45)',borderColor:'#22c55e',borderWidth:1}
+        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#7a8099',font:{size:11}}}},scales:{x:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#7a8099',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}});
+    }
+  }
 }
+
 
 // ── PROYECTOS ──────────────────────────────
 let filtroEstadoActual = 'todos';
@@ -4725,7 +4838,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.8';
+    const CACHE = 'obracontrol-v8.9';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
