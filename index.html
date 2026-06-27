@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v7.3</title>
+<title>ObraControl v7.4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.3</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.4</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -727,7 +727,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.3</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.4</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1636,9 +1636,14 @@ function _poblarClientesFiltro(proyectos){
   const sel = document.getElementById('proy-filtro-cliente');
   if(!sel) return;
   const current = sel.value;
-  const clientes = [...new Set(proyectos.map(p=>p.cliente||'').filter(Boolean))].sort();
+  // Usar clientes del cache para evitar duplicados por mayúsculas
+  const idsEnUso = new Set(proyectos.map(p=>p.cliente_id).filter(Boolean));
+  const clientesFiltro = cacheClientes.filter(c=>idsEnUso.has(c.id));
+  // Fallback: proyectos sin cliente_id pero con texto
+  const sinId = [...new Set(proyectos.filter(p=>!p.cliente_id&&p.cliente).map(p=>p.cliente))].sort();
   sel.innerHTML = '<option value="">Todos los clientes</option>' +
-    clientes.map(c=>`<option value="${c}"${c===current?' selected':''}>${c}</option>`).join('');
+    clientesFiltro.map(c=>`<option value="id:${c.id}"${`id:${c.id}`===current?' selected':''}>${c.nombre}</option>`).join('') +
+    sinId.map(c=>`<option value="txt:${c}"${`txt:${c}`===current?' selected':''}>${c}</option>`).join('');
 }
 
 function renderProyectos(){
@@ -1646,6 +1651,8 @@ function renderProyectos(){
   document.getElementById('detalle-proyecto').style.display='none';
 
   let p = cache.proyectos;
+  // Asegurar que clientes estén cargados para el filtro
+  if(!cacheClientes.length) fetchClientes().then(()=>_poblarClientesFiltro(p));
 
   // Restricción por rol: Supervisor ve proyectos en Planificación y En curso
   if(esSupervisor()){
@@ -1679,7 +1686,15 @@ function renderProyectos(){
 
   // Filtro cliente
   const busqCliente = document.getElementById('proy-filtro-cliente')?.value||'';
-  if(busqCliente) p = p.filter(x => (x.cliente||'') === busqCliente);
+  if(busqCliente){
+    if(busqCliente.startsWith('id:')){
+      const cid = busqCliente.slice(3);
+      p = p.filter(x => x.cliente_id === cid);
+    } else if(busqCliente.startsWith('txt:')){
+      const txt = busqCliente.slice(4);
+      p = p.filter(x => !x.cliente_id && x.cliente === txt);
+    }
+  }
 
   // Ordenamiento
   const campo = document.getElementById('proy-sort-campo')?.value || 'nombre';
@@ -3944,7 +3959,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v7.3';
+    const CACHE = 'obracontrol-v7.4';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
