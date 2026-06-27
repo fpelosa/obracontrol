@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.0</title>
+<title>ObraControl v8.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.1</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -763,7 +763,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.0</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.1</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1856,13 +1856,13 @@ function _renderProyLista(p){
   return `<div class="card" style="padding:0;overflow:hidden">
     <div style="display:flex;gap:10px;padding:9px 14px;font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border)">
       <div style="width:8px;flex-shrink:0"></div>
-      <div style="flex:1.8">Proyecto</div>
-      <div style="flex:1">Cliente</div>
-      <div style="min-width:90px;text-align:right">F. Aprobación</div>
-      <div style="min-width:90px;text-align:right">F. Fin</div>
-      <div style="min-width:100px;text-align:right">Presupuesto</div>
-      <div style="min-width:100px;text-align:right">Gastado</div>
-      <div style="min-width:90px;text-align:right">Avance</div>
+      <div style="flex:1.8;cursor:pointer;user-select:none" onclick="setSortCampo('nombre')">Proyecto${document.getElementById('proy-sort-campo')?.value==='nombre'?' '+(proyOrdenDir==='asc'?'↑':'↓'):''}</div>
+      <div style="flex:1;cursor:pointer;user-select:none" onclick="setSortCampo('cliente')">Cliente${document.getElementById('proy-sort-campo')?.value==='cliente'?' '+(proyOrdenDir==='asc'?'↑':'↓'):''}</div>
+      ${_thSort('fecha_aprobacion','F. Aprobación')}
+      ${_thSort('fecha_fin','F. Fin')}
+      ${_thSort('presupuesto','Presupuesto')}
+      ${_thSort('gastado','Gastado')}
+      ${_thSort('avance','Avance')}
     </div>
     ${rows}
   </div>`;
@@ -2359,8 +2359,26 @@ function actualizarNotasValidez(){
   );
 }
 
+function _thSort(campo, label){
+  const actual = document.getElementById('proy-sort-campo')?.value;
+  const activo = actual===campo;
+  const dir = activo && proyOrdenDir==='asc' ? '↓' : '↑';
+  return `<div style="min-width:90px;text-align:right;cursor:pointer;user-select:none;${activo?'color:var(--accent)':''}" onclick="setSortCampo('${campo}')">${label}${activo?' '+dir:''}</div>`;
+}
+
+function setSortCampo(campo){
+  const sel = document.getElementById('proy-sort-campo');
+  if(sel){
+    if(sel.value===campo){
+      toggleSortDir();
+    } else {
+      sel.value=campo;
+      renderProyectos();
+    }
+  }
+}
+
 function calcularFechaFin(){
-  const inicio = document.getElementById('p-inicio')?.value;
   const tiempo = document.getElementById('p-tiempo-estimado')?.value||'';
   if(!inicio) return;
   // Extraer número de días del texto (ej: "30 días hábiles" → 30)
@@ -2490,6 +2508,10 @@ function renderEsperandoAprobacionHTML(p, id){
     </div>
     <div class="form-grid">
       <div class="form-group">
+        <label>Fecha de inicio</label>
+        <input type="date" id="ea-fecha-inicio" value="${p.fecha_inicio||''}"/>
+      </div>
+      <div class="form-group">
         <label>Cambiar estado</label>
         <select id="ea-nuevo-estado">
           ${ESTADOS.filter(e=>e!=='Esperando aprobación').map(e=>`<option value="${e}">${e}</option>`).join('')}
@@ -2531,9 +2553,8 @@ async function cambiarEstadoDesdeEsperando(proyId){
   if(!confirm(`¿Cambiar el proyecto a "${nuevoEstado}"?`)) return;
   const upd = {estado:nuevoEstado};
   if(nuevoEstado==='En curso'){
-    const fechaInicio = prompt('Fecha de inicio de la obra (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if(fechaInicio===null) return;
-    upd.fecha_inicio = fechaInicio||null;
+    const fechaInicio = document.getElementById('ea-fecha-inicio')?.value||null;
+    upd.fecha_inicio = fechaInicio;
     upd.fecha_aprobacion = new Date().toISOString();
     const proy = cache.proyectos.find(p=>p.id===proyId);
     if(fechaInicio && proy?.tiempo_estimado_obra){
@@ -2579,6 +2600,10 @@ function renderParaPresupuestoHTML(p, id){
         <input type="date" id="pp-fecha-revision" value="${p.fecha_revision_presupuesto||''}"/>
       </div>
       <div class="form-group">
+        <label>Fecha de inicio de obra</label>
+        <input type="date" id="pp-fecha-inicio" value="${p.fecha_inicio||new Date().toISOString().split('T')[0]}"/>
+      </div>
+      <div class="form-group">
         <label>Cambiar estado a (avanzado)</label>
         <select id="pp-nuevo-estado">
           ${ESTADOS.filter(e=>e!=='Para Presupuesto').map(e=>`<option value="${e}"${e==='En curso'?' selected':''}>${e}</option>`).join('')}
@@ -2609,10 +2634,7 @@ async function aprobarParaPresupuesto(id){
   if(!confirm('¿Aprobar esta obra y pasarla a "En curso"?')) return;
   const observaciones=document.getElementById('pp-observaciones')?.value||'';
   const fechaRevision=document.getElementById('pp-fecha-revision')?.value||null;
-  // Pedir fecha de inicio al aprobar
-  const fechaInicio = prompt('Fecha de inicio de la obra (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-  if(fechaInicio===null) return; // canceló
-  // Calcular fecha fin
+  const fechaInicio=document.getElementById('pp-fecha-inicio')?.value||null;
   const proy = cache.proyectos.find(p=>p.id===id);
   let fechaFin = null;
   if(fechaInicio && proy?.tiempo_estimado_obra){
@@ -2627,7 +2649,7 @@ async function aprobarParaPresupuesto(id){
     estado:'En curso',
     obs_presupuesto:observaciones||null,
     fecha_revision_presupuesto:fechaRevision||null,
-    fecha_inicio: fechaInicio||null,
+    fecha_inicio: fechaInicio,
     fecha_fin_calculada: fechaFin,
     fecha_aprobacion: new Date().toISOString()
   }).eq('id',id);
@@ -4192,7 +4214,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.0';
+    const CACHE = 'obracontrol-v8.1';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
