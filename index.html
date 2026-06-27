@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.1</title>
+<title>ObraControl v8.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.1</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.2</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -353,6 +353,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nav-item" id="nav-clientes" style="display:none" onclick="showView('clientes')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-5 5-5s5 2.2 5 5"/><circle cx="12" cy="5" r="2"/><path d="M14 13c0-2-1.3-3.7-3-4.4"/></svg>
         Clientes
+      </div>
+      <div class="nav-item" id="nav-logs" style="display:none" onclick="showView('logs')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="9" y2="11"/></svg>
+        Logs
       </div>
       <div class="nav-item" id="nav-admin" style="display:none" onclick="showView('admin')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
@@ -607,6 +611,28 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
+    <div id="view-logs" class="view">
+      <div class="topbar"><h1>Logs de actividad</h1>
+        <button class="btn btn-ghost" onclick="renderLogs()" style="font-size:12px">🔄 Actualizar</button>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="log-buscar" placeholder="🔍 Buscar por usuario, acción o entidad..." style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 14px;font-size:13px" oninput="filtrarLogs()"/>
+          <select id="log-filtro-tipo" onchange="filtrarLogs()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px">
+            <option value="">Todas las entidades</option>
+            <option value="proyecto">Proyectos</option>
+            <option value="gasto">Gastos</option>
+            <option value="partida">Partidas</option>
+            <option value="presupuesto">Presupuestos</option>
+            <option value="cliente">Clientes</option>
+            <option value="usuario">Usuarios</option>
+            <option value="adjunto">Adjuntos</option>
+          </select>
+        </div>
+      </div>
+      <div id="logs-cont" class="card"><div class="loading">Cargando...</div></div>
+    </div>
+
     <div id="view-admin" class="view">
       <div class="topbar"><h1>Gestión de usuarios</h1>
         <div style="display:flex;gap:10px">
@@ -763,7 +789,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.1</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.2</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1436,7 +1462,7 @@ async function cargarPerfil(){
       document.getElementById('user-name').textContent=currentPerfil.nombre||'—';
       document.getElementById('user-rol').textContent=rolLabel(currentPerfil.rol);
       document.getElementById('user-avatar').textContent=(currentPerfil.nombre||'?')[0].toUpperCase();
-      if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; document.getElementById('nav-clientes').style.display='flex'; }
+      if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; document.getElementById('nav-clientes').style.display='flex'; document.getElementById('nav-logs').style.display='flex'; }
       if(!puedeEditar() && !esSupervisor()){
         document.getElementById('btn-nueva-obra').style.display='none';
         document.getElementById('btn-nueva-obra2').style.display='none';
@@ -1465,7 +1491,7 @@ function showView(v){
   const map={dashboard:0,proyectos:1,gastos:2,reportes:3,presupuestos:4,finanzas:5,rentabilidad:6,admin:7};
   const items=document.querySelectorAll('.nav-item');
   if(map[v]!==undefined&&items[map[v]]) items[map[v]].classList.add('active');
-  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin,finanzas:renderFinanzas,rentabilidad:renderRentabilidadView,presupuestos:renderPresupuestos,clientes:renderClientes};
+  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin,finanzas:renderFinanzas,rentabilidad:renderRentabilidadView,presupuestos:renderPresupuestos,clientes:renderClientes,logs:renderLogs};
   if(fns[v]) fns[v]();
 }
 
@@ -2472,6 +2498,7 @@ async function eliminarProyecto(id){
   if(!confirm('¿Eliminar esta obra y todos sus datos?')) return;
   const {error}=await sb.from('proyectos').delete().eq('id',id);
   if(error){notify('Error: '+error.message,false);return;}
+  log('eliminar', 'proyecto', id, '');
   notify('Obra eliminada');
   await Promise.all([fetchProyectos(),fetchGastos()]);
   renderProyectos();
@@ -2482,6 +2509,7 @@ async function marcarTerminadoSupervisor(id){
   if(!confirm('¿Marcar esta obra como terminada? Pasará al estado "Para Presupuesto" para que el área administrativa la complete.')) return;
   const {error}=await sb.from('proyectos').update({estado:'Para Presupuesto'}).eq('id',id);
   if(error){notify('Error: '+error.message,false);return;}
+  log('marcar_terminada', 'proyecto', id, '');
   notify('Obra marcada como terminada. Ahora está en estado "Para Presupuesto".');
   await fetchProyectos();
   renderProyectos();
@@ -2654,6 +2682,7 @@ async function aprobarParaPresupuesto(id){
     fecha_aprobacion: new Date().toISOString()
   }).eq('id',id);
   if(error){notify('Error: '+error.message,false);return;}
+  log('aprobar', 'proyecto', id, '', {estado:'En curso'});
   notify('✅ Obra aprobada y puesta En curso');
   await fetchProyectos();
   verDetalle(id);
@@ -3015,6 +3044,7 @@ async function guardarGasto(){
   if(error){notify('Error: '+error.message,false);return;}
   const esFactura=document.getElementById('g-es-factura')?.checked||false;
   if(nuevo) await subirAdjuntos('gasto', nuevo.id, 'g', esFactura);
+  if(nuevo) log('crear', 'gasto', nuevo.id, document.getElementById('g-desc')?.value||'', {monto:data.monto, proyecto:pid, estado:estadoAprobacion});
   notify(esSupervisor()?'Gasto enviado para aprobación':'Gasto registrado');
   closeModal('modal-gasto');
   ['g-monto','g-desc','g-comp','g-obs'].forEach(id=>document.getElementById(id).value='');
@@ -3096,6 +3126,7 @@ async function cambiarEstadoGasto(gid, nuevoEstado, pid){
   const {error}=await sb.from('gastos').update({estado_aprobacion:nuevoEstado}).eq('id',gid);
   if(error){notify('Error: '+error.message,false);return;}
   const labels={aprobado:'Gasto aprobado',rechazado:'Gasto rechazado',por_aprobar:'Gasto reenviado a revisión'};
+  log('cambiar_estado_gasto', 'gasto', gid, '', {estado:nuevoEstado, proyecto:pid});
   notify(labels[nuevoEstado]);
   await Promise.all([fetchGastos(),fetchProyectos()]);
   renderGastos(); renderDashboard();
@@ -4107,6 +4138,72 @@ async function poblarSelectCliente(selectId, valorActual){
     cacheClientes.map(c=>`<option value="${c.id}" ${c.id===valorActual?'selected':''}>${c.nombre}</option>`).join('');
 }
 
+// ══════════════════════════════════════════
+// MÓDULO LOGS
+// ══════════════════════════════════════════
+let cacheLogs = [];
+
+async function log(accion, entidadTipo, entidadId, entidadNombre, detalle={}){
+  try {
+    await sb.from('logs').insert({
+      usuario_id: currentUser?.id,
+      usuario_nombre: currentPerfil?.nombre || currentUser?.email || 'Sistema',
+      accion,
+      entidad_tipo: entidadTipo,
+      entidad_id: entidadId || null,
+      entidad_nombre: entidadNombre || null,
+      detalle
+    });
+  } catch(e){ console.warn('Log error:', e); }
+}
+
+async function renderLogs(){
+  if(!esAdmin()) return;
+  document.getElementById('log-buscar').value='';
+  document.getElementById('log-filtro-tipo').value='';
+  const {data,error} = await sb.from('logs').select('*').order('created_at',{ascending:false}).limit(500);
+  cacheLogs = data||[];
+  renderTablaLogs();
+}
+
+function filtrarLogs(){
+  renderTablaLogs();
+}
+
+function renderTablaLogs(){
+  const q=(document.getElementById('log-buscar')?.value||'').toLowerCase();
+  const tipo=document.getElementById('log-filtro-tipo')?.value||'';
+  let lista=cacheLogs;
+  if(q) lista=lista.filter(l=>(l.usuario_nombre||'').toLowerCase().includes(q)||(l.accion||'').toLowerCase().includes(q)||(l.entidad_nombre||'').toLowerCase().includes(q));
+  if(tipo) lista=lista.filter(l=>l.entidad_tipo===tipo);
+
+  const cont=document.getElementById('logs-cont');
+  if(!cont) return;
+  if(!lista.length){ cont.innerHTML='<div class="empty"><p>No hay logs registrados.</p></div>'; return; }
+
+  const iconos={proyecto:'📁',gasto:'💰',partida:'📋',presupuesto:'📄',cliente:'👤',usuario:'👥',adjunto:'📎'};
+
+  cont.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Nombre</th><th>Detalle</th></tr></thead>
+    <tbody>${lista.map(l=>{
+      const fecha=new Date(l.created_at);
+      const fechaStr=fecha.toLocaleDateString('es-AR')+' '+fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      const icon=iconos[l.entidad_tipo]||'⚙️';
+      const detalle=l.detalle&&Object.keys(l.detalle).length?
+        Object.entries(l.detalle).map(([k,v])=>`<span style="font-size:11px;color:var(--muted)">${k}: <span style="color:var(--text)">${v}</span></span>`).join(' · ')
+        :'—';
+      return `<tr>
+        <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${fechaStr}</td>
+        <td style="font-weight:500;font-size:13px">${l.usuario_nombre||'—'}</td>
+        <td><span class="badge badge-gray" style="font-size:11px">${l.accion}</span></td>
+        <td style="font-size:12px">${icon} ${l.entidad_tipo||'—'}</td>
+        <td style="font-size:13px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.entidad_nombre||'—'}</td>
+        <td style="font-size:12px;color:var(--muted);max-width:250px">${detalle}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
 async function renderAdmin(){
   if(!esAdmin()) return;
   const {data}=await sb.from('perfiles').select('*').order('created_at',{ascending:false});
@@ -4214,7 +4311,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.1';
+    const CACHE = 'obracontrol-v8.2';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
