@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v7.4</title>
+<title>ObraControl v7.5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.4</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v7.5</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -636,6 +636,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio"/></div>
       <div class="form-group"><label>Fecha fin estimada</label><input type="date" id="p-fin"/></div>
       <div class="form-group"><label>Avance físico (%)</label><input type="number" id="p-avance" min="0" max="100" placeholder="0"/></div>
+      <div class="form-group"><label>Solicitado por</label><input id="p-solicitado-por" placeholder="Nombre del solicitante"/></div>
+      <div class="form-group"><label>Orden de pedido N°</label><input id="p-orden-pedido" placeholder="N° de orden"/></div>
+      <div class="form-group full"><label>Tiempo estimado de obra</label><input id="p-tiempo-estimado" placeholder="Ej: 30 días hábiles"/></div>
       <div class="form-group full"><label>Descripción</label><textarea id="p-desc"></textarea></div>
       <div class="form-group full" id="p-admin-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔒 Solo administradores</div>
@@ -727,7 +730,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.4</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v7.5</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -2158,6 +2161,9 @@ function renderInfoHTML(p){
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Inicio</div><div>${p.fecha_inicio||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Fin estimado</div><div>${p.fecha_fin_estimada||'—'}</div></div>
     <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Avance físico</div><div>${p.avance_fisico||0}%</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Solicitado por</div><div>${p.solicitado_por||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Orden de pedido N°</div><div>${p.orden_pedido||'—'}</div></div>
+    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Tiempo estimado de obra</div><div>${p.tiempo_estimado_obra||'—'}</div></div>
     <div class="full"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Descripción</div><div>${p.descripcion||'—'}</div></div>
   </div></div>`;
 }
@@ -2185,6 +2191,9 @@ async function guardarProyecto(){
     fecha_inicio:document.getElementById('p-inicio').value||null,
     fecha_fin_estimada:document.getElementById('p-fin').value||null,
     avance_fisico:Number(document.getElementById('p-avance').value)||0,
+    solicitado_por:document.getElementById('p-solicitado-por').value||null,
+    orden_pedido:document.getElementById('p-orden-pedido').value||null,
+    tiempo_estimado_obra:document.getElementById('p-tiempo-estimado').value||null,
     descripcion:document.getElementById('p-desc').value,
     precio_cliente:esAdmin()?Number(document.getElementById('p-precio-cliente').value)||0:undefined
   };
@@ -2209,7 +2218,7 @@ async function guardarProyecto(){
   closeModal('modal-proyecto');
   document.getElementById('p-id').value='';
   document.getElementById('p-modal-title').innerHTML='Nueva Obra<button class="modal-close" onclick="closeModal(&quot;modal-proyecto&quot;)">✕</button>';
-  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc','p-precio-cliente'].forEach(id=>document.getElementById(id).value='');
+  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc','p-precio-cliente','p-solicitado-por','p-orden-pedido','p-tiempo-estimado'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('p-margen').value='';
   document.getElementById('p-estado').value='Planificación';
 
@@ -2225,7 +2234,7 @@ async function abrirModalNuevoProyecto(){
   if(!cacheClientes.length) await fetchClientes();
   document.getElementById('p-id').value='';
   document.getElementById('p-modal-title').innerHTML='Nueva Obra<button class="modal-close" onclick="closeModal(\'modal-proyecto\')">✕</button>';
-  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc','p-precio-cliente'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['p-nombre','p-ubicacion','p-cliente','p-presupuesto','p-inicio','p-fin','p-avance','p-desc','p-precio-cliente','p-solicitado-por','p-orden-pedido','p-tiempo-estimado'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('p-margen').value='';
   document.getElementById('p-estado').value='Planificación';
   await poblarSelectCliente('p-cliente-id','');
@@ -2277,6 +2286,9 @@ async function editarProyecto(id){
   document.getElementById('p-inicio').value=p.fecha_inicio||'';
   document.getElementById('p-fin').value=p.fecha_fin_estimada||'';
   document.getElementById('p-avance').value=p.avance_fisico||0;
+  document.getElementById('p-solicitado-por').value=p.solicitado_por||'';
+  document.getElementById('p-orden-pedido').value=p.orden_pedido||'';
+  document.getElementById('p-tiempo-estimado').value=p.tiempo_estimado_obra||'';
   document.getElementById('p-desc').value=p.descripcion||'';
   if(esAdmin()) document.getElementById('p-precio-cliente').value=p.precio_cliente||0;
   calcularMargen();
@@ -3189,9 +3201,12 @@ async function generarPresupuestoDesdeProyecto(proyId) {
     cliente_dir: '', cliente_cuit: '', cliente_ciudad: '',
     representante: 'jpelosa@nor-tel.com',
     moneda: 'USD', tipo_cambio: '', descuento: 0,
-    notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
+    notas: 'Forma de pago: contra entrega.\nGarantía: 180 días para obras civiles por defectos constructivos.\nPresupuesto válido por 15 días desde la fecha de emisión.\nSujeto a aceptación en los términos y condiciones vigentes.',
     estado: 'borrador', incluye_iva: false,
-    proyecto_origen_id: proyId
+    proyecto_origen_id: proyId,
+    solicitado_por: proy.solicitado_por || '',
+    orden_pedido: proy.orden_pedido || '',
+    tiempo_estimado_obra: proy.tiempo_estimado_obra || ''
   };
 
   presItems = (partidas||[]).length
@@ -3310,7 +3325,16 @@ function mostrarEditorPresupuesto() {
 
     <div class="card" style="margin-bottom:16px">
       <div class="card-title">Notas / condiciones</div>
-      <textarea id="pe-notas" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:10px;resize:vertical">${presActual.notas||''}</textarea>
+      <textarea id="pe-notas" style="width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:10px;resize:vertical">${presActual.notas||'Forma de pago: contra entrega.\nGarantía: 180 días para obras civiles por defectos constructivos.\nPresupuesto válido por 15 días desde la fecha de emisión.\nSujeto a aceptación en los términos y condiciones vigentes.'}</textarea>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Datos de la obra</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Solicitado por</label><input id="pe-solicitado-por" value="${presActual.solicitado_por||''}"/></div>
+        <div class="form-group"><label>Orden de pedido N°</label><input id="pe-orden-pedido" value="${presActual.orden_pedido||''}"/></div>
+        <div class="form-group full"><label>Plazo de entrega / Tiempo estimado</label><input id="pe-tiempo-estimado" value="${presActual.tiempo_estimado_obra||''}"/></div>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -3445,6 +3469,9 @@ function recopilarDatosPresupuesto() {
     moneda, tipo_cambio: document.getElementById('pe-tc').value||null,
     descuento: descPct, subtotal, total,
     notas: document.getElementById('pe-notas').value,
+    solicitado_por: document.getElementById('pe-solicitado-por')?.value||null,
+    orden_pedido: document.getElementById('pe-orden-pedido')?.value||null,
+    tiempo_estimado_obra: document.getElementById('pe-tiempo-estimado')?.value||null,
     estado: document.getElementById('pe-estado').value,
     created_by: currentUser?.id
   };
@@ -3629,6 +3656,7 @@ function generarHTMLPresupuesto(p, items) {
           <div style="font-size:13pt;margin-top:4px">N° ${p.numero}</div>
           <div style="font-size:10pt;color:#aaa;margin-top:2px">Fecha: ${p.fecha}</div>
           ${p.fecha_validez?`<div style="font-size:10pt;color:#aaa">Válido hasta: ${p.fecha_validez}</div>`:''}
+          ${p.orden_pedido?`<div style="font-size:10pt;color:#aaa;margin-top:2px">O.P. N°: ${p.orden_pedido}</div>`:''}
         </div>
       </div>
 
@@ -3649,6 +3677,8 @@ function generarHTMLPresupuesto(p, items) {
           ${p.cliente_dir?`<div style="font-size:9pt;color:#555">Dir: ${p.cliente_dir}</div>`:''}
           ${p.cliente_ciudad?`<div style="font-size:9pt;color:#555">Ciudad: ${p.cliente_ciudad}</div>`:''}
           ${p.representante?`<div style="font-size:9pt;color:#555;margin-top:6px">Representante: ${p.representante}</div>`:''}
+          ${p.solicitado_por?`<div style="font-size:9pt;color:#555;margin-top:4px">Solicitado por: ${p.solicitado_por}</div>`:''}
+          ${p.tiempo_estimado_obra?`<div style="font-size:9pt;color:#555;margin-top:4px">Plazo de entrega: ${p.tiempo_estimado_obra}</div>`:''}
         </div>
       </div>
 
@@ -3959,7 +3989,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v7.4';
+    const CACHE = 'obracontrol-v7.5';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
