@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v8.6</title>
+<title>ObraControl v8.7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.6</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v8.7</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -791,8 +791,21 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:600">Avances por ítem</div>
     <div id="cert-items-lista" style="margin-bottom:16px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Items fuera de proyecto</div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="agregarItemLibre()" style="font-size:11px">+ agregar</button>
+      </div>
+      <div id="cert-items-libres"></div>
+    </div>
     <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
-      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📎 Archivos adjuntos</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">Items fuera de proyecto</div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="agregarItemLibre()" style="font-size:11px">+ Agregar</button>
+      </div>
+      <div id="cert-items-libres"></div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
       <div id="cert-adjuntos-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;border:1px dashed var(--border2);border-radius:8px;color:var(--muted);font-size:13px">
         <span style="font-size:18px">+</span> Adjuntar comprobantes
@@ -842,7 +855,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.6</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v8.7</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -4349,9 +4362,8 @@ async function renderCertificados(proyId){
           ${c.descripcion?`<div style="font-size:12px;color:var(--muted);margin-top:3px">${c.descripcion}</div>`:''}
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="verDetalleCertificado('${c.id}','${proyId}')">👁 Ver</button>
-          ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="abrirModalCertificado('${proyId}','${c.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="eliminarCertificado('${c.id}','${proyId}')">✕</button>`:''}
+          <button class="btn btn-ghost btn-sm" onclick="verDetalleCertificado('${c.id}','${proyId}')">👁 Ver / Editar</button>
+          ${canEdit?`<button class="btn btn-danger btn-sm" onclick="eliminarCertificado('${c.id}','${proyId}')">✕</button>`:''}
         </div>
       </div>
       <div id="cert-adj-${c.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
@@ -4373,6 +4385,7 @@ async function abrirModalCertificado(proyId, certId=null){
   document.getElementById('cert-desc').value='';
   document.getElementById('cert-numero').value='';
   document.getElementById('cert-adjuntos-preview').innerHTML='';
+  document.getElementById('cert-items-libres').innerHTML='';
 
   // Obtener items del proyecto para mostrar en el formulario
   const {data:items}=await sb.from('items_obra').select('*').eq('proyecto_id',proyId).order('orden');
@@ -4403,6 +4416,7 @@ async function abrirModalCertificado(proyId, certId=null){
     if(certId){
       const {data:ciAll}=await sb.from('certificado_items').select('*').eq('certificado_id',certId);
       (ciAll||[]).forEach(ci=>{
+        if(ci.es_libre) return; // las libres se cargan abajo
         if(!certItemsPorItem[ci.item_id]) certItemsPorItem[ci.item_id]=[];
         if(!certItemsPorItem[ci.item_id].find(x=>x.id===ci.id))
           certItemsPorItem[ci.item_id].push({id:ci.id,cantidad:ci.cantidad_ejecutada,obs:ci.observaciones});
@@ -4429,8 +4443,28 @@ async function abrirModalCertificado(proyId, certId=null){
     }).join('');
   }
 
+  // Cargar items libres existentes
+  if(certId){
+    const {data:ciLibres}=await sb.from('certificado_items').select('*').eq('certificado_id',certId).eq('es_libre',true);
+    (ciLibres||[]).forEach(il=>agregarItemLibre(il.descripcion_libre||'', il.cantidad_ejecutada||'', il.observaciones||''));
+  }
+
   document.getElementById('cert-modal-title').innerHTML=(certId?'Editar':'Nuevo')+' Certificado<button class="modal-close" onclick="closeModal(\'modal-certificado\')">✕</button>';
   openModal('modal-certificado');
+}
+
+function agregarItemLibre(desc='', cant='', obs=''){
+  const cont = document.getElementById('cert-items-libres');
+  if(!cont) return;
+  const div = document.createElement('div');
+  div.className='cert-libre-fila';
+  div.style.cssText='display:grid;grid-template-columns:1fr 90px 1fr 22px;gap:8px;align-items:center;margin-bottom:8px';
+  div.innerHTML=`
+    <input type="text" class="cert-libre-desc" placeholder="Descripción del item..." value="${desc}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    <input type="number" class="cert-libre-cant" placeholder="Cant." value="${cant}" min="0" step="0.01" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;text-align:center"/>
+    <input type="text" class="cert-libre-obs" placeholder="Observaciones..." value="${obs}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    <button type="button" onclick="this.closest('.cert-libre-fila').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0;line-height:1">✕</button>`;
+  cont.appendChild(div);
 }
 
 function agregarFilaCertItem(itemId){
@@ -4449,6 +4483,7 @@ function agregarFilaCertItem(itemId){
 function quitarFilaCertItem(btn){
   btn.closest('.cert-fila')?.remove();
 }
+
 
 async function guardarCertificado(){
   const proyId=document.getElementById('cert-proy-id').value;
@@ -4486,6 +4521,18 @@ async function guardarCertificado(){
     }
   });
   if(inserts.length) await sb.from('certificado_items').insert(inserts);
+  // Guardar items libres (fuera de proyecto)
+  const filasLibres = document.querySelectorAll('.cert-libre-fila');
+  const insertsLibres = [];
+  filasLibres.forEach(fila=>{
+    const desc = fila.querySelector('.cert-libre-desc')?.value?.trim();
+    const cant = Number(fila.querySelector('.cert-libre-cant')?.value)||0;
+    const obs = fila.querySelector('.cert-libre-obs')?.value||null;
+    if(desc && cant>0){
+      insertsLibres.push({certificado_id:cid, es_libre:true, descripcion_libre:desc, cantidad_ejecutada:cant, observaciones:obs});
+    }
+  });
+  if(insertsLibres.length) await sb.from('certificado_items').insert(insertsLibres);
   await subirAdjuntos('certificado', cid, 'cert');
   notify('Certificado guardado');
   closeModal('modal-certificado');
@@ -4664,7 +4711,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v8.6';
+    const CACHE = 'obracontrol-v8.7';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
