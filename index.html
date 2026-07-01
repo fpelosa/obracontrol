@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v9.3</title>
+<title>ObraControl v9.4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.3</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.4</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -657,19 +657,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Ubicación</label><input id="p-ubicacion" placeholder="Ciudad, Departamento"/></div>
       <div class="form-group"><label>Cliente</label><select id="p-cliente-id" onchange="onClienteIdChange()"><option value="">Sin cliente (escribir abajo)</option></select></div>
       <div class="form-group" id="p-cliente-libre-group"><label>O escribir nombre de cliente</label><input id="p-cliente" placeholder="Nombre libre si no está en la lista"/></div>
-      <div class="form-group"><label>Presupuesto total ($)</label><input type="number" id="p-presupuesto" placeholder="0"/></div>
       <div class="form-group" id="p-estado-group"><label>Estado</label>
         <select id="p-estado"><option>Planificación</option><option>En curso</option><option>Suspendido</option><option>Finalizado</option><option>Para Presupuesto</option><option>Esperando aprobación</option></select>
       </div>
-      <div class="form-group"><label>Fecha inicio</label><input type="date" id="p-inicio" oninput="calcularFechaFin()"/></div>
       <div class="form-group"><label>Solicitado por</label><input id="p-solicitado-por" placeholder="Nombre del solicitante"/></div>
       <div class="form-group"><label>Orden de pedido N°</label><input id="p-orden-pedido" placeholder="N° de orden"/></div>
       <div class="form-group full"><label>Tiempo estimado de obra</label><input id="p-tiempo-estimado" placeholder="Ej: 30 días hábiles" oninput="calcularFechaFin()"/></div>
       <div class="form-group full"><label>Descripción</label><textarea id="p-desc"></textarea></div>
-      <!-- Campos ocultos calculados -->
+      <!-- Campos calculados — ocultos -->
+      <input type="hidden" id="p-presupuesto" value="0"/>
+      <input type="hidden" id="p-inicio"/>
       <input type="hidden" id="p-fin"/>
       <input type="hidden" id="p-avance"/>
-      <input type="hidden" id="p-presupuesto" value="0"/>
       <div class="form-group full" id="p-admin-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔒 Solo administradores</div>
         <div class="form-grid">
@@ -707,7 +706,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
       <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
-      <div class="form-group"><label>Cuenta bancaria</label><select id="g-cuenta"><option value="">Sin cuenta</option></select></div>
+      <div class="form-group" id="g-cuenta-group"><label>Cuenta bancaria</label><select id="g-cuenta"><option value="">Sin cuenta</option></select></div>
       <div class="form-group full"><label>Observaciones</label><textarea id="g-obs"></textarea></div>
       <div class="form-group full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📎 Comprobantes</div>
@@ -848,7 +847,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.3</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.4</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -2302,11 +2301,12 @@ function renderGastosDetHTML(gastos,partidas,editar){
   return `<table><thead><tr><th>Fecha</th><th>Descripción</th><th>Partida</th><th>Categoría</th><th>Comp.</th><th>Estado</th><th>Monto</th><th>📎</th>${editar?'<th></th>':''}</tr></thead><tbody>${gastos.map(g=>{
     const ea=g.estado_aprobacion||'aprobado';
     const aprobado=ea==='aprobado';
-    const acciones=puedeEditar()&&!aprobado?`
-      ${ea==='por_aprobar'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="cambiarEstadoGasto('${g.id}','aprobado','${g.proyecto_id}')">✓ Aprobar</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="cambiarEstadoGasto('${g.id}','rechazado','${g.proyecto_id}')">✕ Rechazar</button>`:''}
-      ${ea==='rechazado'?`<button class="btn btn-ghost btn-sm" onclick="cambiarEstadoGasto('${g.id}','por_aprobar','${g.proyecto_id}')">↩ Reenviar</button>`:''}
-    `:'';
+    // Admin puede cambiar estado desde cualquier valor; otros solo si no aprobado
+    const acciones = esAdmin()
+      ? `${ea!=='aprobado'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="cambiarEstadoGasto('${g.id}','aprobado','${g.proyecto_id}')">✓ Aprobar</button>`:''}${ea!=='rechazado'?`<button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="cambiarEstadoGasto('${g.id}','rechazado','${g.proyecto_id}')">✕ Rechazar</button>`:''}${ea==='rechazado'?`<button class="btn btn-ghost btn-sm" onclick="cambiarEstadoGasto('${g.id}','por_aprobar','${g.proyecto_id}')">↩ Reenviar</button>`:''}`
+      : puedeEditar()&&!aprobado
+        ? `${ea==='por_aprobar'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="cambiarEstadoGasto('${g.id}','aprobado','${g.proyecto_id}')">✓ Aprobar</button><button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="cambiarEstadoGasto('${g.id}','rechazado','${g.proyecto_id}')">✕ Rechazar</button>`:''}${ea==='rechazado'?`<button class="btn btn-ghost btn-sm" onclick="cambiarEstadoGasto('${g.id}','por_aprobar','${g.proyecto_id}')">↩ Reenviar</button>`:''}`
+        : '';
     return `<tr style="${ea==='por_aprobar'?'background:rgba(245,166,35,.05)':ea==='rechazado'?'opacity:.6':''}">
       <td>${g.fecha||'-'}</td><td>${g.descripcion}</td>
       <td style="color:var(--muted)">${g.partidas?.nombre||'-'}</td>
@@ -2314,7 +2314,12 @@ function renderGastosDetHTML(gastos,partidas,editar){
       <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
       <td>${badgeEstado(ea)}</td>
       <td style="font-weight:500;${ea==='rechazado'?'text-decoration:line-through;color:var(--muted)':''}">${fmt(g.monto)}</td>
-      <td><div id="adj-g-${g.id}" style="display:flex;flex-wrap:wrap;gap:4px;min-width:80px"><span style="color:var(--muted);font-size:11px">...</span></div></td>
+      <td><div id="adj-g-${g.id}" style="display:flex;flex-wrap:wrap;gap:4px;min-width:80px"><span style="color:var(--muted);font-size:11px">...</span></div>
+        ${editar?`<label style="cursor:pointer;font-size:11px;color:var(--accent);margin-top:4px;display:block">
+          + adjuntar
+          <input type="file" multiple style="display:none" onchange="subirAdjuntoGastoRapido('${g.id}','${g.proyecto_id}',this)"/>
+        </label>`:''}
+      </td>
       ${editar?`<td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}${esAdmin()?`<button class="btn btn-ghost btn-sm" onclick="editarGasto('${g.id}','${g.proyecto_id}')">✏️</button>`:''}${!aprobado&&editar?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}${aprobado&&editar&&esAdmin()?`<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`:''}</td>`:''}
     </tr>`;
   }).join('')}</tbody></table>`;
@@ -3349,6 +3354,25 @@ function switchTabById(panelId){
     const panels=['tp','tg','ti','tpp','tr'];
     if(panels[i]===panelId) t.classList.add('active');
     else t.classList.remove('active');
+  });
+}
+
+async function subirAdjuntoGastoRapido(gastoId, proyId, input){
+  if(!input.files.length) return;
+  const esFactura = confirm("¿Marcar este archivo como factura?");
+  const archivos = Array.from(input.files);
+  for(const f of archivos){
+    const path=`gasto/${gastoId}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+    const {error:upErr}=await sb.storage.from("adjuntos").upload(path,f);
+    if(upErr){notify("Error subiendo: "+f.name,false);continue;}
+    const url=STORAGE_URL+path;
+    await sb.from("adjuntos").insert({entidad_tipo:"gasto",entidad_id:gastoId,nombre_archivo:f.name,url,storage_path:path,es_factura:esFactura,privado:esAdmin(),created_by:currentUser.id});
+  }
+  input.value="";
+  notify("Archivo guardado");
+  cargarAdjuntos("gasto",gastoId).then(adj=>{
+    const el=document.getElementById(`adj-g-${gastoId}`);
+    if(el) el.innerHTML=adj.length?renderAdjuntosHTML(adj,`adj-g-${gastoId}`,puedeEditar()):"";
   });
 }
 
@@ -4892,7 +4916,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v9.3';
+    const CACHE = 'obracontrol-v9.4';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
@@ -4986,19 +5010,21 @@ function actualizarVisibilidadAdmin(){
   });
   // Supervisor: ocultar nav items que no corresponden. Para todos los demás, mostrarlos.
   const navSupervisorOcultos=['nav-gastos','nav-finanzas','nav-section-empresa','nav-presupuestos','nav-rentabilidad','nav-admin'];
+  const cuentaGrp=document.getElementById('g-cuenta-group');
   if(esSupervisor()){
     navSupervisorOcultos.forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.style.display='none';
     });
+    if(cuentaGrp) cuentaGrp.style.display='none';
   } else {
     navSupervisorOcultos.forEach(id=>{
       const el=document.getElementById(id);
       if(!el) return;
-      // nav-rentabilidad y nav-admin son controlados por esAdmin(), no tocarlos
       if(id==='nav-rentabilidad'||id==='nav-admin') return;
       el.style.display='';
     });
+    if(cuentaGrp) cuentaGrp.style.display='';
   }
 }
 
