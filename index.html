@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v10.5</title>
+<title>ObraControl v10.6</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.6</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.5</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.6</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -4250,38 +4250,48 @@ function generarHTMLPresupuesto(p, items) {
       <img src="${LOGO_B64}" style="width:480px;height:auto"/>
     </div>
     <div style="position:relative;z-index:1">
-      <!-- HEADER -->
-      <div style="background:#1a2035;padding:16px 32px;display:flex;justify-content:space-between;align-items:center">
-        <img src="${LOGO_B64}" style="width:150px;height:auto;display:block"/>
-        <div style="text-align:right;color:#fff">
-          <div style="font-size:22pt;font-weight:700;letter-spacing:1px;color:#f5a623">PRESUPUESTO</div>
-          <div style="font-size:13pt;margin-top:4px">N° ${p.numero}</div>
-          <div style="font-size:10pt;color:#aaa;margin-top:2px">Fecha: ${p.fecha}</div>
-          ${p.valido_dias?`<div style="font-size:10pt;color:#aaa">Válido por: ${p.valido_dias} días</div>`:''}
-          ${p.orden_pedido?`<div style="font-size:10pt;color:#aaa;margin-top:2px">O.P. N°: ${p.orden_pedido}</div>`:''}
+      <!-- HEADER BLANCO CON LOGO -->
+      <div style="padding:20px 32px 12px;display:flex;justify-content:space-between;align-items:center;background:#fff">
+        <img src="${LOGO_B64}" style="width:160px;height:auto;display:block"/>
+        <div style="text-align:right">
+          <div style="font-size:9pt;color:#555">${EMPRESA.nombre}</div>
+          <div style="font-size:9pt;color:#555">CUIT: ${EMPRESA.cuit}</div>
+          <div style="font-size:9pt;color:#555">${EMPRESA.direccion}</div>
+          <div style="font-size:9pt;color:#555">Comercial: Javier Pelosa &nbsp;|&nbsp; Tel: ${EMPRESA.telefono}</div>
         </div>
       </div>
+      <!-- FRANJA NARANJA -->
+      <div style="height:6px;background:#f5a623;margin-bottom:20px"></div>
 
-      <!-- EMPRESA + CLIENTE -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:2px solid #f5a623">
-        <div style="padding:18px 24px;background:#f8f9fa;border-right:1px solid #ddd">
-          <div style="font-size:9pt;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Empresa</div>
-          <div style="font-weight:700;font-size:11pt">${EMPRESA.nombre}</div>
-          <div style="font-size:9pt;color:#555;margin-top:4px">CUIT: ${EMPRESA.cuit}</div>
-          <div style="font-size:9pt;color:#555">Dir: ${EMPRESA.direccion}</div>
-          <div style="font-size:9pt;color:#555">Email: ${EMPRESA.email}</div>
-          <div style="font-size:9pt;color:#555">Tel: ${EMPRESA.telefono}</div>
-        </div>
-        <div style="padding:18px 24px;background:#fff">
-          <div style="font-size:9pt;font-weight:700;color:#f5a623;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Cliente</div>
-          <div style="font-weight:700;font-size:11pt">${p.cliente_nombre||'—'}</div>
-          ${p.cliente_cuit?`<div style="font-size:9pt;color:#555;margin-top:4px">CUIT: ${p.cliente_cuit}</div>`:''}
-          ${p.cliente_dir?`<div style="font-size:9pt;color:#555">Dir: ${p.cliente_dir}</div>`:''}
-          ${p.cliente_ciudad?`<div style="font-size:9pt;color:#555">Ciudad: ${p.cliente_ciudad}</div>`:''}
-          ${p.representante?`<div style="font-size:9pt;color:#555;margin-top:6px">Representante: ${p.representante}</div>`:''}
-          ${p.solicitado_por?`<div style="font-size:9pt;color:#555;margin-top:4px">Solicitado por: ${p.solicitado_por}</div>`:''}
-          ${p.tiempo_estimado_obra?`<div style="font-size:9pt;color:#555;margin-top:4px">Plazo de entrega: ${p.tiempo_estimado_obra}</div>`:''}
-        </div>
+      <!-- TÍTULO -->
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:15pt;font-weight:700;color:#1a2035;letter-spacing:1px">PRESUPUESTO DE OBRA</div>
+      </div>
+
+      <!-- TABLA INFO SUPERIOR -->
+      <div style="margin:0 24px 20px">
+        <table style="width:100%;border-collapse:collapse;font-size:10pt">
+          <tr>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px;width:22%">N° Presupuesto</td>
+            <td style="border:1px solid #ddd;padding:7px 12px;width:28%">${p.numero}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px;width:22%">Fecha</td>
+            <td style="border:1px solid #ddd;padding:7px 12px;width:28%">${p.fecha ? new Date(p.fecha+'T12:00:00').toLocaleDateString('es-AR') : ''}</td>
+          </tr>
+          <tr>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Cliente</td>
+            <td style="border:1px solid #ddd;padding:7px 12px;font-weight:700">${p.cliente_nombre||'—'}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Tiempo estimado de obra</td>
+            <td style="border:1px solid #ddd;padding:7px 12px">${p.tiempo_estimado_obra||'—'}</td>
+          </tr>
+          <tr>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Obra / Ubicación</td>
+            <td style="border:1px solid #ddd;padding:7px 12px;font-weight:700" colspan="3">${p.cliente_ciudad||p.cliente_dir||'—'}</td>
+          </tr>
+          <tr>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Solicitado por/ O. Pedido</td>
+            <td style="border:1px solid #ddd;padding:7px 12px;font-weight:700" colspan="3">${[p.solicitado_por, p.orden_pedido?`O.P. N° ${p.orden_pedido}`:null].filter(Boolean).join(' &nbsp;·&nbsp; ')||'—'}</td>
+          </tr>
+        </table>
       </div>
 
       <!-- TABLA ITEMS -->
