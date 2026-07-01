@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v9.4</title>
+<title>ObraControl v9.5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.4</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.5</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -606,7 +606,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
         <div class="form-actions">
           <button class="btn btn-ghost" onclick="closeModal('modal-cliente')">Cancelar</button>
-          <button class="btn btn-primary" onclick="guardarCliente()">Guardar</button>
+          <button class="btn btn-primary" onclick="withLoading(this, guardarCliente)">Guardar</button>
         </div>
       </div>
     </div>
@@ -687,7 +687,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-proyecto')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarProyecto()">Guardar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarProyecto)">Guardar</button>
     </div>
   </div>
 </div>
@@ -723,7 +723,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-gasto')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarGasto()">Registrar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarGasto)">Registrar</button>
     </div>
   </div>
 </div>
@@ -746,7 +746,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-editar-gasto')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarEdicionGasto()">Guardar cambios</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarEdicionGasto)">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -772,7 +772,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-item-obra')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarItemObra()">Guardar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarItemObra)">Guardar</button>
     </div>
   </div>
 </div>
@@ -806,7 +806,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-certificado')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarCertificado()">Guardar certificado</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarCertificado)">Guardar certificado</button>
     </div>
   </div>
 </div>
@@ -847,7 +847,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.4</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.5</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -948,7 +948,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-partida')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarPartida()">Agregar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarPartida)">Agregar</button>
     </div>
   </div>
 </div>
@@ -999,7 +999,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-editar-partida')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarPartidaEdicion()">Guardar cambios</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarPartidaEdicion)">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -2505,6 +2505,22 @@ function switchTab(el,panelId){
 }
 
 // ── CRUD PROYECTOS ──────────────────────────
+// Deshabilita un botón mientras ejecuta una función async, lo restaura al terminar
+async function withLoading(btnEl, fn){
+  if(!btnEl||btnEl.disabled) return;
+  const orig = btnEl.innerHTML;
+  btnEl.disabled = true;
+  btnEl.style.opacity = '0.6';
+  btnEl.style.cursor = 'not-allowed';
+  try { await fn(); }
+  finally {
+    btnEl.disabled = false;
+    btnEl.style.opacity = '';
+    btnEl.style.cursor = '';
+    btnEl.innerHTML = orig;
+  }
+}
+
 async function guardarProyecto(){
   const nombre=document.getElementById('p-nombre').value.trim();
   if(!nombre){notify('El nombre es obligatorio',false);return;}
@@ -3863,7 +3879,7 @@ function mostrarEditorPresupuesto() {
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:30px">
       <button class="btn btn-ghost" onclick="renderPresupuestos()">Cancelar</button>
       <button class="btn btn-ghost" onclick="guardarYPrevisualizar()">👁 Vista previa</button>
-      <button class="btn btn-primary" onclick="guardarPresupuesto()">💾 Guardar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarPresupuesto)">💾 Guardar</button>
     </div>`;
 
   renderItems();
@@ -4916,7 +4932,7 @@ document.getElementById('manifest-link').setAttribute('href', manifestURL);
 // Service Worker para PWA
 if('serviceWorker' in navigator) {
   const swCode = `
-    const CACHE = 'obracontrol-v9.4';
+    const CACHE = 'obracontrol-v9.5';
     self.addEventListener('install', e => {
       e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
     });
