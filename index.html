@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v9.9</title>
+<title>ObraControl v10.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.1</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.9</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.1</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -3704,7 +3704,7 @@ async function renderPresupuestos() {
   document.getElementById('pres-preview-cont').style.display = 'none';
   document.getElementById('pres-lista-cont').style.display = 'block';
 
-  const {data} = await sb.from('presupuestos').select('*').order('created_at', {ascending:false});
+  const {data} = await sb.from('presupuestos').select('*,proyecto_origen_id').order('created_at', {ascending:false});
   const cont = document.getElementById('pres-lista-cont');
 
   if(!data?.length) {
@@ -3712,11 +3712,21 @@ async function renderPresupuestos() {
     return;
   }
 
-  // Traer proyectos vinculados a estos presupuestos
+  // Traer proyectos vinculados — buscar por presupuesto_ref_id Y por proyecto_origen_id en presupuestos
   const presIds = data.map(p=>p.id);
   const {data:proyVinc} = await sb.from('proyectos').select('id,nombre,presupuesto_ref_id').in('presupuesto_ref_id', presIds);
   const proyPorPres = {};
-  (proyVinc||[]).forEach(pr=>{ proyPorPres[pr.presupuesto_ref_id]=pr.nombre; });
+  (proyVinc||[]).forEach(pr=>{ if(pr.presupuesto_ref_id) proyPorPres[pr.presupuesto_ref_id]=pr.nombre; });
+
+  // También buscar por proyecto_origen_id si existe en la tabla presupuestos
+  const presConOrigen = data.filter(p=>p.proyecto_origen_id);
+  if(presConOrigen.length){
+    const origIds = presConOrigen.map(p=>p.proyecto_origen_id);
+    const {data:proyOrigen} = await sb.from('proyectos').select('id,nombre').in('id', origIds);
+    const proyOrigenMap = {};
+    (proyOrigen||[]).forEach(pr=>{ proyOrigenMap[pr.id]=pr.nombre; });
+    presConOrigen.forEach(p=>{ if(!proyPorPres[p.id]) proyPorPres[p.id]=proyOrigenMap[p.proyecto_origen_id]; });
+  }
 
   const estadoColor = {borrador:'badge-gray', enviado:'badge-blue', aprobado:'badge-green', rechazado:'badge-red'};
   cont.innerHTML = `
@@ -4019,7 +4029,9 @@ function recalcularTotales() {
     <div style="display:inline-flex;flex-direction:column;gap:6px;min-width:280px;background:var(--bg3);border-radius:10px;padding:12px 16px">
       <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Subtotal venta</span><span>${fmtPres(moneda,subtotal)}</span></div>
       ${descPct>0?`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--red)">Bonificación ${descPct}%</span><span style="color:var(--red);font-weight:600">- ${fmtPres(moneda,descMonto)}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><span>Neto sin IVA</span><span style="color:var(--accent2)">${fmtPres(moneda,neto)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><span style="color:var(--muted)">Neto sin IVA</span><span>${fmtPres(moneda,neto)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">IVA (21%)</span><span>${fmtPres(moneda,neto*0.21)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding-top:4px"><span>TOTAL con IVA</span><span style="color:var(--accent2)">${fmtPres(moneda,neto*1.21)}</span></div>
       ${costoTotal>0?`
       <div style="border-top:1px dashed rgba(249,115,22,.3);padding-top:8px;margin-top:4px">
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:#f97316">Costo neto</span><span style="color:#f97316;font-weight:600">${fmtPres(moneda,costoTotal)}</span></div>
@@ -4039,6 +4051,7 @@ function recopilarDatosPresupuesto() {
     fecha_validez: null,
     valido_dias: Number(document.getElementById('pe-valido-dias')?.value)||15,
     cliente_id: document.getElementById("pe-cli-id")?.value||null,
+    proyecto_origen_id: presActual?.proyecto_origen_id||null,
     cliente_nombre: document.getElementById('pe-cli-nombre').value,
     cliente_cuit: document.getElementById('pe-cli-cuit').value,
     cliente_ciudad: document.getElementById('pe-cli-ciudad').value,
@@ -4292,8 +4305,14 @@ function generarHTMLPresupuesto(p, items) {
           ${p.descuento>0?`<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt">
             <span style="color:#555">Bonificación ${p.descuento}%</span><span style="color:#e53e3e;font-weight:500">-${fmtDoc(descMonto)}</span>
           </div>`:''}
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt;border-top:1px solid #e2e8f0;margin-top:2px">
+            <span style="color:#555">Neto sin IVA</span><span style="font-weight:500">${fmtDoc(neto)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt">
+            <span style="color:#555">IVA (21%)</span><span style="font-weight:500">${fmtDoc(neto*0.21)}</span>
+          </div>
           <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#1a2035;color:#fff;border-radius:6px;font-size:12pt;font-weight:700;margin-top:4px">
-            <span>Neto sin IVA</span><span style="color:#f5a623">${fmtDoc(neto)}</span>
+            <span>TOTAL con IVA</span><span style="color:#f5a623">${fmtDoc(neto*1.21)}</span>
           </div>
           ${p.tipo_cambio?`<div style="font-size:9pt;color:#888;text-align:right;margin-top:6px;padding:0 4px">Tipo de cambio: $1 USD = $${p.tipo_cambio} ARS</div>`:''}
         </div>
