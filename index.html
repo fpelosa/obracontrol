@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v10.2</title>
+<title>ObraControl v10.3</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.2</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.3</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.2</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.3</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1499,36 +1499,31 @@ let _perfilYaRenderizado = false;
 
 async function cargarPerfil(){
   try {
-    const result = await Promise.race([
-      sb.from('perfiles').select('*').eq('id',currentUser.id).single(),
-      new Promise(resolve => setTimeout(() => resolve({data:null,error:{code:'TIMEOUT'}}), 12000))
-    ]);
-    const {data, error} = result;
-    console.log('cargarPerfil:', data?.nombre, error?.code);
+    // Intentar hasta 3 veces con timeouts crecientes
+    let data = null, error = null;
+    const tiempos = [8000, 15000, 25000];
+    for(let i=0; i<tiempos.length; i++){
+      const result = await Promise.race([
+        sb.from('perfiles').select('*').eq('id',currentUser.id).single(),
+        new Promise(resolve => setTimeout(() => resolve({data:null,error:{code:'TIMEOUT'}}), tiempos[i]))
+      ]);
+      data = result.data;
+      error = result.error;
+      if(data || (error && error.code !== 'TIMEOUT')) break;
+      console.warn(`cargarPerfil: intento ${i+1} timeout, reintentando...`);
+    }
 
     if(error && error.code === 'PGRST116') {
-      // Perfil no existe en DB — crear perfil básico sin rol admin
+      // Perfil no existe — crear como visor
       const nombre = currentUser.email.split('@')[0];
       currentPerfil = { id:currentUser.id, nombre, email:currentUser.email, rol:'visor', activo:true };
       sb.from('perfiles').insert(currentPerfil).then(()=>console.log('Perfil creado como visor'));
     } else if(error && error.code === 'TIMEOUT') {
-      // Timeout de Supabase — reintentar sin fallback peligroso
-      console.warn('Timeout cargando perfil, reintentando...');
-      try {
-        const {data:data2, error:err2} = await sb.from('perfiles').select('*').eq('id',currentUser.id).single();
-        if(data2) { currentPerfil = data2; }
-        else {
-          // Si definitivamente no existe, crear como visor
-          const nombre = currentUser.email.split('@')[0];
-          currentPerfil = { id:currentUser.id, nombre, email:currentUser.email, rol:'visor', activo:true };
-        }
-      } catch(e2) {
-        console.error('Reintento falló:', e2);
-        // No asignar ningún rol — mostrar error al usuario
-        mostrarLogin();
-        notify('Error al cargar tu perfil. Por favor recargá la página.', false);
-        return;
-      }
+      // Agotó todos los reintentos
+      console.error('No se pudo cargar el perfil tras 3 intentos');
+      mostrarLogin();
+      notify('Error de conexión. Por favor recargá la página.', false);
+      return;
     } else {
       currentPerfil = data;
     }
@@ -1543,7 +1538,6 @@ async function cargarPerfil(){
         document.getElementById('btn-nueva-obra2').style.display='none';
       }
       actualizarVisibilidadAdmin();
-      // Si hay un detalle de proyecto abierto sin perfil, re-renderizarlo ahora
       if(!_perfilYaRenderizado){
         _perfilYaRenderizado = true;
         if(currentProyectoId && document.getElementById('detalle-proyecto')?.style.display !== 'none'){
@@ -1553,8 +1547,8 @@ async function cargarPerfil(){
     }
   } catch(e) {
     console.error('cargarPerfil error:', e);
-    // Continuar igual aunque falle
-    currentPerfil = { id:currentUser.id, nombre:'Usuario', rol:'admin', activo:true };
+    mostrarLogin();
+    notify('Error al cargar tu perfil. Por favor recargá la página.', false);
   }
 }
 
