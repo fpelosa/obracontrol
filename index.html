@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v10.6</title>
+<title>ObraControl v10.7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.6</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.7</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.6</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.7</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -4272,24 +4272,26 @@ function generarHTMLPresupuesto(p, items) {
       <div style="margin:0 24px 20px">
         <table style="width:100%;border-collapse:collapse;font-size:10pt">
           <tr>
-            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px;width:22%">N° Presupuesto</td>
-            <td style="border:1px solid #ddd;padding:7px 12px;width:28%">${p.numero}</td>
-            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px;width:22%">Fecha</td>
-            <td style="border:1px solid #ddd;padding:7px 12px;width:28%">${p.fecha ? new Date(p.fecha+'T12:00:00').toLocaleDateString('es-AR') : ''}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;width:18%;white-space:nowrap">N° Presupuesto</td>
+            <td style="border:1px solid #ddd;padding:7px 14px;width:22%">${p.numero}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;width:18%;white-space:nowrap">Fecha</td>
+            <td style="border:1px solid #ddd;padding:7px 14px;width:42%">${p.fecha ? new Date(p.fecha+'T12:00:00').toLocaleDateString('es-AR') : ''}</td>
           </tr>
           <tr>
-            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Cliente</td>
-            <td style="border:1px solid #ddd;padding:7px 12px;font-weight:700">${p.cliente_nombre||'—'}</td>
-            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Tiempo estimado de obra</td>
-            <td style="border:1px solid #ddd;padding:7px 12px">${p.tiempo_estimado_obra||'—'}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">Cliente</td>
+            <td style="border:1px solid #ddd;padding:7px 14px;font-weight:700">${p.cliente_nombre||'—'}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">Plazo de entrega</td>
+            <td style="border:1px solid #ddd;padding:7px 14px">${p.tiempo_estimado_obra||'—'}</td>
           </tr>
           <tr>
-            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Obra / Ubicación</td>
-            <td style="border:1px solid #ddd;padding:7px 12px;font-weight:700" colspan="3">${p.cliente_ciudad||p.cliente_dir||'—'}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">Obra / Ubicación</td>
+            <td style="border:1px solid #ddd;padding:7px 14px;font-weight:700" colspan="3">${p.cliente_ciudad||p.cliente_dir||'—'}</td>
           </tr>
           <tr>
-            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 12px">Solicitado por/ O. Pedido</td>
-            <td style="border:1px solid #ddd;padding:7px 12px;font-weight:700" colspan="3">${[p.solicitado_por, p.orden_pedido?`O.P. N° ${p.orden_pedido}`:null].filter(Boolean).join(' &nbsp;·&nbsp; ')||'—'}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">Solicitado por</td>
+            <td style="border:1px solid #ddd;padding:7px 14px;font-weight:700">${p.solicitado_por||'—'}</td>
+            <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">O. Pedido N°</td>
+            <td style="border:1px solid #ddd;padding:7px 14px">${p.orden_pedido||'—'}</td>
           </tr>
         </table>
       </div>
