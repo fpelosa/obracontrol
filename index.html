@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v9.8</title>
+<title>ObraControl v9.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.8</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v9.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.8</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v9.9</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1590,6 +1590,8 @@ async function withTimeout(promise, ms=8000, fallback=null){
 }
 
 async function initApp(){
+  // Mostrar UI inmediatamente con loading state
+  document.getElementById('dash-metrics').innerHTML='<div class="loading" style="color:var(--muted);font-size:13px">Cargando...</div>';
   try {
     await Promise.all([
       withTimeout(fetchProyectos(), 8000),
@@ -1598,9 +1600,7 @@ async function initApp(){
   } catch(e){
     console.error('initApp error:', e);
   }
-  // Render después de que perfil y datos estén listos
   renderDashboard();
-  // Si la vista activa es proyectos, re-renderizarla con el rol correcto
   const viewActiva = document.querySelector('.view.active');
   if(viewActiva?.id === 'view-proyectos') renderProyectos();
 }
@@ -1707,13 +1707,23 @@ async function renderDashboard(){
     </div>`;
 
   // Calcular avance de obra promedio por proyecto (desde certificados)
-  const {data:certItemsAll} = await sb.from('certificado_items')
-    .select('item_id, cantidad_ejecutada, es_libre')
-    .eq('es_libre', false);
-  const {data:itemsAll} = await sb.from('items_obra').select('id, proyecto_id, cantidad');
-  // Agrupar por proyecto
+  // Cargar en paralelo y cachear para no repetir en cada render
+  if(!cache._itemsObra || !cache._certItemsAll){
+    const [r1,r2,r3] = await Promise.all([
+      sb.from('certificado_items').select('item_id, cantidad_ejecutada, es_libre').eq('es_libre',false),
+      sb.from('items_obra').select('id, proyecto_id, cantidad, fecha_inicio, fecha_fin_estimada'),
+      sb.from('certificados_obra').select('proyecto_id, fecha').order('fecha',{ascending:false})
+    ]);
+    cache._certItemsAll = r1.data||[];
+    cache._itemsObra = r2.data||[];
+    cache._ultimosCerts = r3.data||[];
+  }
+  const certItemsAll = cache._certItemsAll;
+  const itemsAll = cache._itemsObra;
+  const ultimosCerts = cache._ultimosCerts;
+
   const cantEjecPorItem = {};
-  (certItemsAll||[]).forEach(ci=>{
+  certItemsAll.forEach(ci=>{
     cantEjecPorItem[ci.item_id] = (cantEjecPorItem[ci.item_id]||0) + Number(ci.cantidad_ejecutada||0);
   });
   // Calcular % tiempo consumido por proyecto (fecha_inicio_min → fecha_fin_max de sus ítems)
@@ -1732,8 +1742,7 @@ async function renderDashboard(){
     avanceObraPorProy[x.id] = Math.min(100, Math.max(0, Math.round(transcurrido/total*100)));
   });
 
-  // Último certificado por proyecto
-  const {data:ultimosCerts} = await sb.from('certificados_obra').select('proyecto_id, fecha').order('fecha',{ascending:false});
+  // Último certificado por proyecto (desde caché)
   const ultimoCertPorProy = {};
   (ultimosCerts||[]).forEach(c=>{
     if(!ultimoCertPorProy[c.proyecto_id]) ultimoCertPorProy[c.proyecto_id]=c.fecha;
@@ -4587,6 +4596,7 @@ async function guardarItemObra(){
     if(error){notify('Error: '+error.message,false);return;}
   }
   notify(id?'Item actualizado':'Item agregado');
+  cache._itemsObra = null; cache._certItemsAll = null; cache._ultimosCerts = null;
   closeModal('modal-item-obra');
   renderItemsObra(proyId);
 }
@@ -4797,6 +4807,7 @@ async function guardarCertificado(){
   if(insertsLibres.length) await sb.from('certificado_items').insert(insertsLibres);
   await subirAdjuntos('certificado', cid, 'cert');
   notify('Certificado guardado');
+  cache._itemsObra = null; cache._certItemsAll = null; cache._ultimosCerts = null;
   closeModal('modal-certificado');
   renderCertificados(proyId);
   renderItemsObra(proyId);
