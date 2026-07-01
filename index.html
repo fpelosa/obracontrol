@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v10.1</title>
+<title>ObraControl v10.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.1</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.2</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.1</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.2</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1607,44 +1607,49 @@ async function initApp(){
 
 async function fetchProyectos(){
   try {
-  const {data, error}=await sb.from('proyectos').select('*').order('created_at',{ascending:false});
-  console.log('fetchProyectos:', data?.length, error);
-  if(!data) { cache.proyectos=[]; return; }
-  // Calcular totales de gastos por proyecto — solo gastos APROBADOS impactan en saldo
-  const {data:gastos}=await sb.from('gastos').select('proyecto_id, monto, estado_aprobacion');
-  const gastosPorProy={};
-  const gastosPendientesPorProy={};
-  (gastos||[]).forEach(g=>{
-    if(g.estado_aprobacion==='aprobado' || !g.estado_aprobacion){
-      gastosPorProy[g.proyecto_id]=(gastosPorProy[g.proyecto_id]||0)+Number(g.monto);
-    }
-    if(g.estado_aprobacion==='por_aprobar'){
-      gastosPendientesPorProy[g.proyecto_id]=(gastosPendientesPorProy[g.proyecto_id]||0)+1;
-    }
-  });
-  const {data:partidas}=await sb.from('partidas').select('proyecto_id');
-  const partidasPorProy={};
-  (partidas||[]).forEach(p=>{
-    partidasPorProy[p.proyecto_id]=(partidasPorProy[p.proyecto_id]||0)+1;
-  });
-  cache.proyectos=data.map(p=>({
-    ...p,
-    total_gastado: gastosPorProy[p.id]||0,
-    saldo: p.presupuesto_total-(gastosPorProy[p.id]||0),
-    pct_ejecutado: p.presupuesto_total>0?Math.round((gastosPorProy[p.id]||0)*100/p.presupuesto_total):0,
-    total_partidas: partidasPorProy[p.id]||0,
-    total_gastos: 0,
-    gastos_pendientes: gastosPendientesPorProy[p.id]||0,
-    responsable_nombre: ''
-  }));
+    // Todas las queries en paralelo
+    const [r1, r2, r3] = await Promise.all([
+      sb.from('proyectos').select('*').order('created_at',{ascending:false}),
+      sb.from('gastos').select('proyecto_id, monto, estado_aprobacion'),
+      sb.from('partidas').select('proyecto_id, presupuesto, precio_venta')
+    ]);
+    const data = r1.data||[];
+    const gastos = r2.data||[];
+    const partidas = r3.data||[];
+
+    const gastosPorProy={}, gastosPendientesPorProy={};
+    gastos.forEach(g=>{
+      if(g.estado_aprobacion==='aprobado'||!g.estado_aprobacion)
+        gastosPorProy[g.proyecto_id]=(gastosPorProy[g.proyecto_id]||0)+Number(g.monto);
+      if(g.estado_aprobacion==='por_aprobar')
+        gastosPendientesPorProy[g.proyecto_id]=(gastosPendientesPorProy[g.proyecto_id]||0)+1;
+    });
+
+    const partidasPorProy={}, pptoPorProy={};
+    partidas.forEach(p=>{
+      partidasPorProy[p.proyecto_id]=(partidasPorProy[p.proyecto_id]||0)+1;
+      pptoPorProy[p.proyecto_id]=(pptoPorProy[p.proyecto_id]||0)+Number(p.precio_venta||p.presupuesto||0);
+    });
+
+    cache.proyectos=data.map(p=>({
+      ...p,
+      presupuesto_total: pptoPorProy[p.id]||p.presupuesto_total||0,
+      total_gastado: gastosPorProy[p.id]||0,
+      saldo: (pptoPorProy[p.id]||p.presupuesto_total||0)-(gastosPorProy[p.id]||0),
+      pct_ejecutado: (pptoPorProy[p.id]||p.presupuesto_total)>0?Math.round((gastosPorProy[p.id]||0)*100/(pptoPorProy[p.id]||p.presupuesto_total)):0,
+      total_partidas: partidasPorProy[p.id]||0,
+      total_gastos: 0,
+      gastos_pendientes: gastosPendientesPorProy[p.id]||0,
+      responsable_nombre: ''
+    }));
   } catch(e){ console.error('fetchProyectos error:',e); cache.proyectos=[]; }
 }
 
 async function fetchGastos(){
   try {
-    const {data}=await sb.from('gastos').select('*,proyectos(nombre),partidas(nombre)').order('fecha',{ascending:false});
+    // Solo traer campos necesarios, sin joins pesados
+    const {data}=await sb.from('gastos').select('id,proyecto_id,partida_id,fecha,descripcion,monto,categoria,comprobante_nro,estado_aprobacion,observaciones,cuenta_id,created_by,created_at').order('fecha',{ascending:false});
     cache.gastos=data||[];
-    console.log('fetchGastos:', data?.length);
   } catch(e){
     console.error('fetchGastos error:', e);
     cache.gastos=[];
@@ -3438,18 +3443,27 @@ async function renderGastos(){
   fsel.innerHTML='<option value="">Todas las obras</option>'+(proyData||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
   if(curVal) fsel.value=curVal;
 
-  // Filtro de estado para admin
+  const proyMap={};
+  (proyData||[]).forEach(p=>proyMap[p.id]=p.nombre);
+
   let festado='';
   const festadoEl=document.getElementById('filtro-estado-gasto');
   if(festadoEl) festado=festadoEl.value;
 
-  let q=sb.from('gastos').select('*,proyectos(nombre),partidas(nombre)').order('fecha',{ascending:false});
+  let q=sb.from('gastos').select('id,proyecto_id,partida_id,fecha,descripcion,monto,categoria,comprobante_nro,estado_aprobacion').order('fecha',{ascending:false});
   const fpid=fsel.value;const fcat=document.getElementById('filtro-cat').value;const fmes=document.getElementById('filtro-mes').value;
   if(fpid) q=q.eq('proyecto_id',fpid);
   if(fcat) q=q.eq('categoria',fcat);
   if(fmes){q=q.gte('fecha',fmes+'-01').lte('fecha',fmes+'-31');}
   if(festado) q=q.eq('estado_aprobacion',festado);
   const {data:gs}=await q;
+
+  // Buscar nombres de partidas si hay filtro por proyecto
+  const partidaMap={};
+  if(gs?.some(g=>g.partida_id)){
+    const {data:parts}=await sb.from('partidas').select('id,nombre').in('id',gs.filter(g=>g.partida_id).map(g=>g.partida_id));
+    (parts||[]).forEach(p=>partidaMap[p.id]=p.nombre);
+  }
 
   const badgeEstado = ea => {
     if(ea==='por_aprobar') return `<span class="badge" style="background:rgba(245,166,35,.15);color:var(--accent)">⏳ Por aprobar</span>`;
@@ -3458,7 +3472,7 @@ async function renderGastos(){
   };
 
   const t=document.getElementById('tabla-gastos');
-  if(!gs?.length){t.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--muted)">No hay gastos</td></tr>';return;}
+  if(!gs?.length){t.innerHTML='<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--muted)">No hay gastos</td></tr>';return;}
   t.innerHTML=`<thead><tr><th>Fecha</th><th>Obra</th><th>Descripción</th><th>Categoría</th><th>Partida</th><th>Comp.</th><th>Estado</th><th>Monto</th>${puedeEditar()?'<th></th>':''}</tr></thead><tbody>${gs.map(g=>{
     const ea=g.estado_aprobacion||'aprobado';
     const acciones = esAdmin()
@@ -3468,10 +3482,10 @@ async function renderGastos(){
       : `<button class="btn btn-danger btn-sm" onclick="eliminarGasto('${g.id}','${g.proyecto_id}')">✕</button>`;
     return `<tr style="${ea==='por_aprobar'?'background:rgba(245,166,35,.04)':ea==='rechazado'?'opacity:.6':''}">
       <td>${g.fecha||'-'}</td>
-      <td style="color:var(--accent);cursor:pointer" onclick="irADetalle('${g.proyecto_id}')">${g.proyectos?.nombre||'—'}</td>
+      <td style="color:var(--accent);cursor:pointer" onclick="irADetalle('${g.proyecto_id}')">${proyMap[g.proyecto_id]||'—'}</td>
       <td>${g.descripcion}</td>
       <td><span class="badge badge-gray">${g.categoria}</span></td>
-      <td style="color:var(--muted)">${g.partidas?.nombre||'-'}</td>
+      <td style="color:var(--muted)">${g.partida_id?partidaMap[g.partida_id]||'-':'-'}</td>
       <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
       <td>${badgeEstado(ea)}</td>
       <td style="font-weight:500;${ea==='rechazado'?'text-decoration:line-through;color:var(--muted)':''}">${fmt(g.monto)}</td>
