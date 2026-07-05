@@ -22,6 +22,7 @@ jobs:
           server: ${{ secrets.DONWEB_FTP_SERVER }}
           username: ${{ secrets.DONWEB_FTP_USERNAME }}
           password: ${{ secrets.DONWEB_FTP_PASSWORD }}
+          protocol: ftps
           local-dir: ./
           server-dir: ./
           # No borramos nada del servidor que no esté en el repo (seguro por defecto)
