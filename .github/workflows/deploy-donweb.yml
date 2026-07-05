@@ -23,9 +23,9 @@ jobs:
           username: ${{ secrets.DONWEB_FTP_USERNAME }}
           password: ${{ secrets.DONWEB_FTP_PASSWORD }}
           protocol: ftps
+          log-level: verbose
           local-dir: ./
           server-dir: ./
-          # No borramos nada del servidor que no esté en el repo (seguro por defecto)
           dangerous-clean-slate: false
           exclude: |
             **/.git*
