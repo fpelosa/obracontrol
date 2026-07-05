@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v11.8">
+<meta name="version" content="v11.9">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v11.8</title>
+<title>ObraControl v11.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -311,7 +311,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.8</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -893,7 +893,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <!-- Modal Registrar Cobro -->
 <div class="modal-overlay" id="modal-cobro">
-  <div class="modal" style="max-width:460px">
+  <div class="modal" style="max-width:620px;max-height:90vh;overflow-y:auto">
     <div class="modal-title">Registrar Cobro<button class="modal-close" onclick="closeModal('modal-cobro')">✕</button></div>
     <input type="hidden" id="cobro-cuota-id"/>
     <input type="hidden" id="cobro-venta-id"/>
@@ -921,7 +921,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div id="cobro-adj-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
       <label style="cursor:pointer;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:6px;padding:8px;border:1px dashed var(--border2);border-radius:8px">
         + Adjuntar comprobante
-        <input type="file" id="cobro-adjunto" multiple style="display:none" onchange="previewAdjuntos('cobro')"/>
+        <input type="file" id="cobro-adjunto" multiple style="display:none" onchange="previewAdjuntosCobro()"/>
       </label>
     </div>
 
@@ -929,10 +929,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">🏦 E-Cheqs</div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="agregarEcheqForm()" style="font-size:11px">+ Agregar e-cheq</button>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:12px;color:var(--muted)">Total e-cheqs: <strong id="echeq-total" style="color:var(--text)">$ 0</strong></span>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="agregarEcheqForm()" style="font-size:11px">+ Agregar e-cheq</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr 110px 110px 30px;gap:6px;font-size:11px;color:var(--muted);padding:0 2px;margin-bottom:4px">
+        <span>N° Cheque</span><span>Importe</span><span>F. Emisión</span><span>F. Vencimiento</span><span></span>
       </div>
       <div id="cobro-echeqs-form"></div>
     </div>
+
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-cobro')">Cancelar</button>
       <button class="btn btn-primary" onclick="withLoading(this, guardarCobro)">Registrar cobro</button>
@@ -976,7 +983,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.8</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.9</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -5197,11 +5204,18 @@ async function renderCobros(){
               </div>
               <span style="font-size:11px;color:${colEst};font-weight:600">${labelEst}</span>
               ${cu.estado!=='cobrado'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="abrirModalCobro('${cu.id}','${v.id}','${cu.numero_cuota}',${cu.saldo},'${v.moneda}')">💰 Cobrar</button>`:''}
-              <label style="cursor:pointer;font-size:11px;color:var(--muted)" title="Adjuntar archivo">
-                📎
-                <input type="file" multiple style="display:none" onchange="subirAdjuntoCuota('${cu.id}',this)"/>
-              </label>
+              <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="toggleAdjCuota('${cu.id}',this)" title="Adjuntos">📎</button>
             </div>
+          </div>
+          <div id="adj-cuota-${cu.id}" style="display:none;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:6px">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="adj-cuota-list-${cu.id}">
+              <span style="color:var(--muted);font-size:12px">Cargando...</span>
+            </div>
+            <label style="cursor:pointer;font-size:12px;color:var(--accent);display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px dashed var(--border2);border-radius:6px;width:fit-content">
+              + Adjuntar archivo
+              <input type="file" multiple style="display:none" onchange="subirAdjuntoCuotaPanel('${cu.id}',this)"/>
+            </label>
+          </div>
           </div>`;
         }).join('')}
       </div>`:'<div style="color:var(--muted);font-size:13px;padding-top:6px">Sin cuotas cargadas</div>'}
@@ -5370,6 +5384,7 @@ function abrirModalCobro(cuotaId, ventaId, numCuota, saldo, moneda){
   document.getElementById('cobro-info').innerHTML=`Cuota ${numCuota} · Saldo pendiente: <strong>${fmt(saldo)} ${moneda}</strong>`;
   document.getElementById('cobro-echeqs-form').innerHTML='';
   document.getElementById('cobro-adj-preview').innerHTML='';
+  const el = document.getElementById('echeq-total'); if(el) el.textContent='$ 0';
   const adjInput = document.getElementById('cobro-adjunto');
   if(adjInput) adjInput.value='';
   openModal('modal-cobro');
@@ -5425,18 +5440,94 @@ async function guardarCobro(){
   renderCobros();
 }
 
+function actualizarTotalEcheqs(){
+  let total = 0;
+  document.querySelectorAll('.echeq-importe').forEach(el=>{
+    total += Number(el.value.replace(/\./g,'').replace(',','.'))||0;
+  });
+  const el = document.getElementById('echeq-total');
+  if(el) el.textContent = fmtInput(total)||'0';
+}
+
 function agregarEcheqForm(){
   const cont = document.getElementById('cobro-echeqs-form');
   const div = document.createElement('div');
   div.className='echeq-row';
-  div.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr 1fr 22px;gap:6px;margin-bottom:8px;align-items:center';
+  div.style.cssText='display:grid;grid-template-columns:1.2fr 1fr 110px 110px 30px;gap:6px;margin-bottom:6px;align-items:center';
   div.innerHTML=`
-    <input type="text" class="echeq-numero" placeholder="N° cheq" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
-    <input type="text" inputmode="decimal" class="echeq-importe" placeholder="Importe" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
-    <input type="date" class="echeq-emision" title="Fecha emisión" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
-    <input type="date" class="echeq-vencimiento" title="Fecha vencimiento (obligatorio)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
-    <button type="button" onclick="this.closest('.echeq-row').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0">✕</button>`;
+    <input type="text" class="echeq-numero" placeholder="N° cheque" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
+    <input type="text" inputmode="decimal" class="echeq-importe" placeholder="Importe" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);actualizarTotalEcheqs()" oninput="actualizarTotalEcheqs()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
+    <input type="date" class="echeq-emision" title="Fecha emisión" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 8px;font-size:11px"/>
+    <input type="date" class="echeq-vencimiento" title="Fecha vencimiento *" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 8px;font-size:11px"/>
+    <button type="button" onclick="this.closest('.echeq-row').remove();actualizarTotalEcheqs()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0">✕</button>`;
   cont.appendChild(div);
+}
+
+function previewAdjuntosCobro(){
+  const input = document.getElementById('cobro-adjunto');
+  const preview = document.getElementById('cobro-adj-preview');
+  if(!input||!preview) return;
+  preview.innerHTML = '';
+  Array.from(input.files).forEach((f,i)=>{
+    const ext = f.name.split('.').pop().toLowerCase();
+    const icon = ['pdf'].includes(ext)?'📄':['jpg','jpeg','png','gif','webp'].includes(ext)?'🖼️':'📎';
+    const chip = document.createElement('div');
+    chip.style.cssText='display:flex;align-items:center;gap:6px;background:var(--bg3);padding:4px 10px;border-radius:6px;font-size:12px';
+    chip.innerHTML=`${icon} ${f.name} <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0;margin-left:4px">✕</button>`;
+    preview.appendChild(chip);
+  });
+}
+
+async function toggleAdjCuota(cuotaId, btn){
+  const panel = document.getElementById(`adj-cuota-${cuotaId}`);
+  if(!panel) return;
+  if(panel.style.display==='none'){
+    panel.style.display='block';
+    // Cargar adjuntos
+    const adj = await cargarAdjuntos('cuota', cuotaId);
+    const list = document.getElementById(`adj-cuota-list-${cuotaId}`);
+    if(list){
+      if(adj.length){
+        list.innerHTML = adj.map(a=>{
+          const ext=a.nombre_archivo.split('.').pop().toLowerCase();
+          const icon=['pdf'].includes(ext)?'📄':['jpg','jpeg','png','gif','webp'].includes(ext)?'🖼️':'📎';
+          return `<div style="display:flex;align-items:center;gap:6px;background:var(--bg3);padding:4px 10px;border-radius:6px;font-size:12px">
+            <a href="${a.url}" target="_blank" style="color:var(--text);text-decoration:none;display:flex;align-items:center;gap:4px">${icon} ${a.nombre_archivo}</a>
+            <button onclick="eliminarAdjCuota('${a.id}','${a.storage_path}','${cuotaId}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0">✕</button>
+          </div>`;
+        }).join('');
+      } else {
+        list.innerHTML='<span style="color:var(--muted);font-size:12px">Sin archivos adjuntos</span>';
+      }
+    }
+  } else {
+    panel.style.display='none';
+  }
+}
+
+async function eliminarAdjCuota(adjId, path, cuotaId){
+  if(!confirm('¿Eliminar este archivo?')) return;
+  await sb.storage.from('adjuntos').remove([path]);
+  await sb.from('adjuntos').delete().eq('id',adjId);
+  notify('Archivo eliminado');
+  toggleAdjCuota(cuotaId, null);
+  document.getElementById(`adj-cuota-${cuotaId}`).style.display='none';
+  toggleAdjCuota(cuotaId, null);
+}
+
+async function subirAdjuntoCuotaPanel(cuotaId, input){
+  if(!input.files.length) return;
+  for(const f of input.files){
+    const path=`cuota/${cuotaId}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const {error}=await sb.storage.from('adjuntos').upload(path,f);
+    if(error){notify('Error: '+f.name,false);continue;}
+    await sb.from('adjuntos').insert({entidad_tipo:'cuota',entidad_id:cuotaId,nombre_archivo:f.name,url:STORAGE_URL+path,storage_path:path,privado:false,created_by:currentUser.id});
+  }
+  input.value='';
+  notify('Archivo adjunto');
+  // Recargar panel
+  document.getElementById(`adj-cuota-${cuotaId}`).style.display='none';
+  await toggleAdjCuota(cuotaId, null);
 }
 
 async function subirAdjuntoCuota(cuotaId, input){
