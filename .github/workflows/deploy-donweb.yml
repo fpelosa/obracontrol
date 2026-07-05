@@ -33,7 +33,7 @@ jobs:
             set ftp:passive-mode true;
             set net:timeout 15;
             set net:max-retries 1;
-            open -u \"$FTP_USERNAME\",\"$FTP_PASSWORD\" \"$FTP_SERVER\";
+            open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER;
             put index.html;
             bye
           "
