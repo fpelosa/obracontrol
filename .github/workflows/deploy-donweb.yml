@@ -9,28 +9,27 @@ on:
 
 jobs:
   ftp-deploy:
-    name: Subir index.html por FTP
+    name: Subir index.html por FTPS (lftp)
     runs-on: ubuntu-latest
 
     steps:
       - name: Descargar repo
         uses: actions/checkout@v4
 
-      - name: Deploy por FTP a DonWeb
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.DONWEB_FTP_SERVER }}
-          username: ${{ secrets.DONWEB_FTP_USERNAME }}
-          password: ${{ secrets.DONWEB_FTP_PASSWORD }}
-          protocol: ftps
-          log-level: verbose
-          local-dir: ./
-          server-dir: ./
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            README.md
-            CLAUDE.md
-            _headers
+      - name: Instalar lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Deploy por FTPS con lftp
+        env:
+          FTP_SERVER: ${{ secrets.DONWEB_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.DONWEB_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.DONWEB_FTP_PASSWORD }}
+        run: |
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -e "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            set ftp:passive-mode true;
+            put index.html;
+            bye
+          " "$FTP_SERVER"
