@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v10.7</title>
+<title>ObraControl v10.9</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.7</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v10.9</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +848,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.7</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v10.9</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -914,7 +914,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group full"><label>Nombre *</label><input id="part-nombre" placeholder="Ej: Estructura hormigón"/></div>
       <div class="form-group"><label>Presupuesto ($)</label>
         <div style="display:flex;gap:6px">
-          <input type="number" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part')" style="flex:1"/>
+          <input type="text" inputmode="decimal" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);calcularPrecioVentaPartida('part')" style="flex:1"/>
           <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('part-ppto')" style="padding:0 10px;font-size:16px" title="Calculadora">🧮</button>
         </div>
       </div>
@@ -932,7 +932,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div class="form-group" id="part-extra-group"><label id="part-extra-label">% adicional</label><input type="number" id="part-extra" placeholder="0" oninput="calcularPrecioVentaPartida('part')"/></div>
           <div class="form-group"><label>Precio de venta ($)</label>
             <div style="display:flex;gap:6px">
-              <input type="number" id="part-pventa" placeholder="0" oninput="onManualPventa('part')" style="flex:1"/>
+              <input type="text" inputmode="decimal" id="part-pventa" placeholder="0" oninput="onManualPventa('part')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)" style="flex:1"/>
               <button type="button" id="part-calc-btn" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('part-pventa')" style="padding:0 10px;font-size:16px;display:none" title="Calculadora">🧮</button>
             </div>
           </div>
@@ -964,7 +964,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group full"><label>Nombre *</label><input id="ep-nombre" placeholder="Ej: Estructura hormigón"/></div>
       <div class="form-group"><label>Presupuesto ($)</label>
         <div style="display:flex;gap:6px">
-          <input type="number" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep')" style="flex:1"/>
+          <input type="text" inputmode="decimal" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);calcularPrecioVentaPartida('ep')" style="flex:1"/>
           <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('ep-ppto')" style="padding:0 10px;font-size:16px" title="Calculadora">🧮</button>
         </div>
       </div>
@@ -982,7 +982,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div class="form-group" id="ep-extra-group"><label id="ep-extra-label">% adicional</label><input type="number" id="ep-extra" placeholder="0" oninput="calcularPrecioVentaPartida('ep')"/></div>
           <div class="form-group"><label>Precio de venta ($)</label>
             <div style="display:flex;gap:6px">
-              <input type="number" id="ep-pventa" placeholder="0" oninput="onManualPventa('ep')" style="flex:1"/>
+              <input type="text" inputmode="decimal" id="ep-pventa" placeholder="0" oninput="onManualPventa('ep')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)" style="flex:1"/>
               <button type="button" id="ep-calc-btn" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('ep-pventa')" style="padding:0 10px;font-size:16px;display:none" title="Calculadora">🧮</button>
             </div>
           </div>
@@ -1321,7 +1321,7 @@ try {
   }
 } catch(e) {}
 let currentUser = null;
-let currentPerfil = null;
+let currentPerfil = null; // null = sin perfil = rol supervisor por defecto (más restrictivo)
 let currentProyectoId = null;
 let chartBarras = null, chartDona = null, chartCertificado = null, chartLineas = null, chartCateg = null;
 let cache = { proyectos: [], gastos: [] };
@@ -1336,11 +1336,13 @@ const estadoBadge = e => {
   return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
 };
 const rolLabel = r => ({admin:'Administrador',director:'Director',ingeniero:'Ingeniero',administrativo:'Administrativo',supervisor:'Supervisor',visor:'Visor'}[r]||r);
+// Por seguridad: sin perfil cargado, asumir el rol más restrictivo (supervisor)
+// Solo cuando el perfil confirme explícitamente 'admin' se habilitan funciones elevadas
 const puedeEditar = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
 const esAdmin = () => currentPerfil?.rol === 'admin';
-const esSupervisor = () => currentPerfil?.rol === 'supervisor';
+const esSupervisor = () => !currentPerfil || currentPerfil.rol === 'supervisor';
 const esAdministrativoOSuperior = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
-const puedeVerPrecioCliente = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
+const puedeVerPrecioCliente = () => puedeEditar();
 
 function notify(msg, ok=true){
   const n=document.getElementById('notif');
@@ -2534,6 +2536,32 @@ function switchTab(el,panelId){
 
 // ── CRUD PROYECTOS ──────────────────────────
 // Deshabilita un botón mientras ejecuta una función async, lo restaura al terminar
+// ── FORMATEO DE INPUTS NUMÉRICOS ──────────────────────────────
+function fmtInput(val){
+  if(val===''||val===null||val===undefined) return '';
+  const n = Number(String(val).replace(/\./g,'').replace(',','.'));
+  if(isNaN(n)) return val;
+  if(n===0) return '';
+  return n.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2});
+}
+function parseInput(id){
+  const el = document.getElementById(id);
+  if(!el) return 0;
+  return Number(el.value.replace(/\./g,'').replace(',','.'))||0;
+}
+function onFmtBlur(el){
+  const raw = el.value.replace(/\./g,'').replace(',','.');
+  const n = parseFloat(raw);
+  if(!isNaN(n) && n!==0) el.value = fmtInput(n);
+  else el.value = '';
+}
+function onFmtFocus(el){
+  // Al hacer foco, mostrar número sin formato para facilitar edición
+  const raw = el.value.replace(/\./g,'').replace(',','.');
+  const n = parseFloat(raw);
+  if(!isNaN(n) && n!==0) el.value = String(n);
+}
+
 async function withLoading(btnEl, fn){
   if(!btnEl||btnEl.disabled) return;
   const orig = btnEl.innerHTML;
@@ -2650,7 +2678,11 @@ function calcUsar(){
     const result = _calcExpr ? Function('"use strict"; return (' + _calcExpr + ')')() : 0;
     const rounded = Math.round(result * 100) / 100;
     const el = document.getElementById(_calcTargetId);
-    if(el){ el.value = rounded; el.dispatchEvent(new Event('input')); }
+    if(el){
+      el.value = fmtInput(rounded);
+      el.dispatchEvent(new Event('input'));
+      el.dispatchEvent(new Event('blur'));
+    }
   } catch(e){}
   closeModal('modal-calc');
 }
@@ -3153,12 +3185,12 @@ function setModoVenta(prefix, modo){
 function calcularPrecioVentaPartida(prefix){
   const modo=_modoVenta[prefix]||'pct';
   if(modo==='man') return;
-  const ppto=Number(document.getElementById(`${prefix}-ppto`)?.value)||0;
+  const ppto=parseInput(`${prefix}-ppto`);
   const extra=Number(document.getElementById(`${prefix}-extra`)?.value)||0;
   const pventaEl=document.getElementById(`${prefix}-pventa`);
   if(!pventaEl) return;
-  if(modo==='pct') pventaEl.value=(ppto*(1+extra/100)).toFixed(2);
-  else pventaEl.value=(ppto+extra).toFixed(2);
+  const result = modo==='pct' ? ppto*(1+extra/100) : ppto+extra;
+  pventaEl.value = fmtInput(result);
 }
 
 function onManualPventa(prefix){
@@ -3184,8 +3216,8 @@ async function guardarPartida(){
   const nombre=document.getElementById('part-nombre').value.trim();
   if(!nombre){notify('Nombre obligatorio',false);return;}
   const data={proyecto_id:pid,nombre,
-    presupuesto:Number(document.getElementById('part-ppto').value)||0,
-    precio_venta:Number(document.getElementById('part-pventa').value)||0,
+    presupuesto:parseInput('part-ppto'),
+    precio_venta:parseInput('part-pventa'),
     unidad:document.getElementById('part-unidad').value,
     cantidad:Number(document.getElementById('part-cant').value)||0,
     precio_unitario:Number(document.getElementById('part-precio').value)||0};
@@ -3205,7 +3237,7 @@ async function editarPartida(partId, pid){
   document.getElementById('ep-id').value=pa.id;
   document.getElementById('ep-proy-id').value=pid;
   document.getElementById('ep-nombre').value=pa.nombre||'';
-  document.getElementById('ep-ppto').value=pa.presupuesto||0;
+  document.getElementById('ep-ppto').value = fmtInput(pa.presupuesto||0);
   document.getElementById('ep-unidad').value=pa.unidad||'';
   document.getElementById('ep-cant').value=pa.cantidad||0;
   document.getElementById('ep-precio').value=pa.precio_unitario||0;
@@ -3221,21 +3253,21 @@ async function editarPartida(partId, pid){
       // Es un % limpio — restaurar en modo pct
       setModoVenta('ep','pct');
       document.getElementById('ep-extra').value = pct;
-      document.getElementById('ep-pventa').value = pventa.toFixed(2);
+      document.getElementById('ep-pventa').value = fmtInput(pventa);
     } else {
       // No es % exacto — importe directo
       setModoVenta('ep','man');
-      document.getElementById('ep-pventa').value = pventa;
+      document.getElementById('ep-pventa').value = fmtInput(pventa);
     }
   } else if(ppto > 0 && pventa === ppto){
     // Sin margen, modo % con 0
     setModoVenta('ep','pct');
     document.getElementById('ep-extra').value = 0;
-    document.getElementById('ep-pventa').value = pventa.toFixed(2);
+    document.getElementById('ep-pventa').value = fmtInput(pventa);
   } else {
     // Importe directo
     setModoVenta('ep','man');
-    document.getElementById('ep-pventa').value = pventa;
+    document.getElementById('ep-pventa').value = fmtInput(pventa);
   }
 
   document.getElementById('ep-adjuntos-preview').innerHTML='';
@@ -3250,8 +3282,8 @@ async function guardarPartidaEdicion(){
   if(!nombre){notify('El nombre es obligatorio',false);return;}
   const {error}=await sb.from('partidas').update({
     nombre,
-    presupuesto:Number(document.getElementById('ep-ppto').value)||0,
-    precio_venta:Number(document.getElementById('ep-pventa').value)||0,
+    presupuesto:parseInput("ep-ppto"),
+    precio_venta:parseInput("ep-pventa"),
     unidad:document.getElementById('ep-unidad').value,
     cantidad:Number(document.getElementById('ep-cant').value)||0,
     precio_unitario:Number(document.getElementById('ep-precio').value)||0
