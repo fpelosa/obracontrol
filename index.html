@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v11.9">
+<meta name="version" content="v12.0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v11.9</title>
+<title>ObraControl v12.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -311,7 +311,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.0</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -983,7 +983,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.9</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.0</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -4126,6 +4126,16 @@ function mostrarEditorPresupuesto() {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div class="card-title" style="margin-bottom:0">Ítems del presupuesto</div>
         <button class="btn btn-ghost btn-sm" onclick="agregarItem()">+ Agregar ítem</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleModoUnificar()" id="btn-unificar-items" style="border-color:var(--accent2);color:var(--accent2)">⊕ Unificar ítems</button>
+      </div>
+      <div id="unificar-panel" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Seleccioná los ítems a unificar y escribí el nombre del ítem resultante:</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="unificar-nombre" placeholder="Nombre del ítem unificado *" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 12px;font-size:13px"/>
+          <button class="btn btn-primary btn-sm" onclick="ejecutarUnificar()">Unificar seleccionados</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleModoUnificar()">Cancelar</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Los ítems seleccionados (✓) se reemplazarán por uno solo con la suma de sus precios y costos. Esta acción no se puede deshacer.</div>
       </div>
       <div id="pe-items-cont"></div>
       <div id="pe-totales" style="margin-top:14px;text-align:right"></div>
@@ -4174,11 +4184,17 @@ function renderItems() {
   const cont = document.getElementById('pe-items-cont');
   const moneda = document.getElementById('pe-moneda')?.value || presActual.moneda || 'USD';
   const simb = moneda === 'USD' ? 'U$S' : '$';
+  const modoUnif = document.getElementById('unificar-panel')?.style.display !== 'none';
   cont.innerHTML = presItems.map((item, i) => {
     const totalVenta = (item.cantidad||1)*(item.precio||0);
     const totalCosto = (item.cantidad||1)*(item.costo||0);
     const lbl = (txt,color='var(--muted)') => i===0?`<label style="font-size:11px;color:${color}">${txt}</label>`:'<label></label>';
-    return `<div style="display:grid;grid-template-columns:1fr 70px 110px 110px 110px 110px 30px;gap:8px;align-items:start;margin-bottom:8px">
+    const checkCol = modoUnif ? `<div style="padding-top:${i===0?'18':'8'}px;display:flex;justify-content:center">
+      <input type="checkbox" class="unif-check" data-i="${i}" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent2)"/>
+    </div>` : '';
+    const cols = modoUnif ? '20px 1fr 70px 110px 110px 110px 110px 30px' : '1fr 70px 110px 110px 110px 110px 30px';
+    return `<div style="display:grid;grid-template-columns:${cols};gap:8px;align-items:start;margin-bottom:8px">
+      ${checkCol}
       <div class="form-group" style="margin:0">
         ${i===0?'<label style="font-size:11px;color:var(--muted)">Descripción</label>':''}
         <textarea data-i="${i}" data-f="desc" onchange="updateItem(this)" style="width:100%;min-height:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--fb);font-size:13px;padding:8px;resize:vertical">${item.desc||''}</textarea>
@@ -4220,6 +4236,49 @@ function updateItem(el) {
   presItems[i][f] = f==='desc' ? el.value : parseFloat(el.value)||0;
   recalcularTotales();
   renderItems();
+}
+
+function toggleModoUnificar(){
+  const panel = document.getElementById('unificar-panel');
+  const btn = document.getElementById('btn-unificar-items');
+  if(panel.style.display==='none'){
+    panel.style.display='block';
+    btn.style.background='rgba(59,130,246,.15)';
+  } else {
+    panel.style.display='none';
+    btn.style.background='';
+    document.getElementById('unificar-nombre').value='';
+  }
+  renderItems();
+}
+
+function ejecutarUnificar(){
+  const nombre = document.getElementById('unificar-nombre').value.trim();
+  if(!nombre){notify('Escribí el nombre del ítem unificado',false);return;}
+  const checks = document.querySelectorAll('.unif-check:checked');
+  if(checks.length<2){notify('Seleccioná al menos 2 ítems para unificar',false);return;}
+  const indices = Array.from(checks).map(c=>parseInt(c.dataset.i)).sort((a,b)=>b-a);
+  // Sumar precios y costos (precio unitario * cantidad)
+  let totalPrecio=0, totalCosto=0;
+  indices.forEach(i=>{
+    const it=presItems[i];
+    totalPrecio += (it.precio||0)*(it.cantidad||1);
+    totalCosto += (it.costo||0)*(it.cantidad||1);
+  });
+  // Eliminar items seleccionados (de mayor a menor índice para no desplazar)
+  indices.forEach(i=>presItems.splice(i,1));
+  // Insertar el item unificado en la posición del primero (menor índice)
+  const posicion = Math.min(...Array.from(checks).map(c=>parseInt(c.dataset.i)));
+  presItems.splice(Math.min(posicion, presItems.length), 0, {
+    desc: nombre,
+    cantidad: 1,
+    precio: totalPrecio,
+    costo: totalCosto
+  });
+  // Cerrar panel
+  toggleModoUnificar();
+  recalcularTotales();
+  notify(`✅ ${checks.length} ítems unificados en "${nombre}"`);
 }
 
 function agregarItem() {
