@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v11.5">
+<meta name="version" content="v11.7">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v11.5</title>
+<title>ObraControl v11.7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -311,7 +311,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.7</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -354,6 +354,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nav-item" id="nav-clientes" style="display:none" onclick="showView('clientes')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-5 5-5s5 2.2 5 5"/><circle cx="12" cy="5" r="2"/><path d="M14 13c0-2-1.3-3.7-3-4.4"/></svg>
         Clientes
+      </div>
+      <div class="nav-item" id="nav-cobros" style="display:none" onclick="showView('cobros')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5v7M6 6.5c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2 .9-2 2 .9 2 2 2"/></svg>
+        Cobranzas
       </div>
       <div class="nav-item" id="nav-logs" style="display:none" onclick="showView('logs')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="9" y2="11"/></svg>
@@ -613,6 +617,30 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
+    <div id="view-cobros" class="view">
+      <div class="topbar">
+        <h1>Cobranzas</h1>
+        <button class="btn btn-primary" onclick="abrirModalVenta()">+ Nueva venta</button>
+      </div>
+      <!-- Métricas -->
+      <div class="metrics" id="cobros-metrics" style="margin-bottom:16px"></div>
+      <!-- Filtros -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select id="cobros-filtro-estado" onchange="renderCobros()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="vencido">Vencidas</option>
+            <option value="cobrado">Cobradas</option>
+          </select>
+          <select id="cobros-filtro-cliente" onchange="renderCobros()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px">
+            <option value="">Todos los clientes</option>
+          </select>
+        </div>
+      </div>
+      <div id="cobros-lista"></div>
+    </div>
+
     <div id="view-logs" class="view">
       <div class="topbar"><h1>Logs de actividad</h1>
         <button class="btn btn-ghost" onclick="renderLogs()" style="font-size:12px">🔄 Actualizar</button>
@@ -704,7 +732,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group full" id="g-proyecto-label" style="display:none"><label>Obra</label><div id="g-proyecto-nombre" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px"></div></div>
       <div class="form-group"><label>Partida</label><select id="g-partida"><option value="">Sin partida</option></select></div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
-      <div class="form-group"><label>Monto ($) *</label><input type="number" id="g-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="text" inputmode="decimal" id="g-monto" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/></div>
       <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
       <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
@@ -739,7 +767,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="form-grid">
       <div class="form-group"><label>Partida</label><select id="eg-partida"><option value="">Sin partida</option></select></div>
       <div class="form-group"><label>Categoría</label><select id="eg-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
-      <div class="form-group"><label>Monto ($) *</label><input type="number" id="eg-monto" placeholder="0"/></div>
+      <div class="form-group"><label>Monto ($) *</label><input type="text" inputmode="decimal" id="eg-monto" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/></div>
       <div class="form-group"><label>Fecha *</label><input type="date" id="eg-fecha"/></div>
       <div class="form-group full"><label>Descripción / Proveedor *</label><input id="eg-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="eg-comp" placeholder="Factura / Recibo"/></div>
@@ -813,6 +841,84 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
+<!-- Modal Nueva Venta -->
+<div class="modal-overlay" id="modal-venta">
+  <div class="modal" style="max-width:580px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title" id="venta-modal-title">Nueva Venta<button class="modal-close" onclick="closeModal('modal-venta')">✕</button></div>
+    <input type="hidden" id="venta-id"/>
+    <div class="form-grid">
+      <div class="form-group"><label>Tipo</label>
+        <select id="venta-tipo" onchange="onVentaTipoChange()">
+          <option value="externo">Externo (sin proyecto)</option>
+          <option value="presupuesto">Presupuesto del sistema</option>
+          <option value="factura">Factura</option>
+        </select>
+      </div>
+      <div class="form-group"><label>N° / Referencia</label><input id="venta-numero" placeholder="N° factura o referencia"/></div>
+      <div class="form-group" id="venta-pres-group" style="display:none"><label>Presupuesto vinculado</label>
+        <select id="venta-presupuesto-id"><option value="">Seleccionar...</option></select>
+      </div>
+      <div class="form-group"><label>Cliente *</label>
+        <select id="venta-cliente-id"><option value="">Seleccionar cliente...</option></select>
+      </div>
+      <div class="form-group"><label>Fecha *</label><input type="date" id="venta-fecha"/></div>
+      <div class="form-group full"><label>Descripción</label><input id="venta-desc" placeholder="Descripción de la venta u obra"/></div>
+      <div class="form-group"><label>Moneda</label>
+        <select id="venta-moneda">
+          <option value="ARS">ARS - Pesos</option>
+          <option value="USD">USD - Dólares</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Importe total *</label>
+        <input type="text" inputmode="decimal" id="venta-importe" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--accent);text-transform:uppercase;font-weight:600">Cuotas / Vencimientos</div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="agregarCuotaForm()">+ Agregar cuota</button>
+      </div>
+      <div id="venta-cuotas-form"></div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-venta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarVenta)">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Registrar Cobro -->
+<div class="modal-overlay" id="modal-cobro">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">Registrar Cobro<button class="modal-close" onclick="closeModal('modal-cobro')">✕</button></div>
+    <input type="hidden" id="cobro-cuota-id"/>
+    <input type="hidden" id="cobro-venta-id"/>
+    <div id="cobro-info" style="background:var(--bg3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--muted)"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Fecha de cobro *</label><input type="date" id="cobro-fecha"/></div>
+      <div class="form-group"><label>Importe cobrado *</label>
+        <input type="text" inputmode="decimal" id="cobro-importe" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/>
+      </div>
+      <div class="form-group"><label>Moneda</label>
+        <select id="cobro-moneda">
+          <option value="ARS">ARS - Pesos</option>
+          <option value="USD">USD - Dólares</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Tipo de cambio</label>
+        <input type="text" inputmode="decimal" id="cobro-tc" placeholder="Solo si pagaron en otra moneda" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/>
+      </div>
+      <div class="form-group full"><label>Observaciones</label><input id="cobro-obs" placeholder="Medio de pago, referencia..."/></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cobro')">Cancelar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, guardarCobro)">Registrar cobro</button>
+    </div>
+  </div>
+</div>
+
 <!-- Calculadora -->
 <div class="modal-overlay" id="modal-calc" style="z-index:10000">
   <div class="modal" style="max-width:280px">
@@ -849,7 +955,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.5</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.7</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1507,7 +1613,7 @@ async function cargarPerfil(){
           document.getElementById('user-name').textContent=currentPerfil.nombre||'—';
           document.getElementById('user-rol').textContent=rolLabel(currentPerfil.rol);
           document.getElementById('user-avatar').textContent=(currentPerfil.nombre||'?')[0].toUpperCase();
-          if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; document.getElementById('nav-clientes').style.display='flex'; document.getElementById('nav-logs').style.display='flex'; }
+          if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; document.getElementById('nav-clientes').style.display='flex'; document.getElementById('nav-logs').style.display='flex'; document.getElementById('nav-cobros').style.display='flex'; }
           actualizarVisibilidadAdmin();
         }
       });
@@ -1523,7 +1629,7 @@ async function cargarPerfil(){
       document.getElementById('user-name').textContent=currentPerfil.nombre||'—';
       document.getElementById('user-rol').textContent=rolLabel(currentPerfil.rol);
       document.getElementById('user-avatar').textContent=(currentPerfil.nombre||'?')[0].toUpperCase();
-      if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; document.getElementById('nav-clientes').style.display='flex'; document.getElementById('nav-logs').style.display='flex'; }
+      if(esAdmin()){ document.getElementById('nav-admin').style.display='flex'; document.getElementById('nav-rentabilidad').style.display='flex'; document.getElementById('nav-clientes').style.display='flex'; document.getElementById('nav-logs').style.display='flex'; document.getElementById('nav-cobros').style.display='flex'; }
       if(!puedeEditar() && !esSupervisor()){
         document.getElementById('btn-nueva-obra').style.display='none';
         document.getElementById('btn-nueva-obra2').style.display='none';
@@ -1551,7 +1657,7 @@ function showView(v){
   const map={dashboard:0,proyectos:1,gastos:2,reportes:3,presupuestos:4,finanzas:5,rentabilidad:6,admin:7};
   const items=document.querySelectorAll('.nav-item');
   if(map[v]!==undefined&&items[map[v]]) items[map[v]].classList.add('active');
-  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin,finanzas:renderFinanzas,rentabilidad:renderRentabilidadView,presupuestos:renderPresupuestos,clientes:renderClientes,logs:renderLogs};
+  const fns={dashboard:renderDashboard,proyectos:renderProyectos,gastos:renderGastos,reportes:renderReportes,admin:renderAdmin,finanzas:renderFinanzas,rentabilidad:renderRentabilidadView,presupuestos:renderPresupuestos,clientes:renderClientes,logs:renderLogs,cobros:renderCobros};
   if(fns[v]) fns[v]();
 }
 
@@ -1874,7 +1980,28 @@ async function renderDashboard(){
   const totalGasto=p.reduce((s,x)=>s+Number(x.total_gastado),0);
   const gEnCurso=g.filter(x=>enCurso.some(pr=>pr.id===x.proyecto_id));
 
-  document.getElementById('dash-metrics').innerHTML=metricasComunes+`
+  // Métricas de cobranzas para admin
+  let metricasCobros = '';
+  if(esAdmin()){
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const {data:cuotas} = await sb.from('venta_cuotas').select('id,fecha_vencimiento,fecha_cobro_estimado,importe,venta_id');
+      if(cuotas?.length){
+        const {data:cobrados} = await sb.from('cobros').select('cuota_id,importe');
+        const cobradoPorCuota = {};
+        (cobrados||[]).forEach(c=>{ cobradoPorCuota[c.cuota_id]=(cobradoPorCuota[c.cuota_id]||0)+Number(c.importe); });
+        const pendientes = cuotas.filter(cu=>{
+          const saldo = Number(cu.importe)-(cobradoPorCuota[cu.id]||0);
+          return saldo>0;
+        });
+        const vencidas = pendientes.filter(cu=>cu.fecha_vencimiento<hoy);
+        const enFechaHoy = pendientes.filter(cu=>cu.fecha_cobro_estimado===hoy);
+        if(vencidas.length) metricasCobros += `<div class="metric" style="border-color:var(--red);cursor:pointer" onclick="showView('cobros')"><div class="metric-label">Cobros vencidos</div><div class="metric-value" style="color:var(--red)">${vencidas.length}</div><div class="metric-sub">pendientes de cobro</div></div>`;
+        if(enFechaHoy.length) metricasCobros += `<div class="metric" style="border-color:var(--accent);cursor:pointer" onclick="showView('cobros')"><div class="metric-label">Cobros de hoy</div><div class="metric-value" style="color:var(--accent)">${enFechaHoy.length}</div><div class="metric-sub">en fecha estimada</div></div>`;
+      }
+    } catch(e){ console.warn('cobros dashboard:', e); }
+  }
+  document.getElementById('dash-metrics').innerHTML=metricasComunes+metricasCobros+`
     <div class="metric" style="cursor:pointer" onclick="showView('gastos')">
       <div class="metric-label">Gastos por aprobar</div>
       <div class="metric-value" style="color:${gastosPorAprobar.length>0?'var(--red)':'var(--green)'}">${gastosPorAprobar.length}</div>
@@ -3334,7 +3461,7 @@ async function abrirGastoProyecto(pid){
 
 async function guardarGasto(){
   const pid=document.getElementById('g-proyecto').value;
-  const monto=Number(document.getElementById('g-monto').value);
+  const monto=parseInput('g-monto');
   const desc=document.getElementById('g-desc').value.trim();
   if(!pid||!monto||!desc){notify('Completá obra, monto y descripción',false);return;}
   const partidaId=document.getElementById('g-partida').value||null;
@@ -3371,7 +3498,7 @@ async function editarGasto(gid, pid){
   const selPart = document.getElementById('eg-partida');
   selPart.innerHTML='<option value="">Sin partida</option>'+(partidas||[]).map(p=>`<option value="${p.id}" ${p.id===g.partida_id?'selected':''}>${p.nombre}</option>`).join('');
   document.getElementById('eg-cat').value=g.categoria||'Materiales';
-  document.getElementById('eg-monto').value=g.monto||0;
+  document.getElementById('eg-monto').value=fmtInput(g.monto||0);
   document.getElementById('eg-fecha').value=g.fecha||'';
   document.getElementById('eg-desc').value=g.descripcion||'';
   document.getElementById('eg-comp').value=g.comprobante_nro||'';
@@ -3383,7 +3510,7 @@ async function editarGasto(gid, pid){
 async function guardarEdicionGasto(){
   const gid=document.getElementById('eg-id').value;
   const pid=document.getElementById('eg-pid').value;
-  const monto=Number(document.getElementById('eg-monto').value);
+  const monto=parseInput('eg-monto');
   const desc=document.getElementById('eg-desc').value.trim();
   if(!monto||!desc){notify('Monto y descripción son obligatorios',false);return;}
   const {error}=await sb.from('gastos').update({
@@ -4908,6 +5035,282 @@ async function eliminarCertificado(certId, proyId){
   renderItemsObra(proyId);
 }
 
+// ══════════════════════════════════════════
+// MÓDULO COBRANZAS
+// ══════════════════════════════════════════
+let cacheVentas = [];
+
+async function renderCobros(){
+  if(!esAdmin()) return;
+  // Poblar filtro clientes
+  if(!cacheClientes.length) await fetchClientes();
+  const selCli = document.getElementById('cobros-filtro-cliente');
+  if(selCli && selCli.options.length <= 1){
+    cacheClientes.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.nombre; selCli.appendChild(o); });
+  }
+
+  const hoy = new Date().toISOString().split('T')[0];
+  const filtroEstado = document.getElementById('cobros-filtro-estado')?.value||'';
+  const filtroCli = document.getElementById('cobros-filtro-cliente')?.value||'';
+
+  // Cargar ventas con cuotas y cobros
+  const {data:ventas} = await sb.from('ventas').select('*').order('fecha',{ascending:false});
+  cacheVentas = ventas||[];
+
+  // Cargar todas las cuotas
+  const ventaIds = cacheVentas.map(v=>v.id);
+  let cuotas = [], cobrosData = [];
+  if(ventaIds.length){
+    const [{data:c},{data:co}] = await Promise.all([
+      sb.from('venta_cuotas').select('*').in('venta_id',ventaIds).order('fecha_vencimiento'),
+      sb.from('cobros').select('*').in('venta_id',ventaIds)
+    ]);
+    cuotas = c||[];
+    cobrosData = co||[];
+  }
+
+  // Calcular saldo por cuota
+  const cobradoPorCuota = {};
+  cobrosData.forEach(c=>{ cobradoPorCuota[c.cuota_id]=(cobradoPorCuota[c.cuota_id]||0)+Number(c.importe); });
+  const cuotasConEstado = cuotas.map(cu=>{
+    const cobrado = cobradoPorCuota[cu.id]||0;
+    const saldo = Number(cu.importe)-cobrado;
+    let estado = saldo<=0 ? 'cobrado' : cu.fecha_vencimiento<hoy ? 'vencido' : 'pendiente';
+    return {...cu, cobrado, saldo, estado};
+  });
+
+  // Métricas dashboard
+  const vencidas = cuotasConEstado.filter(c=>c.estado==='vencido');
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const enFecha = cuotasConEstado.filter(c=>c.estado==='pendiente' && c.fecha_cobro_estimado===hoyStr);
+  const totalVencido = vencidas.reduce((s,c)=>s+c.saldo,0);
+  const totalHoy = enFecha.reduce((s,c)=>s+c.saldo,0);
+  document.getElementById('cobros-metrics').innerHTML=`
+    <div class="metric" style="${vencidas.length?'border-color:var(--red)':''}">
+      <div class="metric-label">Deudas vencidas</div>
+      <div class="metric-value" style="color:${vencidas.length?'var(--red)':'var(--green)'}">${vencidas.length}</div>
+      <div class="metric-sub">${fmt(totalVencido)} por cobrar</div>
+    </div>
+    <div class="metric" style="${enFecha.length?'border-color:var(--accent)':''}">
+      <div class="metric-label">Cobros de hoy</div>
+      <div class="metric-value" style="color:var(--accent)">${enFecha.length}</div>
+      <div class="metric-sub">${fmt(totalHoy)} estimado</div>
+    </div>`;
+
+  // Agrupar cuotas por venta, aplicar filtros
+  const cuotasPorVenta = {};
+  cuotasConEstado.forEach(cu=>{ if(!cuotasPorVenta[cu.venta_id]) cuotasPorVenta[cu.venta_id]=[]; cuotasPorVenta[cu.venta_id].push(cu); });
+
+  const clienteMap = {};
+  cacheClientes.forEach(c=>clienteMap[c.id]=c.nombre);
+
+  const cont = document.getElementById('cobros-lista');
+  const ventasFiltradas = cacheVentas.filter(v=>{
+    if(filtroCli && v.cliente_id!==filtroCli) return false;
+    if(filtroEstado){
+      const cuots = cuotasPorVenta[v.id]||[];
+      const tieneEstado = cuots.some(c=>c.estado===filtroEstado);
+      if(!tieneEstado) return false;
+    }
+    return true;
+  });
+
+  if(!ventasFiltradas.length){ cont.innerHTML='<div class="empty"><p>No hay ventas registradas.</p></div>'; return; }
+
+  cont.innerHTML = ventasFiltradas.map(v=>{
+    const cuots = (cuotasPorVenta[v.id]||[]);
+    const totalCobrado = cuots.reduce((s,c)=>s+c.cobrado,0);
+    const totalSaldo = cuots.reduce((s,c)=>s+c.saldo,0);
+    const tieneVencidas = cuots.some(c=>c.estado==='vencido');
+    return `<div class="card" style="margin-bottom:12px;${tieneVencidas?'border-left:3px solid var(--red)':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-weight:600;font-size:14px">${v.descripcion||'Sin descripción'} ${v.numero?`<span style="color:var(--muted);font-size:12px">· ${v.numero}</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">
+            ${clienteMap[v.cliente_id]||'—'} · ${v.fecha} · <span class="badge badge-gray">${v.moneda}</span>
+            <span class="badge ${v.tipo==='factura'?'badge-blue':v.tipo==='presupuesto'?'badge-purple':'badge-gray'}">${v.tipo}</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--muted)">Total: <span style="font-weight:600;color:var(--text)">${fmt(v.importe_total)}</span></div>
+          <div style="font-size:12px;color:var(--muted)">Cobrado: <span style="color:var(--green)">${fmt(totalCobrado)}</span></div>
+          ${totalSaldo>0?`<div style="font-size:12px;color:${tieneVencidas?'var(--red)':'var(--accent)'}">Saldo: ${fmt(totalSaldo)}</div>`:'<div style="font-size:12px;color:var(--green)">✓ Totalmente cobrado</div>'}
+        </div>
+      </div>
+      ${cuots.length?`<div style="border-top:1px solid var(--border);padding-top:8px">
+        ${cuots.map(cu=>{
+          const colEst = cu.estado==='cobrado'?'var(--green)':cu.estado==='vencido'?'var(--red)':'var(--accent)';
+          const labelEst = cu.estado==='cobrado'?'✓ Cobrado':cu.estado==='vencido'?'⚠️ Vencido':'⏳ Pendiente';
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13px;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--border)">
+            <div>
+              <span style="font-weight:500">Cuota ${cu.numero_cuota}</span>
+              <span style="color:var(--muted);margin-left:8px">Vence: ${cu.fecha_vencimiento}</span>
+              ${cu.fecha_cobro_estimado?`<span style="color:var(--muted);margin-left:8px">Cobro est.: ${cu.fecha_cobro_estimado}</span>`:''}
+              ${cu.observaciones?`<span style="color:var(--muted);margin-left:8px">· ${cu.observaciones}</span>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="text-align:right">
+                <div>${fmt(cu.importe)} <span style="font-size:11px;color:var(--muted)">${v.moneda}</span></div>
+                ${cu.cobrado>0?`<div style="font-size:11px;color:var(--green)">Cobrado: ${fmt(cu.cobrado)}</div>`:''}
+                ${cu.saldo>0?`<div style="font-size:11px;color:${colEst}">Saldo: ${fmt(cu.saldo)}</div>`:''}
+              </div>
+              <span style="font-size:11px;color:${colEst};font-weight:600">${labelEst}</span>
+              ${cu.estado!=='cobrado'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="abrirModalCobro('${cu.id}','${v.id}','${cu.numero_cuota}',${cu.saldo},'${v.moneda}')">💰 Cobrar</button>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:'<div style="color:var(--muted);font-size:13px;padding-top:6px">Sin cuotas cargadas</div>'}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="editarVenta('${v.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="eliminarVenta('${v.id}')">✕ Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function agregarCuotaForm(num, imp='', fv='', fc='', obs=''){
+  const cont = document.getElementById('venta-cuotas-form');
+  const idx = cont.children.length+1;
+  const div = document.createElement('div');
+  div.className='cuota-form-row';
+  div.style.cssText='display:grid;grid-template-columns:40px 1fr 1fr 1fr 22px;gap:8px;align-items:center;margin-bottom:8px';
+  div.innerHTML=`
+    <div style="font-size:12px;color:var(--muted);text-align:center">C${idx}</div>
+    <input type="text" inputmode="decimal" class="cuota-importe" placeholder="Importe" value="${imp}" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    <input type="date" class="cuota-vencimiento" value="${fv}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    <input type="date" class="cuota-cobro" value="${fc}" title="Fecha estimada de cobro" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px"/>
+    <button type="button" onclick="this.closest('.cuota-form-row').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0">✕</button>`;
+  cont.appendChild(div);
+}
+
+async function abrirModalVenta(){
+  document.getElementById('venta-id').value='';
+  document.getElementById('venta-modal-title').innerHTML='Nueva Venta<button class="modal-close" onclick="closeModal(\'modal-venta\')">✕</button>';
+  document.getElementById('venta-tipo').value='externo';
+  document.getElementById('venta-numero').value='';
+  document.getElementById('venta-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('venta-desc').value='';
+  document.getElementById('venta-moneda').value='ARS';
+  document.getElementById('venta-importe').value='';
+  document.getElementById('venta-cuotas-form').innerHTML='';
+  document.getElementById('venta-pres-group').style.display='none';
+  if(!cacheClientes.length) await fetchClientes();
+  await poblarSelectCliente('venta-cliente-id','');
+  // Cargar presupuestos
+  const {data:pres} = await sb.from('presupuestos').select('id,numero,cliente_nombre').order('numero',{ascending:false});
+  const selPres = document.getElementById('venta-presupuesto-id');
+  selPres.innerHTML='<option value="">Seleccionar presupuesto...</option>'+(pres||[]).map(p=>`<option value="${p.id}">${p.numero} — ${p.cliente_nombre}</option>`).join('');
+  agregarCuotaForm();
+  openModal('modal-venta');
+}
+
+function onVentaTipoChange(){
+  const tipo = document.getElementById('venta-tipo').value;
+  document.getElementById('venta-pres-group').style.display = tipo==='presupuesto'?'':'none';
+}
+
+async function editarVenta(vid){
+  const v = cacheVentas.find(x=>x.id===vid);
+  if(!v) return;
+  document.getElementById('venta-id').value=v.id;
+  document.getElementById('venta-modal-title').innerHTML='Editar Venta<button class="modal-close" onclick="closeModal(\'modal-venta\')">✕</button>';
+  document.getElementById('venta-tipo').value=v.tipo||'externo';
+  document.getElementById('venta-numero').value=v.numero||'';
+  document.getElementById('venta-fecha').value=v.fecha||'';
+  document.getElementById('venta-desc').value=v.descripcion||'';
+  document.getElementById('venta-moneda').value=v.moneda||'ARS';
+  document.getElementById('venta-importe').value=fmtInput(v.importe_total||0);
+  document.getElementById('venta-pres-group').style.display=v.tipo==='presupuesto'?'':'none';
+  if(!cacheClientes.length) await fetchClientes();
+  await poblarSelectCliente('venta-cliente-id',v.cliente_id||'');
+  // Cargar cuotas existentes
+  const {data:cuotas} = await sb.from('venta_cuotas').select('*').eq('venta_id',vid).order('numero_cuota');
+  document.getElementById('venta-cuotas-form').innerHTML='';
+  (cuotas||[]).forEach(cu=>agregarCuotaForm(cu.numero_cuota, fmtInput(cu.importe), cu.fecha_vencimiento||'', cu.fecha_cobro_estimado||'', cu.observaciones||''));
+  if(!(cuotas||[]).length) agregarCuotaForm();
+  openModal('modal-venta');
+}
+
+async function guardarVenta(){
+  const vid = document.getElementById('venta-id').value;
+  const clienteId = document.getElementById('venta-cliente-id').value;
+  const importe = parseInput('venta-importe');
+  const fecha = document.getElementById('venta-fecha').value;
+  if(!fecha||!clienteId){notify('Cliente y fecha son obligatorios',false);return;}
+  const data = {
+    cliente_id: clienteId,
+    presupuesto_id: document.getElementById('venta-presupuesto-id')?.value||null,
+    tipo: document.getElementById('venta-tipo').value,
+    numero: document.getElementById('venta-numero').value||null,
+    fecha, descripcion: document.getElementById('venta-desc').value||null,
+    moneda: document.getElementById('venta-moneda').value,
+    importe_total: importe,
+    created_by: currentUser.id
+  };
+  let ventaId = vid;
+  if(vid){
+    await sb.from('ventas').update(data).eq('id',vid);
+    await sb.from('venta_cuotas').delete().eq('venta_id',vid);
+  } else {
+    const {data:nueva} = await sb.from('ventas').insert(data).select().single();
+    ventaId = nueva.id;
+  }
+  // Guardar cuotas
+  const filas = document.querySelectorAll('.cuota-form-row');
+  const cuotas = [];
+  filas.forEach((f,i)=>{
+    const imp = parseInput('');
+    const impEl = f.querySelector('.cuota-importe');
+    const fv = f.querySelector('.cuota-vencimiento').value;
+    const fc = f.querySelector('.cuota-cobro').value;
+    const impVal = impEl ? Number(impEl.value.replace(/\./g,'').replace(',','.'))||0 : 0;
+    if(fv) cuotas.push({venta_id:ventaId,numero_cuota:i+1,importe:impVal,moneda:data.moneda,fecha_vencimiento:fv,fecha_cobro_estimado:fc||null});
+  });
+  if(cuotas.length) await sb.from('venta_cuotas').insert(cuotas);
+  notify('Venta guardada');
+  closeModal('modal-venta');
+  renderCobros();
+}
+
+async function eliminarVenta(vid){
+  if(!confirm('¿Eliminar esta venta y todos sus cobros?')) return;
+  await sb.from('ventas').delete().eq('id',vid);
+  notify('Venta eliminada');
+  renderCobros();
+}
+
+function abrirModalCobro(cuotaId, ventaId, numCuota, saldo, moneda){
+  document.getElementById('cobro-cuota-id').value=cuotaId;
+  document.getElementById('cobro-venta-id').value=ventaId;
+  document.getElementById('cobro-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cobro-importe').value=fmtInput(saldo);
+  document.getElementById('cobro-moneda').value=moneda||'ARS';
+  document.getElementById('cobro-tc').value='';
+  document.getElementById('cobro-obs').value='';
+  document.getElementById('cobro-info').innerHTML=`Cuota ${numCuota} · Saldo pendiente: <strong>${fmt(saldo)} ${moneda}</strong>`;
+  openModal('modal-cobro');
+}
+
+async function guardarCobro(){
+  const cuotaId = document.getElementById('cobro-cuota-id').value;
+  const ventaId = document.getElementById('cobro-venta-id').value;
+  const fecha = document.getElementById('cobro-fecha').value;
+  const importe = parseInput('cobro-importe');
+  if(!fecha||!importe){notify('Fecha e importe son obligatorios',false);return;}
+  const tc = parseInput('cobro-tc');
+  await sb.from('cobros').insert({
+    cuota_id:cuotaId, venta_id:ventaId, fecha, importe,
+    moneda:document.getElementById('cobro-moneda').value,
+    tipo_cambio:tc||null,
+    observaciones:document.getElementById('cobro-obs').value||null,
+    created_by:currentUser.id
+  });
+  notify('✅ Cobro registrado');
+  closeModal('modal-cobro');
+  renderCobros();
+}
+
 async function renderLogs(){
   if(!esAdmin()) return;
   document.getElementById('log-buscar').value='';
@@ -5435,7 +5838,7 @@ async function eliminarIngreso(id){
 // ── CRUD EGRESOS ──
 async function guardarEgreso(){
   const concepto=document.getElementById('eg-concepto').value.trim();
-  const monto=Number(document.getElementById('eg-monto').value);
+  const monto=parseInput('eg-monto');
   if(!concepto||!monto){notify('Completá concepto y monto',false);return;}
   const {error}=await sb.from('fin_egresos').insert({
     concepto, monto, fecha:document.getElementById('eg-fecha').value,
