@@ -25,7 +25,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.DONWEB_FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.DONWEB_FTP_PASSWORD }}
         run: |
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" -e "
+          lftp -e "
             debug 3;
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
@@ -33,6 +33,7 @@ jobs:
             set ftp:passive-mode true;
             set net:timeout 15;
             set net:max-retries 1;
+            open -u \"$FTP_USERNAME\",\"$FTP_PASSWORD\" \"$FTP_SERVER\";
             put index.html;
             bye
-          " "$FTP_SERVER"
+          "
