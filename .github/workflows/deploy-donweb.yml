@@ -1,0 +1,35 @@
+name: Deploy a DonWeb (gestionobras.nor-tel.com)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+
+jobs:
+  ftp-deploy:
+    name: Subir index.html por FTP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repo
+        uses: actions/checkout@v4
+
+      - name: Deploy por FTP a DonWeb
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.DONWEB_FTP_SERVER }}
+          username: ${{ secrets.DONWEB_FTP_USERNAME }}
+          password: ${{ secrets.DONWEB_FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: ./
+          # No borramos nada del servidor que no esté en el repo (seguro por defecto)
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            README.md
+            CLAUDE.md
+            _headers
