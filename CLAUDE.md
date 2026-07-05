@@ -40,8 +40,79 @@ node --check /tmp/check.js && echo OK
   de la carpeta propia)
 - Cuenta FTP aislada: `ftp_gestionobras@nor-tel.com`, con acceso limitado solo a esa carpeta
   (los webmasters de la web corporativa NO tienen esta cuenta)
-- Pendiente: activar SSL/HTTPS para el subdominio, agregar el dominio a la config de CORS/Auth en Supabase,
-  y evaluar automatizar el deploy con GitHub Actions (FTP-Deploy-Action) en vez de FTP manual
+- Host FTP: `c1830261.ferozo.com` — servidor **ProFTPD**, exige FTPS (TLS explícito) en el canal de control
+- SSL del subdominio: certificado Sectigo, solicitado vía panel DonWeb (validación por Registro DNS,
+  automática porque el dominio usa los DNS de DonWeb). El de `nor-tel.com` es tipo "single", NO cubre
+  subdominios — cada subdominio necesita su propio certificado (como ya tenían con `gps.nor-tel.com`)
+- Supabase Auth → Redirect URLs: se agregaron `https://gestionobras.nor-tel.com` y
+  `https://gestionobras.nor-tel.com/*` sin tocar la URL de GitHub Pages (conviven ambas)
+
+### Deploy automático a DonWeb (GitHub Actions)
+Archivo: `.github/workflows/deploy-donweb.yml`. Se dispara con cada push a `main` que modifique
+`index.html`. Usa `lftp` instalado al vuelo en el runner — **no usar `SamKirkland/FTP-Deploy-Action`**,
+ver por qué abajo.
+
+```yaml
+name: Deploy a DonWeb (gestionobras.nor-tel.com)
+
+on:
+  push:
+    branches: [main]
+    paths: ['index.html']
+
+jobs:
+  ftp-deploy:
+    name: Subir index.html por FTPS (lftp)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Deploy por FTPS con lftp
+        env:
+          FTP_SERVER: ${{ secrets.DONWEB_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.DONWEB_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.DONWEB_FTP_PASSWORD }}
+        run: |
+          lftp -e "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            set ftp:passive-mode true;
+            set net:timeout 15;
+            set net:max-retries 1;
+            open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER;
+            put index.html;
+            bye
+          "
+```
+
+Secrets cargados en GitHub (Settings → Secrets and variables → Actions):
+`DONWEB_FTP_SERVER` (sin `ftp://` adelante, solo el host), `DONWEB_FTP_USERNAME`, `DONWEB_FTP_PASSWORD`.
+
+**Por qué no usamos `FTP-Deploy-Action`:** su librería interna (`basic-ftp`) no reutiliza correctamente
+la sesión TLS 1.3 en el canal de datos, y ProFTPD (el servidor de DonWeb) exige esa reutilización por
+seguridad — resultado: `Error: Client is closed because read ECONNRESET (data socket)`. Es un problema
+conocido de `basic-ftp` con TLS 1.3, no algo mal configurado de nuestro lado. `lftp` sí maneja esto bien.
+
+**Trampa al armar el comando de `lftp`:** los `set` (ssl-force, passive-mode, etc.) tienen que ir
+**antes** del `open`, nunca pasar el host como argumento final de `lftp` en la línea de comando —
+eso dispara una conexión automática ANTES de que se apliquen los `set`, y como el servidor exige TLS
+desde el inicio, esa conexión temprana en texto plano se cae silenciosamente (`Not connected` al hacer
+`put`, sin más pistas). Tampoco escapar con `\"..\"` alrededor de `$FTP_SERVER`/`$FTP_USERNAME` dentro
+del string de `-e` — como bash ya expande la variable antes de que `lftp` la vea, esas comillas quedan
+pegadas como caracteres literales al valor y rompen la resolución del hostname
+(`Name or service not known`).
+
+**Nota de permisos de GitHub:** un Personal Access Token sin el scope `workflow` no puede crear/modificar
+archivos dentro de `.github/workflows/` por `git push` (error: `refusing to allow a Personal Access
+Token to create or update workflow ... without workflow scope`). Alternativas: agregar el scope
+`workflow` al token, o editar el archivo directo en la web de GitHub cuando sea solo ese archivo.
+
+**Nota sobre "Re-run":** si falla un workflow y se corrige el `.yml`, el botón "Re-run jobs" de GitHub
+**no relee la versión actualizada** — vuelve a ejecutar exactamente la definición que tenía el commit
+original. Para probar un fix del workflow hace falta un commit nuevo (aunque sea trivial, como un
+comentario en `index.html`), no alcanza con re-ejecutar.
 
 ## Roles de usuario (tabla `perfiles`)
 Roles activos hoy: `admin`, `supervisor`. (El código también contempla `director`, `ingeniero`,
@@ -101,7 +172,9 @@ el campo, (c) que el estado se resetee correctamente en logout/cambio de usuario
 - Modularización del `index.html` (Opción A liviana, en veremos): separar CSS a archivo aparte,
   después JS por módulo (`clientes.js`, `gastos.js`, `partidas.js`, etc.) cargados como
   `<script type="module">`, dejando `proyectos.js` (el módulo más grande) para el final
-- Automatizar deploy a `gestionobras.nor-tel.com` vía GitHub Actions en vez de FTP manual
+- Cuando se confirme que `gestionobras.nor-tel.com` funciona bien de punta a punta (login con los
+  distintos roles, todos los módulos), avisar al equipo para migrar de GitHub Pages a DonWeb como URL
+  principal. Mientras tanto ambas conviven sin conflicto (mismo Supabase, hostings independientes)
 
 ## Convenciones de código
 - Números: formato es-AR (punto miles, coma decimales) vía `parseInput(id)` / `fmtInput(val)`
