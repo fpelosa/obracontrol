@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.0">
+<meta name="version" content="v12.1">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.0</title>
+<title>ObraControl v12.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -311,7 +311,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.1</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -983,7 +983,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.0</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.1</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -5229,61 +5229,53 @@ async function renderCobros(){
     const totalSaldo = cuots.reduce((s,c)=>s+c.saldo,0);
     const tieneVencidas = cuots.some(c=>c.estado==='vencido');
     return `<div class="card" style="margin-bottom:12px;${tieneVencidas?'border-left:3px solid var(--red)':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-        <div>
-          <div style="font-weight:600;font-size:14px">${v.descripcion||'Sin descripción'} ${v.numero?`<span style="color:var(--muted);font-size:12px">· ${v.numero}</span>`:''}
-          </div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px">
-            ${clienteMap[v.cliente_id]||'—'} · ${v.fecha} · <span class="badge badge-gray">${v.moneda}</span>
-            <span class="badge ${v.tipo==='factura'?'badge-blue':v.tipo==='presupuesto'?'badge-purple':'badge-gray'}">${v.tipo}</span>
-          </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;gap:12px" onclick="toggleVentaDetalle('${v.id}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px">${v.descripcion||'Sin descripción'} ${v.numero?`<span style="color:var(--muted);font-size:12px">· ${v.numero}</span>`:''}${tieneVencidas?` <span style="font-size:11px;background:rgba(239,68,68,.15);color:var(--red);border-radius:8px;padding:2px 7px">⚠️ Vencido</span>`:''}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">${clienteMap[v.cliente_id]||'—'} · ${v.fecha} · <span class="badge badge-gray">${v.moneda}</span> <span class="badge ${v.tipo==='factura'?'badge-blue':v.tipo==='presupuesto'?'badge-purple':'badge-gray'}">${v.tipo}</span></div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:12px;color:var(--muted)">Total: <span style="font-weight:600;color:var(--text)">${fmt(v.importe_total)}</span></div>
-          <div style="font-size:12px;color:var(--muted)">Cobrado: <span style="color:var(--green)">${fmt(totalCobrado)}</span></div>
-          ${totalSaldo>0?`<div style="font-size:12px;color:${tieneVencidas?'var(--red)':'var(--accent)'}">Saldo: ${fmt(totalSaldo)}</div>`:'<div style="font-size:12px;color:var(--green)">✓ Totalmente cobrado</div>'}
+        <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+          <div style="text-align:right;font-size:12px">
+            <div style="color:var(--muted)">Total: <strong style="color:var(--text)">${fmt(v.importe_total)}</strong></div>
+            <div style="color:var(--muted)">Cobrado: <span style="color:var(--green)">${fmt(totalCobrado)}</span>${totalSaldo>0?` · <span style="color:${tieneVencidas?'var(--red)':'var(--accent)'}">Saldo: ${fmt(totalSaldo)}</span>`:'<span style="color:var(--green)"> ✓</span>'}</div>
+          </div>
+          <span id="chevron-${v.id}" style="font-size:16px;color:var(--muted);transition:transform .2s;display:inline-block">▸</span>
         </div>
       </div>
-      ${cuots.length?`<div style="border-top:1px solid var(--border);padding-top:8px">
-        ${cuots.map(cu=>{
-          const colEst = cu.estado==='cobrado'?'var(--green)':cu.estado==='vencido'?'var(--red)':'var(--accent)';
-          const labelEst = cu.estado==='cobrado'?'✓ Cobrado':cu.estado==='vencido'?'⚠️ Vencido':'⏳ Pendiente';
+      <div id="venta-detalle-${v.id}" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        ${cuots.length?cuots.map(cu=>{
+          const colEst=cu.estado==='cobrado'?'var(--green)':cu.estado==='vencido'?'var(--red)':'var(--accent)';
+          const labelEst=cu.estado==='cobrado'?'✓ Cobrado':cu.estado==='vencido'?'⚠️ Vencido':'⏳ Pendiente';
           return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13px;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--border)">
-            <div>
-              <span style="font-weight:500">Cuota ${cu.numero_cuota}</span>
-              <span style="color:var(--muted);margin-left:8px">Vence: ${cu.fecha_vencimiento}</span>
-              ${cu.fecha_cobro_estimado?`<span style="color:var(--muted);margin-left:8px">Cobro est.: ${cu.fecha_cobro_estimado}</span>`:''}
-              ${cu.observaciones?`<span style="color:var(--muted);margin-left:8px">· ${cu.observaciones}</span>`:''}
-            </div>
+            <div><span style="font-weight:500">Cuota ${cu.numero_cuota}</span><span style="color:var(--muted);margin-left:8px">Vence: ${cu.fecha_vencimiento}</span>${cu.fecha_cobro_estimado?`<span style="color:var(--muted);margin-left:8px">Cobro est.: ${cu.fecha_cobro_estimado}</span>`:''}${cu.observaciones?`<span style="color:var(--muted);margin-left:8px">· ${cu.observaciones}</span>`:''}</div>
             <div style="display:flex;align-items:center;gap:10px">
-              <div style="text-align:right">
-                <div>${fmt(cu.importe)} <span style="font-size:11px;color:var(--muted)">${v.moneda}</span></div>
-                ${cu.cobrado>0?`<div style="font-size:11px;color:var(--green)">Cobrado: ${fmt(cu.cobrado)}</div>`:''}
-                ${cu.saldo>0?`<div style="font-size:11px;color:${colEst}">Saldo: ${fmt(cu.saldo)}</div>`:''}
-              </div>
+              <div style="text-align:right"><div>${fmt(cu.importe)} <span style="font-size:11px;color:var(--muted)">${v.moneda}</span></div>${cu.cobrado>0?`<div style="font-size:11px;color:var(--green)">Cobrado: ${fmt(cu.cobrado)}</div>`:''}${cu.saldo>0?`<div style="font-size:11px;color:${colEst}">Saldo: ${fmt(cu.saldo)}</div>`:''}</div>
               <span style="font-size:11px;color:${colEst};font-weight:600">${labelEst}</span>
-              ${cu.estado!=='cobrado'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="abrirModalCobro('${cu.id}','${v.id}','${cu.numero_cuota}',${cu.saldo},'${v.moneda}')">💰 Cobrar</button>`:''}
-              <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="toggleAdjCuota('${cu.id}',this)" title="Adjuntos">📎</button>
+              ${cu.estado!=='cobrado'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="event.stopPropagation();abrirModalCobro('${cu.id}','${v.id}','${cu.numero_cuota}',${cu.saldo},'${v.moneda}')">💰 Cobrar</button>`:''}
+              <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="event.stopPropagation();toggleAdjCuota('${cu.id}',this)" title="Adjuntos">📎</button>
             </div>
           </div>
           <div id="adj-cuota-${cu.id}" style="display:none;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:6px">
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="adj-cuota-list-${cu.id}">
-              <span style="color:var(--muted);font-size:12px">Cargando...</span>
-            </div>
-            <label style="cursor:pointer;font-size:12px;color:var(--accent);display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px dashed var(--border2);border-radius:6px;width:fit-content">
-              + Adjuntar archivo
-              <input type="file" multiple style="display:none" onchange="subirAdjuntoCuotaPanel('${cu.id}',this)"/>
-            </label>
-          </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="adj-cuota-list-${cu.id}"><span style="color:var(--muted);font-size:12px">Cargando...</span></div>
+            <label style="cursor:pointer;font-size:12px;color:var(--accent);display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px dashed var(--border2);border-radius:6px;width:fit-content">+ Adjuntar archivo<input type="file" multiple style="display:none" onchange="subirAdjuntoCuotaPanel('${cu.id}',this)"/></label>
           </div>`;
-        }).join('')}
-      </div>`:'<div style="color:var(--muted);font-size:13px;padding-top:6px">Sin cuotas cargadas</div>'}
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="editarVenta('${v.id}')">✏️ Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="eliminarVenta('${v.id}')">✕ Eliminar</button>
+        }).join(''):'<div style="color:var(--muted);font-size:13px;padding:8px 0">Sin cuotas cargadas</div>'}
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editarVenta('${v.id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarVenta('${v.id}')">✕ Eliminar</button>
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+function toggleVentaDetalle(vid){
+  const det = document.getElementById(`venta-detalle-${vid}`);
+  const chev = document.getElementById(`chevron-${vid}`);
+  if(!det) return;
+  const abierto = det.style.display!=='none';
+  det.style.display = abierto?'none':'block';
+  if(chev) chev.style.transform = abierto?'':'rotate(90deg)';
 }
 
 function agregarCuotaForm(num, imp='', fv='', fc='', obs=''){
