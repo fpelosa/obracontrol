@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v11.7">
+<meta name="version" content="v11.8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v11.7</title>
+<title>ObraControl v11.8</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -311,7 +311,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.7</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.8</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -870,7 +870,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </select>
       </div>
       <div class="form-group"><label>Importe total *</label>
-        <input type="text" inputmode="decimal" id="venta-importe" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/>
+        <input type="text" inputmode="decimal" id="venta-importe" placeholder="0" 
+          onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"
+          oninput="this.value=this.value.replace(/[^0-9.,]/g,'')"/>
       </div>
     </div>
 
@@ -911,6 +913,25 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <input type="text" inputmode="decimal" id="cobro-tc" placeholder="Solo si pagaron en otra moneda" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/>
       </div>
       <div class="form-group full"><label>Observaciones</label><input id="cobro-obs" placeholder="Medio de pago, referencia..."/></div>
+    </div>
+
+    <!-- Adjunto comprobante -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📎 Comprobante</div>
+      <div id="cobro-adj-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <label style="cursor:pointer;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:6px;padding:8px;border:1px dashed var(--border2);border-radius:8px">
+        + Adjuntar comprobante
+        <input type="file" id="cobro-adjunto" multiple style="display:none" onchange="previewAdjuntos('cobro')"/>
+      </label>
+    </div>
+
+    <!-- Echeq -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">🏦 E-Cheqs</div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="agregarEcheqForm()" style="font-size:11px">+ Agregar e-cheq</button>
+      </div>
+      <div id="cobro-echeqs-form"></div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-cobro')">Cancelar</button>
@@ -955,7 +976,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.7</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.8</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1999,6 +2020,16 @@ async function renderDashboard(){
         if(vencidas.length) metricasCobros += `<div class="metric" style="border-color:var(--red);cursor:pointer" onclick="showView('cobros')"><div class="metric-label">Cobros vencidos</div><div class="metric-value" style="color:var(--red)">${vencidas.length}</div><div class="metric-sub">pendientes de cobro</div></div>`;
         if(enFechaHoy.length) metricasCobros += `<div class="metric" style="border-color:var(--accent);cursor:pointer" onclick="showView('cobros')"><div class="metric-label">Cobros de hoy</div><div class="metric-value" style="color:var(--accent)">${enFechaHoy.length}</div><div class="metric-sub">en fecha estimada</div></div>`;
       }
+      // Echeqs próximos a vencer (próximos 7 días) y vencidos
+      const {data:echeqs} = await sb.from('echeqs').select('*').eq('cobrado',false);
+      if(echeqs?.length){
+        const en7dias = new Date(); en7dias.setDate(en7dias.getDate()+7);
+        const en7str = en7dias.toISOString().split('T')[0];
+        const echeqsVencidos = echeqs.filter(e=>e.fecha_vencimiento<hoy);
+        const echeqsProximos = echeqs.filter(e=>e.fecha_vencimiento>=hoy&&e.fecha_vencimiento<=en7str);
+        if(echeqsVencidos.length) metricasCobros+=`<div class="metric" style="border-color:var(--red);cursor:pointer" onclick="showView('cobros')"><div class="metric-label">E-Cheqs vencidos</div><div class="metric-value" style="color:var(--red)">${echeqsVencidos.length}</div><div class="metric-sub">sin cobrar</div></div>`;
+        if(echeqsProximos.length) metricasCobros+=`<div class="metric" style="border-color:var(--accent);cursor:pointer" onclick="showView('cobros')"><div class="metric-label">E-Cheqs próximos</div><div class="metric-value" style="color:var(--accent)">${echeqsProximos.length}</div><div class="metric-sub">vencen en 7 días</div></div>`;
+      }
     } catch(e){ console.warn('cobros dashboard:', e); }
   }
   document.getElementById('dash-metrics').innerHTML=metricasComunes+metricasCobros+`
@@ -2669,17 +2700,26 @@ function parseInput(id){
   if(!el) return 0;
   return Number(el.value.replace(/\./g,'').replace(',','.'))||0;
 }
-function onFmtBlur(el){
-  const raw = el.value.replace(/\./g,'').replace(',','.');
-  const n = parseFloat(raw);
-  if(!isNaN(n) && n!==0) el.value = fmtInput(n);
-  else el.value = '';
-}
 function onFmtFocus(el){
   // Al hacer foco, mostrar número sin formato para facilitar edición
   const raw = el.value.replace(/\./g,'').replace(',','.');
   const n = parseFloat(raw);
-  if(!isNaN(n) && n!==0) el.value = String(n);
+  if(!isNaN(n) && n!==0) el.value = String(n).replace('.',',');
+  else el.value = '';
+}
+
+function onFmtBlur(el){
+  // Normalizar: aceptar tanto . como , como separador decimal
+  let raw = el.value.trim();
+  // Si tiene punto Y coma, el punto es separador de miles
+  if(raw.includes('.') && raw.includes(',')) raw = raw.replace(/\./g,'').replace(',','.');
+  // Si solo tiene coma, es decimal
+  else if(raw.includes(',') && !raw.includes('.')) raw = raw.replace(',','.');
+  // Si solo tiene punto y es ej "1.500" (>3 decimales = miles), tratar como miles
+  else if(raw.includes('.') && raw.split('.')[1]?.length === 3) raw = raw.replace('.','');
+  const n = parseFloat(raw);
+  if(!isNaN(n) && n!==0) el.value = fmtInput(n);
+  else el.value = '';
 }
 
 async function withLoading(btnEl, fn){
@@ -5157,6 +5197,10 @@ async function renderCobros(){
               </div>
               <span style="font-size:11px;color:${colEst};font-weight:600">${labelEst}</span>
               ${cu.estado!=='cobrado'?`<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:var(--green)" onclick="abrirModalCobro('${cu.id}','${v.id}','${cu.numero_cuota}',${cu.saldo},'${v.moneda}')">💰 Cobrar</button>`:''}
+              <label style="cursor:pointer;font-size:11px;color:var(--muted)" title="Adjuntar archivo">
+                📎
+                <input type="file" multiple style="display:none" onchange="subirAdjuntoCuota('${cu.id}',this)"/>
+              </label>
             </div>
           </div>`;
         }).join('')}
@@ -5197,12 +5241,47 @@ async function abrirModalVenta(){
   document.getElementById('venta-pres-group').style.display='none';
   if(!cacheClientes.length) await fetchClientes();
   await poblarSelectCliente('venta-cliente-id','');
-  // Cargar presupuestos
-  const {data:pres} = await sb.from('presupuestos').select('id,numero,cliente_nombre').order('numero',{ascending:false});
+  // Cargar presupuestos con datos completos para autocompletar
+  const {data:pres} = await sb.from('presupuestos').select('id,numero,cliente_nombre,cliente_id,total,solicitado_por,tiempo_estimado_obra').order('numero',{ascending:false});
+  // Traer nombres de proyectos vinculados
+  const presIds = (pres||[]).map(p=>p.id);
+  let proyNombrePorPres = {};
+  if(presIds.length){
+    const {data:proyVinc} = await sb.from('proyectos').select('presupuesto_ref_id,nombre,proyecto_origen_id').or(`presupuesto_ref_id.in.(${presIds.join(',')}),id.in.(${presIds.join(',')})`).limit(200);
+    (proyVinc||[]).forEach(p=>{ if(p.presupuesto_ref_id) proyNombrePorPres[p.presupuesto_ref_id]=p.nombre; });
+    // También por proyecto_origen_id en presupuestos
+    const {data:presConOrigen} = await sb.from('presupuestos').select('id,proyecto_origen_id').not('proyecto_origen_id','is',null);
+    if(presConOrigen?.length){
+      const origIds = presConOrigen.map(p=>p.proyecto_origen_id);
+      const {data:proyOrigen} = await sb.from('proyectos').select('id,nombre').in('id',origIds);
+      const pm = {}; (proyOrigen||[]).forEach(p=>pm[p.id]=p.nombre);
+      presConOrigen.forEach(p=>{ if(!proyNombrePorPres[p.id]) proyNombrePorPres[p.id]=pm[p.proyecto_origen_id]; });
+    }
+  }
+  window._presDataCache = pres||[];
+  window._proyNombrePorPres = proyNombrePorPres;
   const selPres = document.getElementById('venta-presupuesto-id');
-  selPres.innerHTML='<option value="">Seleccionar presupuesto...</option>'+(pres||[]).map(p=>`<option value="${p.id}">${p.numero} — ${p.cliente_nombre}</option>`).join('');
+  selPres.innerHTML='<option value="">Seleccionar presupuesto...</option>'+(pres||[]).map(p=>{
+    const titulo = proyNombrePorPres[p.id] || p.cliente_nombre || `N° ${p.numero}`;
+    return `<option value="${p.id}">${p.numero} — ${titulo}</option>`;
+  }).join('');
+  selPres.onchange = onPresupuestoVinculadoChange;
   agregarCuotaForm();
   openModal('modal-venta');
+}
+
+function onPresupuestoVinculadoChange(){
+  const presId = document.getElementById('venta-presupuesto-id').value;
+  if(!presId) return;
+  const p = (window._presDataCache||[]).find(x=>x.id===presId);
+  if(!p) return;
+  const titulo = (window._proyNombrePorPres||{})[presId] || p.cliente_nombre || '';
+  // Autocompletar cliente
+  if(p.cliente_id) poblarSelectCliente('venta-cliente-id', p.cliente_id);
+  // Autocompletar descripción con título del proyecto
+  if(titulo) document.getElementById('venta-desc').value = titulo;
+  // Autocompletar importe (neto sin IVA del presupuesto)
+  if(p.total) document.getElementById('venta-importe').value = fmtInput(Number(p.total));
 }
 
 function onVentaTipoChange(){
@@ -5289,6 +5368,10 @@ function abrirModalCobro(cuotaId, ventaId, numCuota, saldo, moneda){
   document.getElementById('cobro-tc').value='';
   document.getElementById('cobro-obs').value='';
   document.getElementById('cobro-info').innerHTML=`Cuota ${numCuota} · Saldo pendiente: <strong>${fmt(saldo)} ${moneda}</strong>`;
+  document.getElementById('cobro-echeqs-form').innerHTML='';
+  document.getElementById('cobro-adj-preview').innerHTML='';
+  const adjInput = document.getElementById('cobro-adjunto');
+  if(adjInput) adjInput.value='';
   openModal('modal-cobro');
 }
 
@@ -5299,16 +5382,73 @@ async function guardarCobro(){
   const importe = parseInput('cobro-importe');
   if(!fecha||!importe){notify('Fecha e importe son obligatorios',false);return;}
   const tc = parseInput('cobro-tc');
-  await sb.from('cobros').insert({
+  const {data:nuevoCobro,error} = await sb.from('cobros').insert({
     cuota_id:cuotaId, venta_id:ventaId, fecha, importe,
     moneda:document.getElementById('cobro-moneda').value,
     tipo_cambio:tc||null,
     observaciones:document.getElementById('cobro-obs').value||null,
     created_by:currentUser.id
-  });
+  }).select().single();
+  if(error){notify('Error: '+error.message,false);return;}
+  // Subir adjunto comprobante
+  if(nuevoCobro){
+    const adjInput = document.getElementById('cobro-adjunto');
+    if(adjInput?.files.length){
+      for(const f of Array.from(adjInput.files)){
+        const path=`cobro/${nuevoCobro.id}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+        const {error:upErr}=await sb.storage.from('adjuntos').upload(path,f);
+        if(!upErr) await sb.from('adjuntos').insert({entidad_tipo:'cobro',entidad_id:nuevoCobro.id,nombre_archivo:f.name,url:STORAGE_URL+path,storage_path:path,privado:false,created_by:currentUser.id});
+      }
+      adjInput.value='';
+    }
+  }
+  // Guardar echeqs
+  const echeqRows = document.querySelectorAll('.echeq-row');
+  for(const row of echeqRows){
+    const fv = row.querySelector('.echeq-vencimiento').value;
+    if(!fv) continue;
+    const impEl = row.querySelector('.echeq-importe');
+    const imp = Number(impEl.value.replace(/\./g,'').replace(',','.'))||0;
+    await sb.from('echeqs').insert({
+      cobro_id:nuevoCobro?.id||null,
+      cuota_id:cuotaId,
+      numero:row.querySelector('.echeq-numero').value||null,
+      importe:imp,
+      moneda:document.getElementById('cobro-moneda').value,
+      fecha_emision:row.querySelector('.echeq-emision').value||null,
+      fecha_vencimiento:fv,
+      created_by:currentUser.id
+    });
+  }
   notify('✅ Cobro registrado');
   closeModal('modal-cobro');
   renderCobros();
+}
+
+function agregarEcheqForm(){
+  const cont = document.getElementById('cobro-echeqs-form');
+  const div = document.createElement('div');
+  div.className='echeq-row';
+  div.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr 1fr 22px;gap:6px;margin-bottom:8px;align-items:center';
+  div.innerHTML=`
+    <input type="text" class="echeq-numero" placeholder="N° cheq" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
+    <input type="text" inputmode="decimal" class="echeq-importe" placeholder="Importe" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
+    <input type="date" class="echeq-emision" title="Fecha emisión" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
+    <input type="date" class="echeq-vencimiento" title="Fecha vencimiento (obligatorio)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:7px 10px;font-size:12px"/>
+    <button type="button" onclick="this.closest('.echeq-row').remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0">✕</button>`;
+  cont.appendChild(div);
+}
+
+async function subirAdjuntoCuota(cuotaId, input){
+  if(!input.files.length) return;
+  for(const f of input.files){
+    const path=`cuota/${cuotaId}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const {error}=await sb.storage.from('adjuntos').upload(path,f);
+    if(error){notify('Error: '+f.name,false);continue;}
+    await sb.from('adjuntos').insert({entidad_tipo:'cuota',entidad_id:cuotaId,nombre_archivo:f.name,url:STORAGE_URL+path,storage_path:path,privado:false,created_by:currentUser.id});
+  }
+  input.value='';
+  notify('Archivo adjunto a la cuota');
 }
 
 async function renderLogs(){
