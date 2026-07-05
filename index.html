@@ -5,6 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="version" content="v11.1">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v11.0</title>
+<title>ObraControl v11.1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -310,7 +311,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v11.1</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -848,7 +849,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.0</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v11.1</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1435,6 +1436,10 @@ let authInitialized = false;
 let authTimeout = null;
 
 let appLoaded = false;
+// Mostrar login inmediatamente — sin esperar nada
+showLogin();
+authInitialized = false;
+
 sb.auth.onAuthStateChange(async (event, session) => {
   console.log('Auth event:', event, 'user:', session?.user?.id);
   if(authTimeout) { clearTimeout(authTimeout); authTimeout=null; }
@@ -1448,10 +1453,10 @@ sb.auth.onAuthStateChange(async (event, session) => {
       await initApp();
       showApp();
     } else if(session?.user && appLoaded) {
-      // Ya cargó — solo actualizar token silenciosamente
       currentUser = session.user;
     }
   } else if(event === 'INITIAL_SESSION') {
+    authInitialized = true;
     if(session?.user) {
       if(!appLoaded) {
         appLoaded = true;
@@ -1461,41 +1466,21 @@ sb.auth.onAuthStateChange(async (event, session) => {
         await initApp();
         showApp();
       }
-    } else {
-      showLogin();
     }
-    authInitialized = true;
+    // Si no hay sesión, ya estamos en login — no hacer nada
   } else if(event === 'SIGNED_OUT') {
     appLoaded = false;
     showLogin();
   }
 });
 
-// Timeout de seguridad: si en 6 segundos no se resolvió, mostrar login
+// Timeout de seguridad: si en 8s no llegó INITIAL_SESSION, el login ya está visible
 authTimeout = setTimeout(() => {
   if(!authInitialized) {
-    console.warn('Auth timeout — mostrando login');
-    showLogin();
+    console.warn('Auth timeout — login ya visible');
+    authInitialized = true;
   }
-}, 6000);
-
-// Verificar sesión existente al cargar
-(async () => {
-  showLoading('Verificando sesión...');
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if(!session) {
-      // No hay sesión guardada, ir al login inmediatamente
-      showLogin();
-      authInitialized = true;
-      if(authTimeout) { clearTimeout(authTimeout); authTimeout=null; }
-    }
-    // Si hay sesión, onAuthStateChange la va a manejar con INITIAL_SESSION
-  } catch(e) {
-    console.error('getSession error:', e);
-    showLogin();
-  }
-})();
+}, 8000);
 
 let _perfilYaRenderizado = false;
 
