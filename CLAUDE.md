@@ -7,7 +7,7 @@ Backend: Supabase (Postgres + Auth). Hosting actual: GitHub Pages (`fpelosa.gith
 en migración a `gestionobras.nor-tel.com` (DonWeb/Ferozo).
 
 Repo: `github.com/fpelosa/obracontrol` — local en `~/Desktop/obracontrol/`.
-Versión actual: v12.6 (numerar +0.1 en cada cambio, en 4 lugares del HTML: meta tag, title, y dos spans en el body — buscar con grep antes de bump).
+Versión actual: v12.7 (numerar +0.1 en cada cambio, en 4 lugares del HTML: meta tag, title, y dos spans en el body — buscar con grep antes de bump).
 
 ## Deploy
 ```bash
@@ -205,8 +205,8 @@ a una versión paralela** — se modulariza el mismo `index.html` in-place, comm
   — mucho trabajo manual y riesgo de olvidos. Con scripts clásicos todo sigue siendo global (como ya
   es hoy), cero *plumbing* extra, único cuidado real es el ORDEN de carga (`core.js` antes que todo lo
   que dependa de él).
-- Cache-busting: query string con la misma versión del HTML (`?v=12.6`), sumado como un lugar más a
-  bumpear junto con los 4 de siempre.
+- Cache-busting: query string con la misma versión del HTML (`?v=12.7`), sumado como un lugar más a
+  bumpear junto con los 4 de siempre (un `?v=` por cada `<script src>`/`<link>` nuevo).
 - Los `onclick="..."` inline en el HTML **quedan como están** — no se migra a `addEventListener`. La
   razón original para migrar (evitar contaminar `window`) dejó de aplicar al descartar ES Modules.
 - **Cada carpeta nueva (`css/`, `js/`) hay que sumarla al deploy de DonWeb** (trigger `paths:` +
@@ -219,7 +219,10 @@ a una versión paralela** — se modulariza el mismo `index.html` in-place, comm
   helpers (`fmt`/`pct`/roles), `notify()`, auth (`doLogin`/`doLogout`/`doSetup`/`cargarPerfil`), pantalla
   de carga, vistas (`showView`/`openModal`/`closeModal`) e init (`initApp`/`fetchProyectos`/
   `fetchGastos`/`fetchPartidas`) → [js/core.js](js/core.js)
-- ⬜ Fase 3: módulos hoja de bajo riesgo como piloto — `calculadora.js`, `logs.js`, `admin.js`
+- ✅ Fase 3 (v12.7): `calculadora.js` (calculadora flotante), `logs.js` (`log()` de auditoría +
+  pantalla de visualización — estaban físicamente separados en el archivo original, agrupados acá por
+  dominio), `admin.js` (gestión de usuarios). Deploy a DonWeb no necesitó fix esta vez — `css/**` y
+  `js/**` ya cubren cualquier archivo nuevo dentro de esas carpetas
 - ⬜ Fase 4: módulos medianos — `clientes.js`, `cobros.js`, `ventas.js`, `finanzas.js`
 - ⬜ Fase 5: `gastos.js`, `presupuestos.js`
 - ⬜ Fase 6: `proyectos.js` al final (el más grande e interdependiente)
@@ -228,6 +231,12 @@ Nota: `fmtInput`/`parseInput`/`onFmtFocus`/`onFmtBlur`/`withLoading` son utilida
 quedaron físicamente ubicadas en medio del código de proyectos (no se movieron a `core.js` en la Fase 2
 para mantener ese commit como un corte contiguo de bajo riesgo). Al ser todo global da igual desde qué
 archivo se sirvan — no es un bug, es una prolijidad pendiente para cuando se toque esa zona.
+
+**Ojo con los comentarios de sección (`// ── NOMBRE ──`) al ubicar código para las próximas fases: no
+son confiables.** Descubierto en la Fase 3: el comentario `// ── ADMIN USUARIOS ──` en realidad antecede
+al módulo de Clientes, y las funciones reales de admin (`renderAdmin`, `guardarRol`, `crearUsuario`)
+están várias líneas más abajo sin ese marker. Antes de extraer un módulo nuevo, ubicar las funciones
+por nombre (`grep -n "^function nombreFn"`) en vez de confiar en el comentario de sección más cercano.
 
 ## Convenciones de código
 - Números: formato es-AR (punto miles, coma decimales) vía `parseInput(id)` / `fmtInput(val)`
