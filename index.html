@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.6">
+<meta name="version" content="v12.7">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.6</title>
+<title>ObraControl v12.7</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.6</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.7</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -778,7 +778,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.6</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.7</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1212,7 +1212,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.6"></script>
+<script src="js/core.js?v=12.7"></script>
+<script src="js/calculadora.js?v=12.7"></script>
+<script src="js/logs.js?v=12.7"></script>
+<script src="js/admin.js?v=12.7"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -2226,50 +2229,6 @@ async function guardarProyecto(){
   } else {
     renderDashboard(); renderProyectos();
   }
-}
-
-// ── CALCULADORA ──────────────────────────────
-let _calcExpr = '';
-let _calcTargetId = '';
-
-function abrirCalculadora(targetId){
-  _calcTargetId = targetId;
-  _calcExpr = '';
-  document.getElementById('calc-display').textContent = '0';
-  openModal('modal-calc');
-}
-function calcBtn(v){
-  _calcExpr += v;
-  document.getElementById('calc-display').textContent = _calcExpr;
-}
-function calcClear(){
-  _calcExpr = '';
-  document.getElementById('calc-display').textContent = '0';
-}
-function calcEqual(){
-  try {
-    const result = Function('"use strict"; return (' + _calcExpr + ')')();
-    const rounded = Math.round(result * 100) / 100;
-    _calcExpr = String(rounded);
-    document.getElementById('calc-display').textContent = rounded.toLocaleString('es-AR');
-  } catch(e) {
-    document.getElementById('calc-display').textContent = 'Error';
-    _calcExpr = '';
-  }
-}
-function calcUsar(){
-  if(!_calcTargetId) return;
-  try {
-    const result = _calcExpr ? Function('"use strict"; return (' + _calcExpr + ')')() : 0;
-    const rounded = Math.round(result * 100) / 100;
-    const el = document.getElementById(_calcTargetId);
-    if(el){
-      el.value = fmtInput(rounded);
-      el.dispatchEvent(new Event('input'));
-      el.dispatchEvent(new Event('blur'));
-    }
-  } catch(e){}
-  closeModal('modal-calc');
 }
 
 function actualizarNotasValidez(){
@@ -4192,25 +4151,6 @@ async function poblarSelectCliente(selectId, valorActual){
 }
 
 // ══════════════════════════════════════════
-// MÓDULO LOGS
-// ══════════════════════════════════════════
-let cacheLogs = [];
-
-async function log(accion, entidadTipo, entidadId, entidadNombre, detalle={}){
-  try {
-    await sb.from('logs').insert({
-      usuario_id: currentUser?.id,
-      usuario_nombre: currentPerfil?.nombre || currentUser?.email || 'Sistema',
-      accion,
-      entidad_tipo: entidadTipo,
-      entidad_id: entidadId || null,
-      entidad_nombre: entidadNombre || null,
-      detalle
-    });
-  } catch(e){ console.warn('Log error:', e); }
-}
-
-// ══════════════════════════════════════════
 // MÓDULO ITEMS DE OBRA
 // ══════════════════════════════════════════
 
@@ -5013,121 +4953,6 @@ async function subirAdjuntoCuota(cuotaId, input){
   notify('Archivo adjunto a la cuota');
 }
 
-async function renderLogs(){
-  if(!esAdmin()) return;
-  document.getElementById('log-buscar').value='';
-  document.getElementById('log-filtro-tipo').value='';
-  const {data,error} = await sb.from('logs').select('*').order('created_at',{ascending:false}).limit(500);
-  cacheLogs = data||[];
-  renderTablaLogs();
-}
-
-function filtrarLogs(){
-  renderTablaLogs();
-}
-
-function renderTablaLogs(){
-  const q=(document.getElementById('log-buscar')?.value||'').toLowerCase();
-  const tipo=document.getElementById('log-filtro-tipo')?.value||'';
-  let lista=cacheLogs;
-  if(q) lista=lista.filter(l=>(l.usuario_nombre||'').toLowerCase().includes(q)||(l.accion||'').toLowerCase().includes(q)||(l.entidad_nombre||'').toLowerCase().includes(q));
-  if(tipo) lista=lista.filter(l=>l.entidad_tipo===tipo);
-
-  const cont=document.getElementById('logs-cont');
-  if(!cont) return;
-  if(!lista.length){ cont.innerHTML='<div class="empty"><p>No hay logs registrados.</p></div>'; return; }
-
-  const iconos={proyecto:'📁',gasto:'💰',partida:'📋',presupuesto:'📄',cliente:'👤',usuario:'👥',adjunto:'📎'};
-
-  cont.innerHTML=`<div class="table-wrap"><table>
-    <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Nombre</th><th>Detalle</th></tr></thead>
-    <tbody>${lista.map(l=>{
-      const fecha=new Date(l.created_at);
-      const fechaStr=fecha.toLocaleDateString('es-AR')+' '+fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-      const icon=iconos[l.entidad_tipo]||'⚙️';
-      const detalle=l.detalle&&Object.keys(l.detalle).length?
-        Object.entries(l.detalle).map(([k,v])=>`<span style="font-size:11px;color:var(--muted)">${k}: <span style="color:var(--text)">${v}</span></span>`).join(' · ')
-        :'—';
-      return `<tr>
-        <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${fechaStr}</td>
-        <td style="font-weight:500;font-size:13px">${l.usuario_nombre||'—'}</td>
-        <td><span class="badge badge-gray" style="font-size:11px">${l.accion}</span></td>
-        <td style="font-size:12px">${icon} ${l.entidad_tipo||'—'}</td>
-        <td style="font-size:13px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.entidad_nombre||'—'}</td>
-        <td style="font-size:12px;color:var(--muted);max-width:250px">${detalle}</td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table></div>`;
-}
-
-async function renderAdmin(){
-  if(!esAdmin()) return;
-  const {data}=await sb.from('perfiles').select('*').order('created_at',{ascending:false});
-  const t=document.getElementById('tabla-usuarios');
-  if(!data?.length){t.innerHTML='<tr><td style="padding:20px;color:var(--muted)">Sin usuarios</td></tr>';return;}
-  t.innerHTML=`<thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Desde</th><th></th></tr></thead><tbody>${data.map(u=>`<tr>
-    <td>${u.nombre||'—'}</td><td style="color:var(--muted);font-family:monospace">${u.email?u.email.replace('@obracontrol.interno',''):'—'}</td>
-    <td><span class="role-pill">${rolLabel(u.rol)}</span></td>
-    <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
-    <td style="color:var(--muted)">${u.created_at?u.created_at.slice(0,10):'-'}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="abrirModalRol('${u.id}','${u.rol}',${u.activo})">Editar</button></td>
-  </tr>`).join('')}</tbody>`;
-}
-
-function abrirModalRol(uid,rol,activo){
-  document.getElementById('rol-uid').value=uid;
-  document.getElementById('rol-nuevo').value=rol;
-  document.getElementById('rol-activo').value=String(activo);
-  openModal('modal-rol');
-}
-
-async function guardarRol(){
-  const uid=document.getElementById('rol-uid').value;
-  const {error}=await sb.from('perfiles').update({rol:document.getElementById('rol-nuevo').value,activo:document.getElementById('rol-activo').value==='true'}).eq('id',uid);
-  if(error){notify('Error: '+error.message,false);return;}
-  notify('Usuario actualizado');
-  closeModal('modal-rol');
-  renderAdmin();
-}
-
-
-// ── CREAR USUARIO (admin) ──────────────────
-async function crearUsuario(){
-  if(!esAdmin()){notify('Solo el administrador puede crear usuarios',false);return;}
-  const nombre=document.getElementById('cu-nombre').value.trim();
-  const usuario=document.getElementById('cu-usuario').value.trim();
-  const pass=document.getElementById('cu-pass').value;
-  const rol=document.getElementById('cu-rol').value;
-  if(!nombre||!usuario||!pass){notify('Completá nombre, usuario y contraseña',false);return;}
-  if(pass.length<6){notify('Contraseña mínimo 6 caracteres',false);return;}
-  if(!/^[a-z0-9._]+$/.test(usuario)){notify('Usuario: solo letras minúsculas, números y puntos',false);return;}
-
-  // Convertimos username a email interno — el usuario nunca lo ve
-  const emailInterno=usernameToEmail(usuario);
-
-  const {data,error}=await sb.auth.signUp({
-    email:emailInterno, password:pass,
-    options:{data:{nombre, rol, username:usuario}}
-  });
-  if(error){
-    if(error.message.includes('already registered')) notify('Ese nombre de usuario ya existe',false);
-    else notify('Error: '+error.message,false);
-    return;
-  }
-
-  if(data.user){
-    await sb.from('perfiles').upsert({
-      id:data.user.id, nombre,
-      email:emailInterno,
-      rol, activo:true
-    },{onConflict:'id'});
-  }
-
-  notify('Usuario "'+nombre+'" creado correctamente');
-  closeModal('modal-crear-usuario');
-  ['cu-nombre','cu-usuario','cu-pass'].forEach(id=>document.getElementById(id).value='');
-  renderAdmin();
-}
 
 // Finanzas modals populate
 document.getElementById('modal-ingreso').addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay'))return;});
