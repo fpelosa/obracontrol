@@ -7,7 +7,7 @@ Backend: Supabase (Postgres + Auth). Hosting actual: GitHub Pages (`fpelosa.gith
 en migración a `gestionobras.nor-tel.com` (DonWeb/Ferozo).
 
 Repo: `github.com/fpelosa/obracontrol` — local en `~/Desktop/obracontrol/`.
-Versión actual: v12.4 (numerar +0.1 en cada cambio, en 4 lugares del HTML: meta tag, title, y dos spans en el body — buscar con grep antes de bump).
+Versión actual: v12.6 (numerar +0.1 en cada cambio, en 4 lugares del HTML: meta tag, title, y dos spans en el body — buscar con grep antes de bump).
 
 ## Deploy
 ```bash
@@ -68,7 +68,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar lftp
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
-      # cuando exista carpeta js/ agregar 'mirror -R js js;' al script de lftp de abajo
       - name: Deploy por FTPS con lftp
         env:
           FTP_SERVER: ${{ secrets.DONWEB_FTP_SERVER }}
@@ -85,19 +84,25 @@ jobs:
             open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER;
             put index.html;
             mirror -R css css;
+            mirror -R js js;
             bye
           "
 ```
 
-**Bug real (v12.5, arrancando la modularización):** el `put index.html` solo sube ese archivo — nunca
-subió la carpeta `css/` nueva. Resultado: `gestionobras.nor-tel.com` quedó sin estilos (fallback a CSS
-default del navegador) porque `css/styles.css` no existía en el servidor, mientras que GitHub Pages sí
-lo tenía (sirve el repo completo, no depende de este workflow). Fix: agregar `css/**` y `js/**` al
-`paths:` del trigger, y sumar `mirror -R css css;` al script de `lftp` para subir la carpeta completa.
-**Cada vez que la modularización agregue una carpeta nueva** (ej. `js/` en las próximas fases), hay que
-repetir el mismo patrón acá: sumarla al `paths:` del trigger y agregar su propio `mirror -R` al script,
-sino el deploy a DonWeb queda silenciosamente desactualizado para esos archivos (GitHub Pages no se ve
-afectado porque sirve el repo tal cual).
+**Bug real (v12.5 y v12.6, arrancando la modularización) — pasó DOS veces:** el `put index.html` solo
+sube ese archivo. En v12.5 se agregó `css/` (estilos) sin subir la carpeta al workflow →
+`gestionobras.nor-tel.com` quedó sin estilos. Se corrigió agregando `mirror -R css css;`. En v12.6 se
+agregó `js/core.js` y **se repitió el mismo bug** con la carpeta `js/` (ya estaba anticipado en un
+comentario en el workflow, pero aun así hubo que acordarse de accionarlo). GitHub Pages nunca se ve
+afectado por este bug porque sirve el repo completo tal cual, no depende de este workflow.
+**Cada carpeta nueva de assets estáticos que se agregue debe sumarse tanto al `paths:` del trigger como
+a un `mirror -R <carpeta> <carpeta>;` en el script de `lftp`** — como `css/**` y `js/**` ya cubren sus
+carpetas completas (incluye cualquier archivo nuevo adentro), esto ya no debería repetirse mientras la
+modularización solo agregue archivos DENTRO de `css/` o `js/`; solo hace falta si aparece un tercer tipo
+de carpeta de assets.
+**Trampa extra confirmada dos veces:** un commit que solo toca `.github/workflows/deploy-donweb.yml`
+NO dispara el deploy (no está en el `paths:` filter) — hace falta un commit adicional que toque
+`index.html`, `css/**` o `js/**` para que el fix del workflow se ejecute por primera vez.
 
 Secrets cargados en GitHub (Settings → Secrets and variables → Actions):
 `DONWEB_FTP_SERVER` (sin `ftp://` adelante, solo el host), `DONWEB_FTP_USERNAME`, `DONWEB_FTP_PASSWORD`.
@@ -181,12 +186,48 @@ el campo, (c) que el estado se resetee correctamente en logout/cambio de usuario
 ## Pendientes conocidos
 - PDF de Presupuestos: alinear al template de NorTel (header blanco con logo, franja naranja,
   bloque TOTAL FINAL distintivo, campos "Obra/Descripción" y "Plazo de entrega")
-- Modularización del `index.html` (Opción A liviana, en veremos): separar CSS a archivo aparte,
-  después JS por módulo (`clientes.js`, `gastos.js`, `partidas.js`, etc.) cargados como
-  `<script type="module">`, dejando `proyectos.js` (el módulo más grande) para el final
 - Cuando se confirme que `gestionobras.nor-tel.com` funciona bien de punta a punta (login con los
   distintos roles, todos los módulos), avisar al equipo para migrar de GitHub Pages a DonWeb como URL
   principal. Mientras tanto ambas conviven sin conflicto (mismo Supabase, hostings independientes)
+
+## Modularización de index.html (en curso)
+Objetivo: separar el HTML/CSS/JS monolítico en archivos, **sin quitar funcionalidad ni migrar usuarios
+a una versión paralela** — se modulariza el mismo `index.html` in-place, commit por commit, siempre
+100% funcional y desplegado. No hay "cutover" final: el archivo modularizado completo *es* el mismo
+`index.html`, solo que con menos código inline.
+
+**Decisiones de arquitectura (ya cerradas, no volver a discutir salvo que cambie el contexto):**
+- Sin build step, sin bundler — scripts y CSS servidos tal cual (GitHub Pages + DonWeb son hosting
+  estático puro).
+- **JS se carga como `<script src="...">` clásico, NO `type="module"`.** Se evaluó ES Modules pero el
+  código está muy entrelazado (funciones de una sección llaman funciones de otra que todavía sigue
+  inline), lo que hubiera obligado a exportar manualmente cada símbolo a `window` en cada módulo nuevo
+  — mucho trabajo manual y riesgo de olvidos. Con scripts clásicos todo sigue siendo global (como ya
+  es hoy), cero *plumbing* extra, único cuidado real es el ORDEN de carga (`core.js` antes que todo lo
+  que dependa de él).
+- Cache-busting: query string con la misma versión del HTML (`?v=12.6`), sumado como un lugar más a
+  bumpear junto con los 4 de siempre.
+- Los `onclick="..."` inline en el HTML **quedan como están** — no se migra a `addEventListener`. La
+  razón original para migrar (evitar contaminar `window`) dejó de aplicar al descartar ES Modules.
+- **Cada carpeta nueva (`css/`, `js/`) hay que sumarla al deploy de DonWeb** (trigger `paths:` +
+  `mirror -R` en `.github/workflows/deploy-donweb.yml`) — ver sección de deploy arriba, ya pasó dos
+  veces que se subió código nuevo sin actualizar el workflow y `gestionobras.nor-tel.com` quedó roto.
+
+**Progreso:**
+- ✅ Fase 1 (v12.5): CSS → [css/styles.css](css/styles.css)
+- ✅ Fase 2 (v12.6): config de Supabase, estado global (`currentUser`, `currentPerfil`, `cache`, charts),
+  helpers (`fmt`/`pct`/roles), `notify()`, auth (`doLogin`/`doLogout`/`doSetup`/`cargarPerfil`), pantalla
+  de carga, vistas (`showView`/`openModal`/`closeModal`) e init (`initApp`/`fetchProyectos`/
+  `fetchGastos`/`fetchPartidas`) → [js/core.js](js/core.js)
+- ⬜ Fase 3: módulos hoja de bajo riesgo como piloto — `calculadora.js`, `logs.js`, `admin.js`
+- ⬜ Fase 4: módulos medianos — `clientes.js`, `cobros.js`, `ventas.js`, `finanzas.js`
+- ⬜ Fase 5: `gastos.js`, `presupuestos.js`
+- ⬜ Fase 6: `proyectos.js` al final (el más grande e interdependiente)
+
+Nota: `fmtInput`/`parseInput`/`onFmtFocus`/`onFmtBlur`/`withLoading` son utilidades genéricas pero
+quedaron físicamente ubicadas en medio del código de proyectos (no se movieron a `core.js` en la Fase 2
+para mantener ese commit como un corte contiguo de bajo riesgo). Al ser todo global da igual desde qué
+archivo se sirvan — no es un bug, es una prolijidad pendiente para cuando se toque esa zona.
 
 ## Convenciones de código
 - Números: formato es-AR (punto miles, coma decimales) vía `parseInput(id)` / `fmtInput(val)`
