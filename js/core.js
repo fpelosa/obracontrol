@@ -383,3 +383,4 @@ async function fetchPartidas(proyId){
     pct_ejecutado: p.presupuesto>0?Math.round((gastosPorPart[p.id]||0)*100/p.presupuesto):0
   }));
 }
+
