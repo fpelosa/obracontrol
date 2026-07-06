@@ -49,8 +49,8 @@ node --check /tmp/check.js && echo OK
 
 ### Deploy automático a DonWeb (GitHub Actions)
 Archivo: `.github/workflows/deploy-donweb.yml`. Se dispara con cada push a `main` que modifique
-`index.html`. Usa `lftp` instalado al vuelo en el runner — **no usar `SamKirkland/FTP-Deploy-Action`**,
-ver por qué abajo.
+`index.html`, `css/**` o `js/**`. Usa `lftp` instalado al vuelo en el runner — **no usar
+`SamKirkland/FTP-Deploy-Action`**, ver por qué abajo.
 
 ```yaml
 name: Deploy a DonWeb (gestionobras.nor-tel.com)
@@ -58,7 +58,7 @@ name: Deploy a DonWeb (gestionobras.nor-tel.com)
 on:
   push:
     branches: [main]
-    paths: ['index.html']
+    paths: ['index.html', 'css/**', 'js/**']
 
 jobs:
   ftp-deploy:
@@ -68,6 +68,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar lftp
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      # cuando exista carpeta js/ agregar 'mirror -R js js;' al script de lftp de abajo
       - name: Deploy por FTPS con lftp
         env:
           FTP_SERVER: ${{ secrets.DONWEB_FTP_SERVER }}
@@ -83,9 +84,20 @@ jobs:
             set net:max-retries 1;
             open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER;
             put index.html;
+            mirror -R css css;
             bye
           "
 ```
+
+**Bug real (v12.5, arrancando la modularización):** el `put index.html` solo sube ese archivo — nunca
+subió la carpeta `css/` nueva. Resultado: `gestionobras.nor-tel.com` quedó sin estilos (fallback a CSS
+default del navegador) porque `css/styles.css` no existía en el servidor, mientras que GitHub Pages sí
+lo tenía (sirve el repo completo, no depende de este workflow). Fix: agregar `css/**` y `js/**` al
+`paths:` del trigger, y sumar `mirror -R css css;` al script de `lftp` para subir la carpeta completa.
+**Cada vez que la modularización agregue una carpeta nueva** (ej. `js/` en las próximas fases), hay que
+repetir el mismo patrón acá: sumarla al `paths:` del trigger y agregar su propio `mirror -R` al script,
+sino el deploy a DonWeb queda silenciosamente desactualizado para esos archivos (GitHub Pages no se ve
+afectado porque sirve el repo tal cual).
 
 Secrets cargados en GitHub (Settings → Secrets and variables → Actions):
 `DONWEB_FTP_SERVER` (sin `ftp://` adelante, solo el host), `DONWEB_FTP_USERNAME`, `DONWEB_FTP_PASSWORD`.
