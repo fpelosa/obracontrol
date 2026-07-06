@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.9">
+<meta name="version" content="v12.10">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.9</title>
+<title>ObraControl v12.10</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.9</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.10</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -778,7 +778,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.9</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.10</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -3390,6 +3390,7 @@ async function generarPresupuestoDesdeProyecto(proyId) {
     notas: 'Forma de pago: contra entrega.\nGarantía: 180 días para obras civiles por defectos constructivos.\nPresupuesto válido por 15 días desde la fecha de emisión.\nSujeto a aceptación en los términos y condiciones vigentes.',
     estado: 'borrador', incluye_iva: false,
     proyecto_origen_id: proyId,
+    obra_ubicacion: proy.nombre || '',
     solicitado_por: proy.solicitado_por || '',
     orden_pedido: proy.orden_pedido || '',
     tiempo_estimado_obra: proy.tiempo_estimado_obra || ''
@@ -3477,6 +3478,7 @@ function mostrarEditorPresupuesto() {
             </select>
           </div>
           <div class="form-group"><label>Tipo de cambio</label><input type="number" id="pe-tc" placeholder="(opcional)" value="${presActual.tipo_cambio||''}"/></div>
+          <div class="form-group full"><label>Obra / Ubicación</label><input id="pe-obra-ubicacion" value="${presActual.obra_ubicacion||''}"/></div>
           <div class="form-group" style="grid-column:1/-1"><label style="color:var(--accent)">Bonificación %</label><input type="number" id="pe-desc" value="${presActual.descuento||0}" min="0" max="100" step="0.1" placeholder="0" oninput="recalcularTotales()"/></div>
           <div class="form-group"><label>Estado</label>
             <select id="pe-estado">
@@ -3712,6 +3714,7 @@ function recopilarDatosPresupuesto() {
     valido_dias: Number(document.getElementById('pe-valido-dias')?.value)||15,
     cliente_id: document.getElementById("pe-cli-id")?.value||null,
     proyecto_origen_id: presActual?.proyecto_origen_id||null,
+    obra_ubicacion: document.getElementById('pe-obra-ubicacion')?.value||null,
     cliente_nombre: document.getElementById('pe-cli-nombre').value,
     cliente_cuit: document.getElementById('pe-cli-cuit').value,
     cliente_ciudad: document.getElementById('pe-cli-ciudad').value,
@@ -3936,7 +3939,7 @@ function generarHTMLPresupuesto(p, items) {
           </tr>
           <tr>
             <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">Obra / Ubicación</td>
-            <td style="border:1px solid #ddd;padding:7px 14px;font-weight:700" colspan="3">${p.cliente_ciudad||p.cliente_dir||'—'}</td>
+            <td style="border:1px solid #ddd;padding:7px 14px;font-weight:700" colspan="3">${p.obra_ubicacion||p.cliente_ciudad||p.cliente_dir||'—'}</td>
           </tr>
           <tr>
             <td style="background:#1a2035;color:#fff;font-weight:700;padding:7px 14px;white-space:nowrap">Solicitado por</td>
