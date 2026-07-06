@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'index.html'
+      - 'css/**'
+      - 'js/**'
 
 jobs:
   ftp-deploy:
@@ -19,6 +21,7 @@ jobs:
       - name: Instalar lftp
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
+      # cuando exista carpeta js/ agregar 'mirror -R js js;' al script de lftp de abajo
       - name: Deploy por FTPS con lftp
         env:
           FTP_SERVER: ${{ secrets.DONWEB_FTP_SERVER }}
@@ -35,5 +38,6 @@ jobs:
             set net:max-retries 1;
             open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_SERVER;
             put index.html;
+            mirror -R css css;
             bye
           "
