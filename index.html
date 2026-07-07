@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.12">
+<meta name="version" content="v12.13">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.12</title>
+<title>ObraControl v12.13</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.12</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.13</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -204,11 +204,12 @@
             <button class="btn btn-ghost" id="filtro-estado-Finalizado" onclick="filtrarProyectos('Finalizado')" style="font-size:12px;padding:5px 12px">Finalizados</button>
             <button class="btn btn-ghost" id="filtro-estado-Suspendido" onclick="filtrarProyectos('Suspendido')" style="font-size:12px;padding:5px 12px">Suspendidos</button>
           </div>
-          <!-- Fila 1b: sub-filtro de facturación — solo visible dentro de Finalizados, solo admin -->
-          <div id="filtro-facturado-row" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:11px">
-            <button class="btn btn-ghost" id="filtro-facturado-todos" onclick="filtrarFacturado('todos')" style="border-color:var(--accent);color:var(--accent);font-size:12px;padding:5px 12px">Todos</button>
-            <button class="btn btn-ghost" id="filtro-facturado-facturados" onclick="filtrarFacturado('facturados')" style="font-size:12px;padding:5px 12px">✓ Facturados</button>
-            <button class="btn btn-ghost" id="filtro-facturado-sinfacturar" onclick="filtrarFacturado('sinfacturar')" style="font-size:12px;padding:5px 12px">⚠ Sin facturar</button>
+          <!-- Fila 1b: filtro de facturación — solo visible dentro de Finalizados, solo admin -->
+          <div id="filtro-facturado-row" style="display:none;align-items:center;margin-bottom:11px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer">
+              <input type="checkbox" id="chk-ocultar-facturados" onchange="renderProyectos()" style="width:15px;height:15px;accent-color:var(--accent)"/>
+              Ocultar facturados
+            </label>
           </div>
           <!-- Fila 2: búsqueda, cliente, ordenamiento, vistas -->
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -539,6 +540,27 @@
           <input type="file" id="fact-adjuntos" multiple style="display:none" onchange="previewAdjuntos('fact')"/>
         </label>
       </div>
+      <div class="form-group full" id="fact-venta-generada-info" style="display:none;border-top:1px solid var(--border);padding-top:14px;margin-top:4px;font-size:13px;color:var(--green)">
+        ✓ Ya se generó una venta pendiente de cobro en Cobranzas para este proyecto.
+      </div>
+      <div class="form-group full" id="fact-venta-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="fact-generar-venta" onchange="toggleFactVentaFields()" style="width:16px;height:16px;accent-color:var(--accent)"/>
+          Generar venta pendiente de cobro en Cobranzas
+        </label>
+        <div id="fact-venta-fields" style="display:none;margin-top:12px">
+          <div class="form-grid">
+            <div class="form-group full"><label>Cliente *</label><select id="fact-venta-cliente-id"><option value="">Seleccionar cliente...</option></select></div>
+            <div class="form-group"><label>Importe a facturar *</label>
+              <input type="text" inputmode="decimal" id="fact-venta-importe" placeholder="0"
+                onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"
+                oninput="this.value=this.value.replace(/[^0-9.,]/g,'')"/>
+            </div>
+            <div class="form-group"><label>N° Factura</label><input id="fact-venta-numero" placeholder="N° de factura"/></div>
+            <div class="form-group"><label>Vencimiento de cobro</label><input type="date" id="fact-venta-vencimiento"/></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" id="fact-btn-desmarcar" style="color:var(--red);border-color:var(--red);display:none" onclick="desmarcarFacturado()">🗑 Desmarcar facturado</button>
@@ -809,7 +831,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.12</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.13</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1536,13 +1558,11 @@ async function renderDashboard(){
 
 // ── PROYECTOS ──────────────────────────────
 let filtroEstadoActual = 'todos';
-let filtroFacturadoActual = 'todos';
 let proyVistaActual = 'lista';
 let proyOrdenDir = 'asc';
 
 function filtrarProyectos(estado){
   filtroEstadoActual = estado;
-  filtroFacturadoActual = 'todos';
   document.querySelectorAll('[id^="filtro-estado-"]').forEach(btn => {
     btn.style.borderColor = '';
     btn.style.color = '';
@@ -1551,20 +1571,6 @@ function filtrarProyectos(estado){
   if(btn){ btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
   const filaFacturado = document.getElementById('filtro-facturado-row');
   if(filaFacturado) filaFacturado.style.display = (estado==='Finalizado' && esAdmin()) ? 'flex' : 'none';
-  document.querySelectorAll('[id^="filtro-facturado-"]').forEach(b=>{ b.style.borderColor=''; b.style.color=''; });
-  const btnFact = document.getElementById('filtro-facturado-todos');
-  if(btnFact){ btnFact.style.borderColor='var(--accent)'; btnFact.style.color='var(--accent)'; }
-  renderProyectos();
-}
-
-function filtrarFacturado(valor){
-  filtroFacturadoActual = valor;
-  document.querySelectorAll('[id^="filtro-facturado-"]').forEach(btn => {
-    btn.style.borderColor = '';
-    btn.style.color = '';
-  });
-  const btn = document.getElementById('filtro-facturado-'+valor);
-  if(btn){ btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
   renderProyectos();
 }
 
@@ -1641,9 +1647,9 @@ function renderProyectos(){
   // Filtro estado
   if(filtroEstadoActual !== 'todos') p = p.filter(x => x.estado === filtroEstadoActual);
 
-  // Sub-filtro de facturación (solo aplica dentro de Finalizados)
-  if(filtroEstadoActual==='Finalizado' && esAdmin() && filtroFacturadoActual!=='todos'){
-    p = p.filter(x => filtroFacturadoActual==='facturados' ? x.facturado : !x.facturado);
+  // Filtro de facturación (solo aplica dentro de Finalizados)
+  if(filtroEstadoActual==='Finalizado' && esAdmin() && document.getElementById('chk-ocultar-facturados')?.checked){
+    p = p.filter(x => !x.facturado);
   }
 
   // Filtro nombre
@@ -1701,6 +1707,11 @@ function facturadoBadge(x){
   return `<button onclick="event.stopPropagation();abrirModalFacturar('${x.id}')" class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;border-color:var(--accent);color:var(--accent);white-space:nowrap">💲 Marcar facturado</button>`;
 }
 
+function toggleFactVentaFields(){
+  const chk = document.getElementById('fact-generar-venta');
+  document.getElementById('fact-venta-fields').style.display = chk.checked ? 'block' : 'none';
+}
+
 async function abrirModalFacturar(proyId){
   const p = cache.proyectos.find(x=>x.id===proyId);
   if(!p) return;
@@ -1711,6 +1722,22 @@ async function abrirModalFacturar(proyId){
   document.getElementById('fact-adjuntos-preview').innerHTML = '';
   document.getElementById('fact-btn-desmarcar').style.display = p.facturado ? 'inline-flex' : 'none';
   document.getElementById('fact-adjuntos-existentes').innerHTML = '<span style="color:var(--muted);font-size:13px">Cargando...</span>';
+
+  // Sección de venta pendiente de cobro
+  const yaGenerada = !!p.venta_id;
+  document.getElementById('fact-venta-generada-info').style.display = yaGenerada ? 'block' : 'none';
+  document.getElementById('fact-venta-section').style.display = yaGenerada ? 'none' : 'block';
+  document.getElementById('fact-generar-venta').checked = false;
+  document.getElementById('fact-venta-fields').style.display = 'none';
+  if(!yaGenerada){
+    await poblarSelectCliente('fact-venta-cliente-id', p.cliente_id||'');
+    document.getElementById('fact-venta-importe').value = fmtInput(Number(p.precio_cliente||p.presupuesto_total||0));
+    document.getElementById('fact-venta-numero').value = '';
+    const fechaBase = p.facturado_en || new Date().toISOString().split('T')[0];
+    const dVenc = new Date(fechaBase+'T12:00:00'); dVenc.setDate(dVenc.getDate()+30);
+    document.getElementById('fact-venta-vencimiento').value = dVenc.toISOString().split('T')[0];
+  }
+
   openModal('modal-facturar');
   const existentes = await cargarAdjuntos('proyecto_factura', proyId);
   document.getElementById('fact-adjuntos-existentes').innerHTML = renderAdjuntosHTML(existentes, 'fact-adjuntos-existentes', esAdmin())
@@ -1720,12 +1747,48 @@ async function abrirModalFacturar(proyId){
 async function confirmarFacturado(){
   const proyId = document.getElementById('fact-proyecto-id').value;
   const fecha = document.getElementById('fact-fecha').value || new Date().toISOString().split('T')[0];
-  const {error} = await sb.from('proyectos').update({facturado:true, facturado_en:fecha}).eq('id',proyId);
+  const generarVenta = document.getElementById('fact-generar-venta').checked;
+
+  let ventaClienteId, ventaImporte, ventaVencimiento;
+  if(generarVenta){
+    ventaClienteId = document.getElementById('fact-venta-cliente-id').value;
+    ventaImporte = parseInput('fact-venta-importe');
+    ventaVencimiento = document.getElementById('fact-venta-vencimiento').value;
+    if(!ventaClienteId || !ventaImporte || !ventaVencimiento){
+      notify('Para generar la venta: cliente, importe y vencimiento son obligatorios', false);
+      return;
+    }
+  }
+
+  const proyectoUpdate = {facturado:true, facturado_en:fecha};
+
+  if(generarVenta){
+    const p = cache.proyectos.find(x=>x.id===proyId);
+    const {data:nuevaVenta, error:errVenta} = await sb.from('ventas').insert({
+      cliente_id: ventaClienteId,
+      presupuesto_id: p?.presupuesto_ref_id||null,
+      tipo: 'factura',
+      numero: document.getElementById('fact-venta-numero').value||null,
+      fecha,
+      descripcion: p?.nombre||null,
+      moneda: 'ARS',
+      importe_total: ventaImporte,
+      created_by: currentUser.id
+    }).select().single();
+    if(errVenta){ notify('Error generando la venta: '+errVenta.message, false); return; }
+    await sb.from('venta_cuotas').insert({
+      venta_id: nuevaVenta.id, numero_cuota:1, importe: ventaImporte, moneda:'ARS',
+      fecha_vencimiento: ventaVencimiento, fecha_cobro_estimado: null
+    });
+    proyectoUpdate.venta_id = nuevaVenta.id;
+  }
+
+  const {error} = await sb.from('proyectos').update(proyectoUpdate).eq('id',proyId);
   if(error){ notify('Error: '+error.message,false); return; }
   await subirAdjuntos('proyecto_factura', proyId, 'fact', true);
   await fetchProyectos();
   closeModal('modal-facturar');
-  notify('✅ Proyecto marcado como facturado');
+  notify(generarVenta ? '✅ Proyecto facturado y venta generada en Cobranzas' : '✅ Proyecto marcado como facturado');
   renderProyectos();
 }
 
