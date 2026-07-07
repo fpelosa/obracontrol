@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.11">
+<meta name="version" content="v12.12">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.11</title>
+<title>ObraControl v12.12</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.11</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.12</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -203,6 +203,12 @@
             <button class="btn btn-ghost" id="filtro-estado-Esperando aprobación" onclick="filtrarProyectos('Esperando aprobación')" style="font-size:12px;padding:5px 12px">Esp. aprobación</button>
             <button class="btn btn-ghost" id="filtro-estado-Finalizado" onclick="filtrarProyectos('Finalizado')" style="font-size:12px;padding:5px 12px">Finalizados</button>
             <button class="btn btn-ghost" id="filtro-estado-Suspendido" onclick="filtrarProyectos('Suspendido')" style="font-size:12px;padding:5px 12px">Suspendidos</button>
+          </div>
+          <!-- Fila 1b: sub-filtro de facturación — solo visible dentro de Finalizados, solo admin -->
+          <div id="filtro-facturado-row" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:11px">
+            <button class="btn btn-ghost" id="filtro-facturado-todos" onclick="filtrarFacturado('todos')" style="border-color:var(--accent);color:var(--accent);font-size:12px;padding:5px 12px">Todos</button>
+            <button class="btn btn-ghost" id="filtro-facturado-facturados" onclick="filtrarFacturado('facturados')" style="font-size:12px;padding:5px 12px">✓ Facturados</button>
+            <button class="btn btn-ghost" id="filtro-facturado-sinfacturar" onclick="filtrarFacturado('sinfacturar')" style="font-size:12px;padding:5px 12px">⚠ Sin facturar</button>
           </div>
           <!-- Fila 2: búsqueda, cliente, ordenamiento, vistas -->
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -517,6 +523,31 @@
   </div>
 </div>
 
+<!-- Facturar proyecto -->
+<div class="modal-overlay" id="modal-facturar">
+  <div class="modal">
+    <input type="hidden" id="fact-proyecto-id"/>
+    <div class="modal-title" id="fact-modal-title">Facturación<button class="modal-close" onclick="closeModal('modal-facturar')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Fecha de facturación</label><input type="date" id="fact-fecha"/></div>
+      <div class="form-group full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📄 Factura / comprobante</div>
+        <div id="fact-adjuntos-existentes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+        <div id="fact-adjuntos-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;border:1px dashed var(--border2);border-radius:8px;color:var(--muted);font-size:13px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+          <span style="font-size:18px">+</span> Adjuntar factura / comprobante
+          <input type="file" id="fact-adjuntos" multiple style="display:none" onchange="previewAdjuntos('fact')"/>
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" id="fact-btn-desmarcar" style="color:var(--red);border-color:var(--red);display:none" onclick="desmarcarFacturado()">🗑 Desmarcar facturado</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-facturar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="withLoading(this, confirmarFacturado)">✅ Confirmar facturación</button>
+    </div>
+  </div>
+</div>
+
 <!-- Gasto -->
 <div class="modal-overlay" id="modal-gasto">
   <div class="modal">
@@ -778,7 +809,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.11</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.12</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1505,16 +1536,34 @@ async function renderDashboard(){
 
 // ── PROYECTOS ──────────────────────────────
 let filtroEstadoActual = 'todos';
+let filtroFacturadoActual = 'todos';
 let proyVistaActual = 'lista';
 let proyOrdenDir = 'asc';
 
 function filtrarProyectos(estado){
   filtroEstadoActual = estado;
+  filtroFacturadoActual = 'todos';
   document.querySelectorAll('[id^="filtro-estado-"]').forEach(btn => {
     btn.style.borderColor = '';
     btn.style.color = '';
   });
   const btn = document.getElementById('filtro-estado-'+estado);
+  if(btn){ btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
+  const filaFacturado = document.getElementById('filtro-facturado-row');
+  if(filaFacturado) filaFacturado.style.display = (estado==='Finalizado' && esAdmin()) ? 'flex' : 'none';
+  document.querySelectorAll('[id^="filtro-facturado-"]').forEach(b=>{ b.style.borderColor=''; b.style.color=''; });
+  const btnFact = document.getElementById('filtro-facturado-todos');
+  if(btnFact){ btnFact.style.borderColor='var(--accent)'; btnFact.style.color='var(--accent)'; }
+  renderProyectos();
+}
+
+function filtrarFacturado(valor){
+  filtroFacturadoActual = valor;
+  document.querySelectorAll('[id^="filtro-facturado-"]').forEach(btn => {
+    btn.style.borderColor = '';
+    btn.style.color = '';
+  });
+  const btn = document.getElementById('filtro-facturado-'+valor);
   if(btn){ btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; }
   renderProyectos();
 }
@@ -1592,6 +1641,11 @@ function renderProyectos(){
   // Filtro estado
   if(filtroEstadoActual !== 'todos') p = p.filter(x => x.estado === filtroEstadoActual);
 
+  // Sub-filtro de facturación (solo aplica dentro de Finalizados)
+  if(filtroEstadoActual==='Finalizado' && esAdmin() && filtroFacturadoActual!=='todos'){
+    p = p.filter(x => filtroFacturadoActual==='facturados' ? x.facturado : !x.facturado);
+  }
+
   // Filtro nombre
   const busqNombre = (document.getElementById('proy-buscar-nombre')?.value||'').toLowerCase().trim();
   if(busqNombre) p = p.filter(x => x.nombre.toLowerCase().includes(busqNombre));
@@ -1638,6 +1692,53 @@ function renderProyectos(){
   else cont.innerHTML = _renderProyLista(p);
 }
 
+// Badge/botón de facturación — solo aplica a proyectos Finalizados, visible solo para admin
+function facturadoBadge(x){
+  if(x.estado!=='Finalizado' || !esAdmin()) return '';
+  if(x.facturado){
+    return `<span onclick="event.stopPropagation();abrirModalFacturar('${x.id}')" title="Facturado el ${x.facturado_en?new Date(x.facturado_en+'T12:00:00').toLocaleDateString('es-AR'):''}" style="cursor:pointer;font-size:11px;background:rgba(34,197,94,.15);color:var(--green);border-radius:8px;padding:3px 8px;white-space:nowrap">✓ Facturado</span>`;
+  }
+  return `<button onclick="event.stopPropagation();abrirModalFacturar('${x.id}')" class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;border-color:var(--accent);color:var(--accent);white-space:nowrap">💲 Marcar facturado</button>`;
+}
+
+async function abrirModalFacturar(proyId){
+  const p = cache.proyectos.find(x=>x.id===proyId);
+  if(!p) return;
+  document.getElementById('fact-proyecto-id').value = proyId;
+  document.getElementById('fact-modal-title').innerHTML = `Facturación — ${p.nombre}<button class="modal-close" onclick="closeModal('modal-facturar')">✕</button>`;
+  document.getElementById('fact-fecha').value = p.facturado_en || new Date().toISOString().split('T')[0];
+  document.getElementById('fact-adjuntos').value = '';
+  document.getElementById('fact-adjuntos-preview').innerHTML = '';
+  document.getElementById('fact-btn-desmarcar').style.display = p.facturado ? 'inline-flex' : 'none';
+  document.getElementById('fact-adjuntos-existentes').innerHTML = '<span style="color:var(--muted);font-size:13px">Cargando...</span>';
+  openModal('modal-facturar');
+  const existentes = await cargarAdjuntos('proyecto_factura', proyId);
+  document.getElementById('fact-adjuntos-existentes').innerHTML = renderAdjuntosHTML(existentes, 'fact-adjuntos-existentes', esAdmin())
+    || '<span style="color:var(--muted);font-size:13px">Sin comprobantes adjuntos todavía.</span>';
+}
+
+async function confirmarFacturado(){
+  const proyId = document.getElementById('fact-proyecto-id').value;
+  const fecha = document.getElementById('fact-fecha').value || new Date().toISOString().split('T')[0];
+  const {error} = await sb.from('proyectos').update({facturado:true, facturado_en:fecha}).eq('id',proyId);
+  if(error){ notify('Error: '+error.message,false); return; }
+  await subirAdjuntos('proyecto_factura', proyId, 'fact', true);
+  await fetchProyectos();
+  closeModal('modal-facturar');
+  notify('✅ Proyecto marcado como facturado');
+  renderProyectos();
+}
+
+async function desmarcarFacturado(){
+  const proyId = document.getElementById('fact-proyecto-id').value;
+  if(!confirm('¿Desmarcar este proyecto como facturado?')) return;
+  await sb.from('proyectos').update({facturado:false}).eq('id',proyId);
+  await fetchProyectos();
+  closeModal('modal-facturar');
+  notify('Proyecto desmarcado como facturado');
+  renderProyectos();
+}
+
 function _renderProyCards(p){
   return `<div class="project-cards">${p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
@@ -1645,7 +1746,7 @@ function _renderProyCards(p){
     return `<div class="project-card" onclick="verDetalle('${x.id}')" style="${x.gastos_pendientes>0&&puedeEditar()?'border-color:rgba(239,68,68,.4)':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div><div class="pc-name">${x.nombre}</div><div class="pc-loc">📍 ${x.ubicacion||'Sin ubicación'}</div>${pendBadge}</div>
-        ${estadoBadge(x.estado)}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">${estadoBadge(x.estado)}${facturadoBadge(x)}</div>
       </div>
       ${x.cliente?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">👤 ${x.cliente}</div>`:''}
       <div class="pc-stats">
@@ -1676,6 +1777,7 @@ function _renderProyTabla(p){
           <span style="color:${col};font-size:12px;font-weight:500;min-width:34px">${av}%</span>
         </div>
       </td>
+      ${esAdmin()?`<td>${facturadoBadge(x)}</td>`:''}
     </tr>`;
   }).join('');
   return `<div class="card"><div class="table-wrap"><table>
@@ -1686,6 +1788,7 @@ function _renderProyTabla(p){
       <th>F. Aprobación</th>
       <th>F. Fin estimada</th>
       <th style="min-width:130px">Avance</th>
+      ${esAdmin()?'<th>Facturado</th>':''}
     </tr></thead>
     <tbody>${rows}</tbody>
   </table></div></div>`;
@@ -1707,6 +1810,7 @@ function _renderProyLista(p){
         <div class="progress-wrap" style="width:50px"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div>
         <span style="font-size:12px;font-weight:500;color:${col};min-width:30px;text-align:right">${av}%</span>
       </div>
+      ${esAdmin()?`<div style="min-width:130px;text-align:right">${facturadoBadge(x)}</div>`:''}
     </div>`;
   }).join('');
   return `<div class="card" style="padding:0;overflow:hidden">
@@ -1719,6 +1823,7 @@ function _renderProyLista(p){
       ${_thSort('presupuesto','Presupuesto')}
       ${_thSort('gastado','Gastado')}
       ${_thSort('avance','Avance')}
+      ${esAdmin()?'<div style="min-width:130px;text-align:right">Facturado</div>':''}
     </div>
     ${rows}
   </div>`;
