@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.18">
+<meta name="version" content="v12.19">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.18</title>
+<title>ObraControl v12.19</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.18</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.19</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -831,7 +831,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.18</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.19</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -897,13 +897,13 @@
       <div class="form-group full"><label>Nombre *</label><input id="part-nombre" placeholder="Ej: Estructura hormigón"/></div>
       <div class="form-group"><label>Presupuesto ($)</label>
         <div style="display:flex;gap:6px">
-          <input type="text" inputmode="decimal" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);calcularPrecioVentaPartida('part')" style="flex:1"/>
+          <input type="text" inputmode="decimal" id="part-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('part');calcularPrecioUnitarioPartida('part')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);calcularPrecioVentaPartida('part');calcularPrecioUnitarioPartida('part')" style="flex:1"/>
           <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('part-ppto')" style="padding:0 10px;font-size:16px" title="Calculadora">🧮</button>
         </div>
       </div>
+      <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0" oninput="calcularPrecioUnitarioPartida('part')"/></div>
+      <div class="form-group"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0" step="0.01" oninput="calcularPresupuestoDesdeUnitario('part')"/></div>
       <div class="form-group"><label>Unidad</label><input id="part-unidad" placeholder="m², m³, gl..."/></div>
-      <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0"/></div>
-      <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0"/></div>
       <div class="form-group full" id="part-pventa-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -947,13 +947,13 @@
       <div class="form-group full"><label>Nombre *</label><input id="ep-nombre" placeholder="Ej: Estructura hormigón"/></div>
       <div class="form-group"><label>Presupuesto ($)</label>
         <div style="display:flex;gap:6px">
-          <input type="text" inputmode="decimal" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);calcularPrecioVentaPartida('ep')" style="flex:1"/>
+          <input type="text" inputmode="decimal" id="ep-ppto" placeholder="0" oninput="calcularPrecioVentaPartida('ep');calcularPrecioUnitarioPartida('ep')" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this);calcularPrecioVentaPartida('ep');calcularPrecioUnitarioPartida('ep')" style="flex:1"/>
           <button type="button" class="btn btn-ghost btn-sm" onclick="abrirCalculadora('ep-ppto')" style="padding:0 10px;font-size:16px" title="Calculadora">🧮</button>
         </div>
       </div>
+      <div class="form-group"><label>Cantidad</label><input type="number" id="ep-cant" placeholder="0" oninput="calcularPrecioUnitarioPartida('ep')"/></div>
+      <div class="form-group"><label>Precio unitario ($)</label><input type="number" id="ep-precio" placeholder="0" step="0.01" oninput="calcularPresupuestoDesdeUnitario('ep')"/></div>
       <div class="form-group"><label>Unidad</label><input id="ep-unidad" placeholder="m², m³, gl..."/></div>
-      <div class="form-group"><label>Cantidad</label><input type="number" id="ep-cant" placeholder="0"/></div>
-      <div class="form-group full"><label>Precio unitario ($)</label><input type="number" id="ep-precio" placeholder="0"/></div>
       <div class="form-group full" id="ep-pventa-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -2288,7 +2288,9 @@ function switchTab(el,panelId){
 // ── FORMATEO DE INPUTS NUMÉRICOS ──────────────────────────────
 function fmtInput(val){
   if(val===''||val===null||val===undefined) return '';
-  const n = Number(String(val).replace(/\./g,'').replace(',','.'));
+  // Si ya es un number, no pasarlo por el parser de string es-AR (el punto decimal
+  // se interpretaría como separador de miles y multiplicaría el valor por 100)
+  const n = typeof val==='number' ? val : Number(String(val).replace(/\./g,'').replace(',','.'));
   if(isNaN(n)) return val;
   if(n===0) return '';
   return n.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -2911,6 +2913,21 @@ function calcularPrecioVentaPartida(prefix){
 function onManualPventa(prefix){
   // Si el usuario escribe directo en precio venta, cambiar a modo manual
   setModoVenta(prefix,'man');
+}
+
+// ── PRESUPUESTO / CANTIDAD / PRECIO UNITARIO: cálculo bidireccional ──
+function calcularPrecioUnitarioPartida(prefix){
+  const cant = Number(document.getElementById(`${prefix}-cant`).value)||0;
+  if(cant<=0) return;
+  const ppto = parseInput(`${prefix}-ppto`);
+  document.getElementById(`${prefix}-precio`).value = (ppto/cant).toFixed(2);
+}
+
+function calcularPresupuestoDesdeUnitario(prefix){
+  const cant = Number(document.getElementById(`${prefix}-cant`).value)||1;
+  const precio = Number(document.getElementById(`${prefix}-precio`).value)||0;
+  document.getElementById(`${prefix}-ppto`).value = fmtInput(cant*precio);
+  calcularPrecioVentaPartida(prefix);
 }
 
 // ── RECALCULAR TOTALES PROYECTO DESDE PARTIDAS ──
