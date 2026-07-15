@@ -45,6 +45,9 @@ let cache = { proyectos: [], gastos: [] };
 // ── HELPERS ──────────────────────────────
 const fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
 const fmtN = n => new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(n||0);
+const fmtMoneda = (n, moneda) => moneda==='USD'
+  ? 'U$S '+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})
+  : fmt(n);
 const pct = (a,b) => b>0?Math.round(a/b*100):0;
 const colorPct = p => p>90?'var(--red)':p>70?'var(--orange)':p>50?'var(--accent)':'var(--green)';
 const estadoBadge = e => {
@@ -370,11 +373,19 @@ async function fetchPartidas(proyId){
   const {data:partidas, error}=await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('orden');
   console.log('fetchPartidas:', partidas?.length, error);
   if(!partidas) return [];
-  const {data:gastos}=await sb.from('gastos').select('partida_id, monto, estado_aprobacion').eq('proyecto_id',proyId);
+  const {data:gastos}=await sb.from('gastos').select('partida_id, monto, estado_aprobacion, tipo_cambio').eq('proyecto_id',proyId);
+  const monedaPorPart={};
+  partidas.forEach(p=>{ monedaPorPart[p.id]=p.moneda||'ARS'; });
   const gastosPorPart={};
   (gastos||[]).forEach(g=>{
-    if(g.partida_id && (g.estado_aprobacion==='aprobado' || !g.estado_aprobacion))
-      gastosPorPart[g.partida_id]=(gastosPorPart[g.partida_id]||0)+Number(g.monto);
+    if(g.partida_id && (g.estado_aprobacion==='aprobado' || !g.estado_aprobacion)){
+      // El monto del gasto siempre se carga en pesos; si la partida es en USD, se
+      // convierte con el tipo de cambio registrado en ese gasto puntual para poder
+      // comparar gastado vs. presupuesto en la misma moneda.
+      const esUsd = monedaPorPart[g.partida_id]==='USD';
+      const monto = esUsd && Number(g.tipo_cambio)>0 ? Number(g.monto)/Number(g.tipo_cambio) : Number(g.monto);
+      gastosPorPart[g.partida_id]=(gastosPorPart[g.partida_id]||0)+monto;
+    }
   });
   return partidas.map(p=>({
     ...p,

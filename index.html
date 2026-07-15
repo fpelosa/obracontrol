@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.19">
+<meta name="version" content="v12.21">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.19</title>
+<title>ObraControl v12.21</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.5">
+<link rel="stylesheet" href="css/styles.css?v=12.21">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.19</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.21</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -578,9 +578,10 @@
     <div class="form-grid">
       <div class="form-group full" id="g-proyecto-group"><label>Obra *</label><select id="g-proyecto" onchange="cargarPartidasSelect()"></select></div>
       <div class="form-group full" id="g-proyecto-label" style="display:none"><label>Obra</label><div id="g-proyecto-nombre" style="padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px"></div></div>
-      <div class="form-group"><label>Partida</label><select id="g-partida"><option value="">Sin partida</option></select></div>
+      <div class="form-group"><label>Partida</label><select id="g-partida" onchange="toggleTipoCambioGasto('g')"><option value="">Sin partida</option></select></div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
       <div class="form-group"><label>Monto ($) *</label><input type="text" inputmode="decimal" id="g-monto" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/></div>
+      <div class="form-group" id="g-tc-group" style="display:none"><label>Tipo de cambio (partida en U$S)</label><input type="text" inputmode="decimal" id="g-tc" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/></div>
       <div class="form-group"><label>Fecha *</label><input type="date" id="g-fecha"/></div>
       <div class="form-group"><label>Descripción / Proveedor *</label><input id="g-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="g-comp" placeholder="Factura / Recibo"/></div>
@@ -613,9 +614,10 @@
     <input type="hidden" id="eg-id"/>
     <input type="hidden" id="eg-pid"/>
     <div class="form-grid">
-      <div class="form-group"><label>Partida</label><select id="eg-partida"><option value="">Sin partida</option></select></div>
+      <div class="form-group"><label>Partida</label><select id="eg-partida" onchange="toggleTipoCambioGasto('eg')"><option value="">Sin partida</option></select></div>
       <div class="form-group"><label>Categoría</label><select id="eg-cat"><option>Materiales</option><option>Mano de obra</option><option>Equipos</option><option>Subcontratos</option><option>Varios</option></select></div>
       <div class="form-group"><label>Monto ($) *</label><input type="text" inputmode="decimal" id="eg-monto" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/></div>
+      <div class="form-group" id="eg-tc-group" style="display:none"><label>Tipo de cambio (partida en U$S)</label><input type="text" inputmode="decimal" id="eg-tc" placeholder="0" onfocus="onFmtFocus(this)" onblur="onFmtBlur(this)"/></div>
       <div class="form-group"><label>Fecha *</label><input type="date" id="eg-fecha"/></div>
       <div class="form-group full"><label>Descripción / Proveedor *</label><input id="eg-desc" placeholder="Nombre proveedor o descripción"/></div>
       <div class="form-group"><label>Comprobante N°</label><input id="eg-comp" placeholder="Factura / Recibo"/></div>
@@ -831,7 +833,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.19</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.21</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -902,8 +904,9 @@
         </div>
       </div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="part-cant" placeholder="0" oninput="calcularPrecioUnitarioPartida('part')"/></div>
-      <div class="form-group"><label>Precio unitario ($)</label><input type="number" id="part-precio" placeholder="0" step="0.01" oninput="calcularPresupuestoDesdeUnitario('part')"/></div>
+      <div class="form-group"><label>Precio unitario</label><input type="number" id="part-precio" placeholder="0" step="0.01" oninput="calcularPresupuestoDesdeUnitario('part')"/></div>
       <div class="form-group"><label>Unidad</label><input id="part-unidad" placeholder="m², m³, gl..."/></div>
+      <div class="form-group"><label>Moneda</label><select id="part-moneda"><option value="ARS">ARS - Pesos</option><option value="USD">USD - Dólares</option></select></div>
       <div class="form-group full" id="part-pventa-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -952,8 +955,9 @@
         </div>
       </div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="ep-cant" placeholder="0" oninput="calcularPrecioUnitarioPartida('ep')"/></div>
-      <div class="form-group"><label>Precio unitario ($)</label><input type="number" id="ep-precio" placeholder="0" step="0.01" oninput="calcularPresupuestoDesdeUnitario('ep')"/></div>
+      <div class="form-group"><label>Precio unitario</label><input type="number" id="ep-precio" placeholder="0" step="0.01" oninput="calcularPresupuestoDesdeUnitario('ep')"/></div>
       <div class="form-group"><label>Unidad</label><input id="ep-unidad" placeholder="m², m³, gl..."/></div>
+      <div class="form-group"><label>Moneda</label><select id="ep-moneda"><option value="ARS">ARS - Pesos</option><option value="USD">USD - Dólares</option></select></div>
       <div class="form-group full" id="ep-pventa-section" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
         <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💰 Precio de venta</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -1265,10 +1269,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.7"></script>
-<script src="js/calculadora.js?v=12.7"></script>
-<script src="js/logs.js?v=12.7"></script>
-<script src="js/admin.js?v=12.7"></script>
+<script src="js/core.js?v=12.21"></script>
+<script src="js/calculadora.js?v=12.21"></script>
+<script src="js/logs.js?v=12.21"></script>
+<script src="js/admin.js?v=12.21"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -1924,6 +1928,7 @@ async function verDetalle(id){
   const gastosXAprobar=gastos.filter(g=>g.estado_aprobacion==="por_aprobar").length;
   const av=pct(totalGasto,p.presupuesto_total),col=colorPct(av);
   const saldo=p.presupuesto_total-totalGasto;
+  _detalleActual={p,partidas,totalGasto,pid:id};
 
   det.innerHTML=`
     <div class="detail-back" onclick="renderProyectos()">← Volver</div>
@@ -1978,7 +1983,7 @@ async function verDetalle(id){
     </div>
     ${p.estado==='Para Presupuesto' && esAdministrativoOSuperior()?`<div id="tpp" class="tab-panel">${renderParaPresupuestoHTML(p,id)}</div>`:''}
     ${p.estado==='Esperando aprobación' && esAdministrativoOSuperior()?`<div id="tea" class="tab-panel">${renderEsperandoAprobacionHTML(p,id)}</div>`:''}
-    ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id)}</div>`:''}`;
+    ${esAdmin()?`<div id="tr" class="tab-panel">${renderRentabilidadHTML(p,totalGasto,id,partidas)}</div>`:''}`;
   // Cargar adjuntos en pestaña dedicada (async)
   setTimeout(async ()=>{
     renderItemsObra(id);
@@ -2038,24 +2043,83 @@ async function verDetalle(id){
   }, 50);
 }
 
+let _modoTablaPartidas = {};
+
+function toggleModoTablaPartidas(pid){
+  _modoTablaPartidas[pid] = !_modoTablaPartidas[pid];
+  const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
+  const panel = document.getElementById('tp');
+  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
+}
+
+function recalcPresupuestoInline(partId){
+  const cant = Number(document.getElementById(`inl-cant-${partId}`)?.value)||0;
+  const precio = Number(document.getElementById(`inl-precio-${partId}`)?.value)||0;
+  const moneda = document.getElementById(`inl-moneda-${partId}`)?.value||'ARS';
+  const el = document.getElementById(`inl-ppto-${partId}`);
+  if(el) el.textContent = fmtMoneda(cant*precio, moneda);
+}
+
+async function guardarPartidaInline(partId, pid){
+  const updateData = {
+    cantidad: Number(document.getElementById(`inl-cant-${partId}`).value)||0,
+    precio_unitario: Number(document.getElementById(`inl-precio-${partId}`).value)||0,
+    moneda: document.getElementById(`inl-moneda-${partId}`).value
+  };
+  updateData.presupuesto = updateData.cantidad * updateData.precio_unitario;
+  const pventaEl = document.getElementById(`inl-pventa-${partId}`);
+  if(pventaEl) updateData.precio_venta = Number(pventaEl.value)||0;
+  const {error} = await sb.from('partidas').update(updateData).eq('id',partId);
+  if(error){notify('Error: '+error.message,false);return;}
+  await recalcularTotalesProyecto(pid);
+  verDetalle(pid);
+}
+
 function renderPartidasHTML(partidas,pid,editar){
   if(!partidas.length) return `<div class="empty"><p>Sin partidas. ${editar?'Agrega partidas al presupuesto.':''}</p></div>`;
-  return partidas.map(pa=>{
+  const modoTabla = editar && _modoTablaPartidas[pid];
+  const toolbar = editar ? `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <button class="btn btn-ghost btn-sm" onclick="toggleModoTablaPartidas('${pid}')">${modoTabla?'✕ Cerrar edición':'📝 Editar tabla'}</button>
+  </div>` : '';
+  const filas = partidas.map(pa=>{
     const av=Number(pa.pct_ejecutado),col=colorPct(av);
     const pventa=Number(pa.precio_venta)||0;
     const ppto=Number(pa.presupuesto)||0;
-    return `<div class="partida-row">
+    const moneda=pa.moneda||'ARS';
+
+    if(modoTabla){
+      return `<div class="partida-row">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="flex:1;min-width:120px">
           <span style="font-weight:500">${pa.nombre}</span>
           ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
         </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><input type="number" id="inl-cant-${pa.id}" value="${pa.cantidad||1}" oninput="recalcPresupuestoInline('${pa.id}')" onblur="guardarPartidaInline('${pa.id}','${pid}')" style="width:60px;text-align:right"/></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><input type="number" step="0.01" id="inl-precio-${pa.id}" value="${pa.precio_unitario||0}" oninput="recalcPresupuestoInline('${pa.id}')" onblur="guardarPartidaInline('${pa.id}','${pid}')" style="width:90px;text-align:right"/></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Moneda</div><select id="inl-moneda-${pa.id}" onchange="recalcPresupuestoInline('${pa.id}');guardarPartidaInline('${pa.id}','${pid}')" style="width:70px"><option value="ARS" ${moneda==='ARS'?'selected':''}>ARS</option><option value="USD" ${moneda==='USD'?'selected':''}>USD</option></select></div>
+          <div style="text-align:right;min-width:90px"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px" id="inl-ppto-${pa.id}">${fmtMoneda(ppto,moneda)}</div></div>
+          ${puedeVerPrecioCliente()?`<div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><input type="number" step="0.01" id="inl-pventa-${pa.id}" value="${pventa||0}" onblur="guardarPartidaInline('${pa.id}','${pid}')" style="width:90px;text-align:right;color:var(--accent)"/></div>`:''}
+          <button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>
+        </div>
+      </div>
+      <div style="margin-top:8px"><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
+    </div>`;
+    }
+
+    return `<div class="partida-row">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:120px">
+          <span style="font-weight:500">${pa.nombre}</span>
+          ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
+          ${moneda==='USD'?`<span class="badge badge-gray" style="margin-left:8px">U$S</span>`:''}
+        </div>
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><div style="font-size:13px">${pa.cantidad||1}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><div style="font-size:13px">${fmt(pa.precio_unitario||0)}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmt(ppto)}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${puedeVerPrecioCliente()&&pventa>0?fmt(pventa):'—'}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmt(pa.total_gastado)}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><div style="font-size:13px">${fmtMoneda(pa.precio_unitario||0,moneda)}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmtMoneda(ppto,moneda)}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${puedeVerPrecioCliente()&&pventa>0?fmtMoneda(pventa,moneda):'—'}</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmtMoneda(pa.total_gastado,moneda)}</div></div>
           <div style="text-align:right;min-width:44px"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:13px;color:${col}">${av}%</div></div>
           ${editar?`<button class="btn btn-ghost btn-sm" onclick="editarPartida('${pa.id}','${pid}')">✏️</button><button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>`:''}
         </div>
@@ -2064,6 +2128,7 @@ function renderPartidasHTML(partidas,pid,editar){
       <div style="margin-top:8px"><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
     </div>`;
   }).join('');
+  return toolbar + filas;
 }
 
 function renderGastosDetHTML(gastos,partidas,editar){
@@ -2088,7 +2153,7 @@ function renderGastosDetHTML(gastos,partidas,editar){
       <td><span class="badge badge-gray">${g.categoria}</span></td>
       <td style="color:var(--muted)">${g.comprobante_nro||'-'}</td>
       <td>${badgeEstado(ea)}</td>
-      <td style="font-weight:500;${ea==='rechazado'?'text-decoration:line-through;color:var(--muted)':''}">${fmt(g.monto)}</td>
+      <td style="font-weight:500;${ea==='rechazado'?'text-decoration:line-through;color:var(--muted)':''}">${fmt(g.monto)}${g.tipo_cambio>0?`<div style="font-size:11px;color:var(--muted);font-weight:400">≈ ${fmtMoneda(Number(g.monto)/Number(g.tipo_cambio),'USD')}</div>`:''}</td>
       <td><div id="adj-g-${g.id}" style="display:flex;flex-wrap:wrap;gap:4px;min-width:80px"><span style="color:var(--muted);font-size:11px">...</span></div>
         <label style="cursor:pointer;font-size:11px;color:var(--accent);margin-top:4px;display:block">
           + adjuntar
@@ -2105,7 +2170,40 @@ function renderGastosDetHTML(gastos,partidas,editar){
   }).join('')}</tbody></table>`;
 }
 
-function renderRentabilidadHTML(p, totalGasto, pid){
+let _detalleActual = null; // {p, partidas, totalGasto, pid} — último detalle de obra renderizado
+let _vistaRentabilidad = {}; // pid -> 'ARS' | 'USD'
+
+function setVistaRentabilidad(pid, moneda){
+  _vistaRentabilidad[pid] = moneda;
+  refrescarTabRentabilidad(pid);
+}
+
+function refrescarTabRentabilidad(pid){
+  if(!_detalleActual || _detalleActual.pid!==pid) return;
+  const el = document.getElementById('tr');
+  if(el) el.innerHTML = renderRentabilidadHTML(_detalleActual.p, _detalleActual.totalGasto, pid, _detalleActual.partidas);
+}
+
+async function guardarTipoCambioProyecto(pid, valor){
+  const tc = Number(String(valor).replace(',','.'))||null;
+  const {error} = await sb.from('proyectos').update({tipo_cambio_usd:tc}).eq('id',pid);
+  if(error){notify('Error: '+error.message,false);return;}
+  await recalcularTotalesProyecto(pid);
+  const {data:proyActualizado} = await sb.from('proyectos').select('*').eq('id',pid).single();
+  if(_detalleActual && _detalleActual.pid===pid && proyActualizado) Object.assign(_detalleActual.p, proyActualizado);
+  refrescarTabRentabilidad(pid);
+}
+
+function renderRentabilidadHTML(p, totalGasto, pid, partidas){
+  const tc = Number(p.tipo_cambio_usd)||0;
+  const vista = _vistaRentabilidad[pid] || 'ARS';
+  // precio_cliente/presupuesto_total del proyecto ya están consolidados en pesos
+  // (recalcularTotalesProyecto convierte las partidas en USD con el tipo de cambio cargado).
+  // Si se eligió ver en dólares pero todavía no hay tipo de cambio cargado, mostrar en
+  // pesos igual (mejor que mostrar el mismo número con el símbolo U$S, que sería engañoso).
+  const vistaEfectiva = vista==='USD' && tc<=0 ? 'ARS' : vista;
+  const fmtVista = monto => vistaEfectiva==='USD' ? fmtMoneda(monto/tc,'USD') : fmt(monto);
+
   const precioCliente = Number(p.precio_cliente)||0;
   const presupuesto = Number(p.presupuesto_total)||0;
   const gananciaEsperada = precioCliente - presupuesto;
@@ -2113,24 +2211,52 @@ function renderRentabilidadHTML(p, totalGasto, pid){
   const margenEsperado = precioCliente>0 ? (gananciaEsperada/precioCliente*100).toFixed(1) : 0;
   const margenReal = precioCliente>0 ? (gananciaReal/precioCliente*100).toFixed(1) : 0;
 
+  const partidasArs = (partidas||[]).filter(pa=>(pa.moneda||'ARS')!=='USD');
+  const partidasUsd = (partidas||[]).filter(pa=>pa.moneda==='USD');
+  const suma = (arr,campo) => arr.reduce((s,pa)=>s+Number(pa[campo]||0),0);
+  const avisoTC = tc<=0
+    ? `<div style="margin-top:10px;font-size:12px;color:var(--accent)">⚠️ Cargá el tipo de cambio para ver el resumen en dólares${partidasUsd.length?' y para que el presupuesto/precio al cliente consolidados conviertan correctamente las partidas en U$S':''}.</div>`
+    : '';
+  const desglose = (partidasArs.length && partidasUsd.length) ? `
+    <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="font-size:12px"><span style="color:var(--muted)">🇦🇷 Partidas en pesos (${partidasArs.length})</span><br/>Presup.: ${fmt(suma(partidasArs,'presupuesto'))} · Venta: ${fmt(suma(partidasArs,'precio_venta'))}</div>
+      <div style="font-size:12px"><span style="color:var(--muted)">🇺🇸 Partidas en dólares (${partidasUsd.length})</span><br/>Presup.: ${fmtMoneda(suma(partidasUsd,'presupuesto'),'USD')} · Venta: ${fmtMoneda(suma(partidasUsd,'precio_venta'),'USD')}</div>
+    </div>` : '';
+
   return `
   <div style="margin-bottom:16px">
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Ver resumen en</span>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setVistaRentabilidad('${pid}','ARS')" style="${vista==='ARS'?'border-color:var(--accent);color:var(--accent)':''}">$ Pesos</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="setVistaRentabilidad('${pid}','USD')" style="${vista==='USD'?'border-color:var(--accent);color:var(--accent)':''}">U$S Dólares</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="font-size:12px;color:var(--muted)">Tipo de cambio (1 U$S = $)</label>
+          <input type="number" step="0.01" id="rv-tc-${pid}" value="${p.tipo_cambio_usd||''}" placeholder="0" style="width:100px" onblur="guardarTipoCambioProyecto('${pid}',this.value)"/>
+        </div>
+      </div>
+      ${avisoTC}
+      ${desglose}
+    </div>
+
     <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
       <div class="metric" style="border-color:rgba(59,130,246,.3)">
         <div class="metric-label">Precio al cliente</div>
-        <div class="metric-value" style="font-size:18px;color:var(--accent2)">${fmt(precioCliente)}</div>
+        <div class="metric-value" style="font-size:18px;color:var(--accent2)">${fmtVista(precioCliente)}</div>
         <div class="metric-sub" style="margin-top:6px">
           <button class="btn btn-ghost btn-sm" onclick="editarPrecioCliente('${pid}',${precioCliente})">✏️ Editar</button>
         </div>
       </div>
       <div class="metric" style="border-color:rgba(245,166,35,.3)">
         <div class="metric-label">Presupuesto obra</div>
-        <div class="metric-value" style="font-size:18px;color:var(--accent)">${fmt(presupuesto)}</div>
+        <div class="metric-value" style="font-size:18px;color:var(--accent)">${fmtVista(presupuesto)}</div>
         <div class="metric-sub">Lo máximo a gastar</div>
       </div>
       <div class="metric" style="border-color:rgba(34,197,94,.3)">
         <div class="metric-label">Ganancia esperada</div>
-        <div class="metric-value" style="font-size:18px;color:${gananciaEsperada>=0?'var(--green)':'var(--red)'}">${fmt(gananciaEsperada)}</div>
+        <div class="metric-value" style="font-size:18px;color:${gananciaEsperada>=0?'var(--green)':'var(--red)'}">${fmtVista(gananciaEsperada)}</div>
         <div class="metric-sub">Margen: ${margenEsperado}%</div>
       </div>
     </div>
@@ -2140,16 +2266,16 @@ function renderRentabilidadHTML(p, totalGasto, pid){
       <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
         <div class="metric">
           <div class="metric-label">Gastado hasta hoy</div>
-          <div class="metric-value" style="font-size:18px;color:var(--red)">${fmt(totalGasto)}</div>
+          <div class="metric-value" style="font-size:18px;color:var(--red)">${fmtVista(totalGasto)}</div>
         </div>
         <div class="metric">
           <div class="metric-label">Ganancia real actual</div>
-          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=0?'var(--green)':'var(--red)'}">${fmt(gananciaReal)}</div>
+          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=0?'var(--green)':'var(--red)'}">${fmtVista(gananciaReal)}</div>
           <div class="metric-sub">Margen real: ${margenReal}%</div>
         </div>
         <div class="metric">
           <div class="metric-label">Diferencia vs esperado</div>
-          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=gananciaEsperada?'var(--green)':'var(--red)'}">${fmt(gananciaReal-gananciaEsperada)}</div>
+          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=gananciaEsperada?'var(--green)':'var(--red)'}">${fmtVista(gananciaReal-gananciaEsperada)}</div>
           <div class="metric-sub">${gananciaReal>=gananciaEsperada?'✓ Mejor de lo esperado':'⚠ Por debajo del esperado'}</div>
         </div>
       </div>
@@ -2932,10 +3058,15 @@ function calcularPresupuestoDesdeUnitario(prefix){
 
 // ── RECALCULAR TOTALES PROYECTO DESDE PARTIDAS ──
 async function recalcularTotalesProyecto(pid){
-  const {data:partidas}=await sb.from('partidas').select('presupuesto,precio_venta').eq('proyecto_id',pid);
+  const {data:partidas}=await sb.from('partidas').select('presupuesto,precio_venta,moneda').eq('proyecto_id',pid);
   if(!partidas) return;
-  const totalPpto=partidas.reduce((s,p)=>s+Number(p.presupuesto||0),0);
-  const totalPventa=partidas.reduce((s,p)=>s+Number(p.precio_venta||0),0);
+  const {data:proy}=await sb.from('proyectos').select('tipo_cambio_usd').eq('id',pid).single();
+  const tc=Number(proy?.tipo_cambio_usd)||0;
+  // Las partidas en USD se convierten a pesos (si hay tipo de cambio cargado) para que
+  // el presupuesto/precio al cliente del proyecto queden en una sola moneda consolidada.
+  const aArs = (monto,moneda) => moneda==='USD' && tc>0 ? Number(monto||0)*tc : Number(monto||0);
+  const totalPpto=partidas.reduce((s,p)=>s+aArs(p.presupuesto,p.moneda),0);
+  const totalPventa=partidas.reduce((s,p)=>s+aArs(p.precio_venta,p.moneda),0);
   await sb.from('proyectos').update({
     presupuesto_total: totalPpto,
     precio_cliente: totalPventa>0?totalPventa:undefined
@@ -2952,13 +3083,15 @@ async function guardarPartida(){
     precio_venta:puedeVerPrecioCliente()?parseInput('part-pventa'):0,
     unidad:document.getElementById('part-unidad').value,
     cantidad:Number(document.getElementById('part-cant').value)||0,
-    precio_unitario:Number(document.getElementById('part-precio').value)||0};
+    precio_unitario:Number(document.getElementById('part-precio').value)||0,
+    moneda:document.getElementById('part-moneda').value};
   const {data:nueva,error}=await sb.from('partidas').insert(data).select().single();
   if(error){notify('Error: '+error.message,false);return;}
   if(nueva) await subirAdjuntos('partida', nueva.id, 'part');
   notify('Partida agregada');
   closeModal('modal-partida');
   ['part-nombre','part-ppto','part-unidad','part-cant','part-precio','part-extra','part-pventa'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('part-moneda').value='ARS';
   await recalcularTotalesProyecto(pid);
   verDetalle(pid);
 }
@@ -2973,6 +3106,7 @@ async function editarPartida(partId, pid){
   document.getElementById('ep-unidad').value=pa.unidad||'';
   document.getElementById('ep-cant').value=pa.cantidad||0;
   document.getElementById('ep-precio').value=pa.precio_unitario||0;
+  document.getElementById('ep-moneda').value=pa.moneda||'ARS';
 
   const ppto = Number(pa.presupuesto)||0;
   const pventa = Number(pa.precio_venta)||0;
@@ -3017,7 +3151,8 @@ async function guardarPartidaEdicion(){
     presupuesto:parseInput("ep-ppto"),
     unidad:document.getElementById('ep-unidad').value,
     cantidad:Number(document.getElementById('ep-cant').value)||0,
-    precio_unitario:Number(document.getElementById('ep-precio').value)||0
+    precio_unitario:Number(document.getElementById('ep-precio').value)||0,
+    moneda:document.getElementById('ep-moneda').value
   };
   if(puedeVerPrecioCliente()) updateData.precio_venta=parseInput("ep-pventa");
   const {error}=await sb.from('partidas').update(updateData).eq('id',partId);
@@ -3040,9 +3175,20 @@ async function eliminarPartida(partId,pid){
 // ── GASTOS ──────────────────────────────
 async function cargarPartidasSelect(){
   const pid=document.getElementById('g-proyecto').value;
-  const {data}=await sb.from('partidas').select('id,nombre').eq('proyecto_id',pid);
+  const {data}=await sb.from('partidas').select('id,nombre,moneda').eq('proyecto_id',pid);
   const sel=document.getElementById('g-partida');
-  sel.innerHTML='<option value="">Sin partida</option>'+(data||[]).map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  sel.innerHTML='<option value="">Sin partida</option>'+(data||[]).map(p=>`<option value="${p.id}" data-moneda="${p.moneda||'ARS'}">${p.nombre}</option>`).join('');
+  toggleTipoCambioGasto('g');
+}
+
+// Muestra el campo "Tipo de cambio" en el modal de gasto solo si la partida elegida está en USD
+function toggleTipoCambioGasto(prefix){
+  const sel=document.getElementById(`${prefix}-partida`);
+  const grupo=document.getElementById(`${prefix}-tc-group`);
+  if(!sel||!grupo) return;
+  const moneda=sel.selectedOptions[0]?.dataset.moneda||'ARS';
+  grupo.style.display = moneda==='USD' ? '' : 'none';
+  if(moneda!=='USD') document.getElementById(`${prefix}-tc`).value='';
 }
 
 async function poblarSelectGasto(){
@@ -3078,6 +3224,7 @@ async function guardarGasto(){
   const desc=document.getElementById('g-desc').value.trim();
   if(!pid||!monto||!desc){notify('Completá obra, monto y descripción',false);return;}
   const partidaId=document.getElementById('g-partida').value||null;
+  const monedaPartida=document.getElementById('g-partida').selectedOptions[0]?.dataset.moneda||'ARS';
   // Supervisor siempre carga en "por_aprobar"; admin y superiores en "aprobado"
   const estadoAprobacion = esSupervisor() ? 'por_aprobar' : 'aprobado';
   const data={proyecto_id:pid,partida_id:partidaId,categoria:document.getElementById('g-cat').value,
@@ -3085,6 +3232,7 @@ async function guardarGasto(){
     comprobante_nro:document.getElementById('g-comp').value,observaciones:document.getElementById('g-obs').value,
     cuenta_id:document.getElementById('g-cuenta').value||null,
     estado_aprobacion:estadoAprobacion,
+    tipo_cambio: monedaPartida==='USD' ? (parseInput('g-tc')||null) : null,
     created_by:currentUser.id,pagado_por:currentUser.id};
   const {data:nuevo,error}=await sb.from('gastos').insert(data).select().single();
   if(error){notify('Error: '+error.message,false);return;}
@@ -3093,8 +3241,9 @@ async function guardarGasto(){
   if(nuevo) log('crear', 'gasto', nuevo.id, document.getElementById('g-desc')?.value||'', {monto:data.monto, proyecto:pid, estado:estadoAprobacion});
   notify(esSupervisor()?'Gasto enviado para aprobación':'Gasto registrado');
   closeModal('modal-gasto');
-  ['g-monto','g-desc','g-comp','g-obs'].forEach(id=>document.getElementById(id).value='');
+  ['g-monto','g-desc','g-comp','g-obs','g-tc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('g-cuenta').value='';
+  document.getElementById('g-tc-group').style.display='none';
   if(document.getElementById('g-es-factura')) document.getElementById('g-es-factura').checked=false;
   await fetchGastos();
   renderGastos(); renderDashboard();
@@ -3107,9 +3256,9 @@ async function editarGasto(gid, pid){
   if(!g){notify('Error al cargar el gasto',false);return;}
   document.getElementById('eg-id').value=g.id;
   document.getElementById('eg-pid').value=pid;
-  const {data:partidas} = await sb.from('partidas').select('id,nombre').eq('proyecto_id',pid).order('nombre');
+  const {data:partidas} = await sb.from('partidas').select('id,nombre,moneda').eq('proyecto_id',pid).order('nombre');
   const selPart = document.getElementById('eg-partida');
-  selPart.innerHTML='<option value="">Sin partida</option>'+(partidas||[]).map(p=>`<option value="${p.id}" ${p.id===g.partida_id?'selected':''}>${p.nombre}</option>`).join('');
+  selPart.innerHTML='<option value="">Sin partida</option>'+(partidas||[]).map(p=>`<option value="${p.id}" data-moneda="${p.moneda||'ARS'}" ${p.id===g.partida_id?'selected':''}>${p.nombre}</option>`).join('');
   document.getElementById('eg-cat').value=g.categoria||'Materiales';
   document.getElementById('eg-monto').value=fmtInput(g.monto||0);
   document.getElementById('eg-fecha').value=g.fecha||'';
@@ -3117,6 +3266,8 @@ async function editarGasto(gid, pid){
   document.getElementById('eg-comp').value=g.comprobante_nro||'';
   document.getElementById('eg-obs').value=g.observaciones||'';
   document.getElementById('eg-estado').value=g.estado_aprobacion||'aprobado';
+  toggleTipoCambioGasto('eg');
+  document.getElementById('eg-tc').value=fmtInput(g.tipo_cambio||0);
   openModal('modal-editar-gasto');
 }
 
@@ -3126,6 +3277,7 @@ async function guardarEdicionGasto(){
   const monto=parseInput('eg-monto');
   const desc=document.getElementById('eg-desc').value.trim();
   if(!monto||!desc){notify('Monto y descripción son obligatorios',false);return;}
+  const monedaPartida=document.getElementById('eg-partida').selectedOptions[0]?.dataset.moneda||'ARS';
   const {error}=await sb.from('gastos').update({
     partida_id:document.getElementById('eg-partida').value||null,
     categoria:document.getElementById('eg-cat').value,
@@ -3134,7 +3286,8 @@ async function guardarEdicionGasto(){
     descripcion:desc,
     comprobante_nro:document.getElementById('eg-comp').value||null,
     observaciones:document.getElementById('eg-obs').value||null,
-    estado_aprobacion:document.getElementById('eg-estado').value
+    estado_aprobacion:document.getElementById('eg-estado').value,
+    tipo_cambio: monedaPartida==='USD' ? (parseInput('eg-tc')||null) : null
   }).eq('id',gid);
   if(error){notify('Error: '+error.message,false);return;}
   notify('Gasto actualizado');
@@ -3301,7 +3454,7 @@ async function renderReportes(){
       const av=Number(pa.pct_ejecutado),col=colorPct(av);
       return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
         <div style="flex:1"><div style="font-size:13px;margin-bottom:4px">${pa.nombre}</div><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
-        <div style="min-width:130px;text-align:right;font-size:12px;color:var(--muted)">${fmt(pa.total_gastado)} / ${fmt(pa.presupuesto)}</div>
+        <div style="min-width:130px;text-align:right;font-size:12px;color:var(--muted)">${fmtMoneda(pa.total_gastado,pa.moneda)} / ${fmtMoneda(pa.presupuesto,pa.moneda)}</div>
         <div style="min-width:38px;text-align:right;color:${col};font-size:13px;font-weight:500">${av}%</div>
       </div>`;
     }).join('')}</div>`;
