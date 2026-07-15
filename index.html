@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.24">
+<meta name="version" content="v12.25">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.24</title>
+<title>ObraControl v12.25</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.24">
+<link rel="stylesheet" href="css/styles.css?v=12.25">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.24</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.25</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -833,7 +833,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.24</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.25</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1269,10 +1269,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.24"></script>
-<script src="js/calculadora.js?v=12.24"></script>
-<script src="js/logs.js?v=12.24"></script>
-<script src="js/admin.js?v=12.24"></script>
+<script src="js/core.js?v=12.25"></script>
+<script src="js/calculadora.js?v=12.25"></script>
+<script src="js/logs.js?v=12.25"></script>
+<script src="js/admin.js?v=12.25"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -2044,17 +2044,21 @@ async function verDetalle(id){
 }
 
 let _modoTablaPartidas = {};
+let _ordenEdicion = {}; // pid -> array de ids de partidas en el orden actual de edición (drag & drop)
+let _dragSrcPartidaIdx = null;
 
 function toggleModoTablaPartidas(pid){
   _modoTablaPartidas[pid] = !_modoTablaPartidas[pid];
   const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
+  if(_modoTablaPartidas[pid] && partidas) _ordenEdicion[pid] = partidas.map(pa=>pa.id);
   const panel = document.getElementById('tp');
   if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
 }
 
-// Descarta los cambios sin guardar y vuelve a los valores originales (los que ya están en _detalleActual)
+// Descarta los cambios sin guardar (incluido el orden) y vuelve a los valores originales
 function cancelarEdicionPartidas(pid){
   _modoTablaPartidas[pid] = false;
+  delete _ordenEdicion[pid];
   const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
   const panel = document.getElementById('tp');
   if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
@@ -2068,9 +2072,36 @@ function recalcPresupuestoInline(partId){
   if(el) el.textContent = fmtMoneda(cant*precio, moneda);
 }
 
-// Manda a Supabase todas las filas que están en modo edición de una sola vez
+function dragStartPartida(ev, idx){
+  _dragSrcPartidaIdx = idx;
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', idx);
+  ev.currentTarget.style.opacity = '.4';
+}
+function dragOverPartida(ev){
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+}
+function dropPartida(ev, pid, idx){
+  ev.preventDefault();
+  const orden = _ordenEdicion[pid];
+  if(!orden || _dragSrcPartidaIdx===null || _dragSrcPartidaIdx===idx) return;
+  const [moved] = orden.splice(_dragSrcPartidaIdx,1);
+  orden.splice(idx,0,moved);
+  _dragSrcPartidaIdx = null;
+  const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
+  const panel = document.getElementById('tp');
+  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
+}
+function dragEndPartida(ev){
+  ev.currentTarget.style.opacity = '';
+  _dragSrcPartidaIdx = null;
+}
+
+// Manda a Supabase todas las filas que están en modo edición de una sola vez (campos + orden)
 async function guardarCambiosPartidas(pid){
   if(!_detalleActual || _detalleActual.pid!==pid) return;
+  const orden = _ordenEdicion[pid];
   const cambios = _detalleActual.partidas.map(pa=>{
     const cantEl = document.getElementById(`inl-cant-${pa.id}`);
     if(!cantEl) return null;
@@ -2082,6 +2113,7 @@ async function guardarCambiosPartidas(pid){
     data.presupuesto = data.cantidad * data.precio_unitario;
     const pventaEl = document.getElementById(`inl-pventa-${pa.id}`);
     if(pventaEl) data.precio_venta = Number(pventaEl.value)||0;
+    if(orden) data.orden = orden.indexOf(pa.id);
     return {id: pa.id, data};
   }).filter(Boolean);
   const resultados = await Promise.all(cambios.map(c=>sb.from('partidas').update(c.data).eq('id',c.id)));
@@ -2089,6 +2121,7 @@ async function guardarCambiosPartidas(pid){
   if(conError){notify('Error: '+conError.error.message,false);return;}
   await recalcularTotalesProyecto(pid);
   _modoTablaPartidas[pid] = false;
+  delete _ordenEdicion[pid];
   notify('Cambios guardados');
   verDetalle(pid);
 }
@@ -2101,7 +2134,13 @@ function renderPartidasHTML(partidas,pid,editar){
       ? `<button class="btn btn-ghost btn-sm" onclick="cancelarEdicionPartidas('${pid}')">✕ Cancelar edición</button><button class="btn btn-primary btn-sm" onclick="guardarCambiosPartidas('${pid}')">💾 Guardar cambios</button>`
       : `<button class="btn btn-ghost btn-sm" onclick="toggleModoTablaPartidas('${pid}')">📝 Editar tabla</button>`}
   </div>` : '';
-  const filas = partidas.map((pa,idx)=>{
+  // En modo edición, las filas se muestran en el orden de arrastre en curso (si hay uno)
+  let listaPartidas = partidas;
+  if(modoTabla && _ordenEdicion[pid]){
+    const porId = new Map(partidas.map(pa=>[pa.id,pa]));
+    listaPartidas = _ordenEdicion[pid].map(id=>porId.get(id)).filter(Boolean);
+  }
+  const filas = listaPartidas.map((pa,idx)=>{
     const av=Number(pa.pct_ejecutado),col=colorPct(av);
     const pventa=Number(pa.precio_venta)||0;
     const ppto=Number(pa.presupuesto)||0;
@@ -2116,42 +2155,41 @@ function renderPartidasHTML(partidas,pid,editar){
     const precioUnitInicial=pa.precio_unitario>0?pa.precio_unitario:(ppto>0?ppto/cantParaCalculo:0);
 
     if(modoTabla){
-      return `<div class="partida-row">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div style="flex:1;min-width:120px">
-          <span style="font-weight:500">${pa.nombre}</span>
-          ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Moneda</div><select id="inl-moneda-${pa.id}" tabindex="-1" onchange="recalcPresupuestoInline('${pa.id}')" style="width:70px"><option value="ARS" ${moneda==='ARS'?'selected':''}>ARS</option><option value="USD" ${moneda==='USD'?'selected':''}>USD</option></select></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><input type="number" id="inl-cant-${pa.id}" tabindex="${tiCant}" value="${pa.cantidad||1}" oninput="recalcPresupuestoInline('${pa.id}')" style="width:60px;text-align:right"/></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><input type="number" step="0.01" id="inl-precio-${pa.id}" tabindex="${tiPrecio}" value="${precioUnitInicial}" oninput="recalcPresupuestoInline('${pa.id}')" style="width:90px;text-align:right"/></div>
-          <div style="text-align:right;min-width:90px"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px" id="inl-ppto-${pa.id}">${fmtMoneda(ppto,moneda)}</div></div>
-          ${puedeVerPrecioCliente()?`<div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><input type="number" step="0.01" id="inl-pventa-${pa.id}" tabindex="${tiPventa}" value="${pventa||0}" style="width:90px;text-align:right;color:var(--accent)"/></div>`:''}
-          <button class="btn btn-danger btn-sm" tabindex="-1" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>
-        </div>
+      const colsEdit=`70px 60px 90px 100px${esAdmin()?' 90px':''} 40px`;
+      return `<div class="partida-row" draggable="true" ondragstart="dragStartPartida(event,${idx})" ondragover="dragOverPartida(event)" ondrop="dropPartida(event,'${pid}',${idx})" ondragend="dragEndPartida(event)">
+      <div style="margin-bottom:8px">
+        <span style="cursor:grab;color:var(--muted);user-select:none;margin-right:6px" title="Arrastrar para reordenar">⋮⋮</span>
+        <span style="font-weight:500">${pa.nombre}</span>
+        ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:${colsEdit};gap:10px;align-items:end">
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Moneda</div><select id="inl-moneda-${pa.id}" tabindex="-1" onchange="recalcPresupuestoInline('${pa.id}')" style="width:100%"><option value="ARS" ${moneda==='ARS'?'selected':''}>ARS</option><option value="USD" ${moneda==='USD'?'selected':''}>USD</option></select></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><input type="number" id="inl-cant-${pa.id}" tabindex="${tiCant}" value="${pa.cantidad||1}" oninput="recalcPresupuestoInline('${pa.id}')" style="width:100%;text-align:right"/></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><input type="number" step="0.01" id="inl-precio-${pa.id}" tabindex="${tiPrecio}" value="${precioUnitInicial}" oninput="recalcPresupuestoInline('${pa.id}')" style="width:100%;text-align:right"/></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px;padding:8px 0" id="inl-ppto-${pa.id}">${fmtMoneda(ppto,moneda)}</div></div>
+        ${esAdmin()?`<div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><input type="number" step="0.01" id="inl-pventa-${pa.id}" tabindex="${tiPventa}" value="${pventa||0}" style="width:100%;text-align:right;color:var(--accent)"/></div>`:''}
+        <div style="text-align:right"><button class="btn btn-danger btn-sm" tabindex="-1" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button></div>
       </div>
       <div style="margin-top:8px"><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
     </div>`;
     }
 
+    const colsVer=`56px 90px 100px${esAdmin()?' 90px 110px':''} 90px 44px auto`;
     return `<div class="partida-row">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div style="flex:1;min-width:120px">
-          <span style="font-weight:500">${pa.nombre}</span>
-          ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
-          ${moneda==='USD'?`<span class="badge badge-gray" style="margin-left:8px">U$S</span>`:''}
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><div style="font-size:13px">${pa.cantidad||1}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><div style="font-size:13px">${fmtMoneda(pa.precio_unitario||0,moneda)}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmtMoneda(ppto,moneda)}</div></div>
-          <div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${puedeVerPrecioCliente()&&pventa>0?fmtMoneda(pventa,moneda):'—'}</div></div>
-          ${puedeVerPrecioCliente()&&pventa>0?`<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Utilidad</div><div style="font-size:13px;color:${utilidad>=0?'var(--green)':'var(--red)'}">${fmtMoneda(utilidad,moneda)} <span style="font-size:11px">(${margenItem}%)</span></div></div>`:''}
-          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmtMoneda(pa.total_gastado,moneda)}</div></div>
-          <div style="text-align:right;min-width:44px"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:13px;color:${col}">${av}%</div></div>
-          ${editar?`<button class="btn btn-ghost btn-sm" onclick="editarPartida('${pa.id}','${pid}')">✏️</button><button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>`:''}
-        </div>
+      <div style="margin-bottom:8px">
+        <span style="font-weight:500">${pa.nombre}</span>
+        ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
+        ${moneda==='USD'?`<span class="badge badge-gray" style="margin-left:8px">U$S</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:${colsVer};gap:14px;align-items:center;justify-content:end">
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><div style="font-size:13px">${pa.cantidad||1}</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Precio unit.</div><div style="font-size:13px">${fmtMoneda(pa.precio_unitario||0,moneda)}</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Presupuesto</div><div style="font-size:13px">${fmtMoneda(ppto,moneda)}</div></div>
+        ${esAdmin()?`<div style="text-align:right"><div style="font-size:11px;color:var(--accent)">Precio venta</div><div style="font-size:13px;color:var(--accent);font-weight:500">${pventa>0?fmtMoneda(pventa,moneda):'—'}</div></div>`:''}
+        ${esAdmin()?`<div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Utilidad</div><div style="font-size:13px;color:${pventa>0?(utilidad>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${pventa>0?`${fmtMoneda(utilidad,moneda)} <span style="font-size:11px">(${margenItem}%)</span>`:'—'}</div></div>`:''}
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Gastado</div><div style="font-size:13px;color:${col}">${fmtMoneda(pa.total_gastado,moneda)}</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Avance</div><div style="font-size:13px;color:${col}">${av}%</div></div>
+        <div style="text-align:right;white-space:nowrap">${editar?`<button class="btn btn-ghost btn-sm" onclick="editarPartida('${pa.id}','${pid}')">✏️</button><button class="btn btn-danger btn-sm" onclick="eliminarPartida('${pa.id}','${pid}')">✕</button>`:''}</div>
       </div>
       <div id="adj-pa-${pa.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
       <div style="margin-top:8px"><div class="progress-wrap"><div class="progress-bar" style="width:${Math.min(av,100)}%;background:${col}"></div></div></div>
@@ -3054,7 +3092,7 @@ function setModoVenta(prefix, modo){
 }
 
 function calcularPrecioVentaPartida(prefix){
-  if(!puedeVerPrecioCliente()) return;
+  if(!esAdmin()) return;
   const modo=_modoVenta[prefix]||'pct';
   if(modo==='man') return;
   const ppto=parseInput(`${prefix}-ppto`);
@@ -3109,7 +3147,7 @@ async function guardarPartida(){
   if(!nombre){notify('Nombre obligatorio',false);return;}
   const data={proyecto_id:pid,nombre,
     presupuesto:parseInput('part-ppto'),
-    precio_venta:puedeVerPrecioCliente()?parseInput('part-pventa'):0,
+    precio_venta:esAdmin()?parseInput('part-pventa'):0,
     unidad:document.getElementById('part-unidad').value,
     cantidad:Number(document.getElementById('part-cant').value)||0,
     precio_unitario:Number(document.getElementById('part-precio').value)||0,
@@ -3183,7 +3221,7 @@ async function guardarPartidaEdicion(){
     precio_unitario:Number(document.getElementById('ep-precio').value)||0,
     moneda:document.getElementById('ep-moneda').value
   };
-  if(puedeVerPrecioCliente()) updateData.precio_venta=parseInput("ep-pventa");
+  if(esAdmin()) updateData.precio_venta=parseInput("ep-pventa");
   const {error}=await sb.from('partidas').update(updateData).eq('id',partId);
   if(error){notify('Error: '+error.message,false);return;}
   await subirAdjuntos('partida', partId, 'ep');
@@ -5486,7 +5524,7 @@ function actualizarVisibilidadAdmin(){
   const pventaSecs=['part-pventa-section','ep-pventa-section'];
   pventaSecs.forEach(id=>{
     const el=document.getElementById(id);
-    if(el) el.style.display=puedeVerPrecioCliente()?'':'none';
+    if(el) el.style.display=esAdmin()?'':'none';
   });
   // Supervisor: ocultar nav items que no corresponden. Para todos los demás, mostrarlos.
   const navSupervisorOcultos=['nav-gastos','nav-finanzas','nav-section-empresa','nav-presupuestos','nav-rentabilidad','nav-admin','nav-cobros','nav-clientes','nav-logs'];

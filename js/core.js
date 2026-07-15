@@ -61,7 +61,6 @@ const puedeEditar = () => currentPerfil && ['admin','director','ingeniero','admi
 const esAdmin = () => currentPerfil?.rol === 'admin';
 const esSupervisor = () => !currentPerfil || currentPerfil.rol === 'supervisor';
 const esAdministrativoOSuperior = () => currentPerfil && ['admin','director','ingeniero','administrativo'].includes(currentPerfil.rol);
-const puedeVerPrecioCliente = () => puedeEditar();
 
 function notify(msg, ok=true){
   const n=document.getElementById('notif');
