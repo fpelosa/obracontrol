@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.26">
+<meta name="version" content="v12.27">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.26</title>
+<title>ObraControl v12.27</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.26">
+<link rel="stylesheet" href="css/styles.css?v=12.27">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.26</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.27</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -833,7 +833,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.26</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.27</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1269,10 +1269,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.26"></script>
-<script src="js/calculadora.js?v=12.26"></script>
-<script src="js/logs.js?v=12.26"></script>
-<script src="js/admin.js?v=12.26"></script>
+<script src="js/core.js?v=12.27"></script>
+<script src="js/calculadora.js?v=12.27"></script>
+<script src="js/logs.js?v=12.27"></script>
+<script src="js/admin.js?v=12.27"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -3788,6 +3788,14 @@ async function generarPresupuestoDesdeProyecto(proyId) {
   const {data:proy} = await sb.from('proyectos').select('*').eq('id',proyId).single();
   const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('created_at');
 
+  // Si ya había un presupuesto vinculado a esta obra, rescatar los ítems que se habían
+  // "unificado" a mano para no perder esa agrupación en esta nueva generación.
+  let gruposPrevios = [];
+  if(proy.presupuesto_ref_id){
+    const {data:itemsPrevios} = await sb.from('presupuestos_items').select('descripcion,moneda,partida_ids').eq('presupuesto_id',proy.presupuesto_ref_id);
+    gruposPrevios = (itemsPrevios||[]).filter(it=>Array.isArray(it.partida_ids) && it.partida_ids.length>1);
+  }
+
   const {data:last} = await sb.from('presupuestos').select('numero').order('created_at',{ascending:false}).limit(1);
   const lastNum = last?.[0]?.numero || '270000';
   const nextNum = String(parseInt(lastNum.replace(/\D/g,'')) + 1);
@@ -3823,14 +3831,48 @@ async function generarPresupuestoDesdeProyecto(proyId) {
     tiempo_estimado_obra: proy.tiempo_estimado_obra || ''
   };
 
-  presItems = (partidas||[]).length
-    ? partidas.map(pa=>({
-        desc: pa.nombre||'',
-        cantidad: pa.cantidad||1,
-        precio: pa.cantidad>1 ? Math.round((pa.precio_venta||pa.presupuesto||0) / pa.cantidad) : (pa.precio_venta||pa.presupuesto||0),
-        costo: pa.cantidad>1 ? Math.round((pa.presupuesto||0) / pa.cantidad) : (pa.presupuesto||0)
-      }))
-    : [{desc:'', cantidad:1, precio:0, costo:0}];
+  // Reconstruir los ítems: las partidas que antes formaban parte de un grupo unificado
+  // se vuelven a agrupar (recalculando con las partidas que sobrevivan), y el resto se
+  // arma como una línea suelta por partida, igual que antes.
+  const partidasPorId = new Map((partidas||[]).map(pa=>[pa.id,pa]));
+  const itemDesdePartida = pa => ({
+    desc: pa.nombre||'',
+    cantidad: pa.cantidad||1,
+    precio: pa.cantidad>1 ? Math.round((pa.precio_venta||pa.presupuesto||0) / pa.cantidad) : (pa.precio_venta||pa.presupuesto||0),
+    costo: pa.cantidad>1 ? Math.round((pa.presupuesto||0) / pa.cantidad) : (pa.presupuesto||0),
+    moneda: pa.moneda||'ARS',
+    partida_ids: [{id:pa.id, nombre:pa.nombre}]
+  });
+  const gruposUsados = new Set();
+  const consumidas = new Set();
+  presItems = [];
+  (partidas||[]).forEach(pa=>{
+    if(consumidas.has(pa.id)) return;
+    const idxGrupo = gruposPrevios.findIndex((g,gi)=>!gruposUsados.has(gi) && g.partida_ids.some(x=>x.id===pa.id));
+    if(idxGrupo>=0){
+      gruposUsados.add(idxGrupo);
+      const grupo = gruposPrevios[idxGrupo];
+      const sobrevivientes = grupo.partida_ids.filter(x=>partidasPorId.has(x.id));
+      sobrevivientes.forEach(x=>consumidas.add(x.id));
+      if(sobrevivientes.length){
+        let totalPrecio=0, totalCosto=0;
+        sobrevivientes.forEach(x=>{
+          const p2 = partidasPorId.get(x.id);
+          totalPrecio += Number(p2.precio_venta||p2.presupuesto||0);
+          totalCosto += Number(p2.presupuesto||0);
+        });
+        presItems.push({
+          desc: grupo.descripcion, cantidad: 1, precio: totalPrecio, costo: totalCosto,
+          moneda: grupo.moneda || partidasPorId.get(sobrevivientes[0].id).moneda || 'ARS',
+          partida_ids: sobrevivientes.map(x=>({id:x.id, nombre:partidasPorId.get(x.id).nombre}))
+        });
+      }
+      return;
+    }
+    presItems.push(itemDesdePartida(pa));
+    consumidas.add(pa.id);
+  });
+  if(!presItems.length) presItems = [{desc:'', cantidad:1, precio:0, costo:0, moneda:'ARS', partida_ids:[]}];
 
   presupuestoFotos = [];
 
@@ -3856,21 +3898,21 @@ async function nuevoPresupuesto() {
     descuento: 0, notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
     estado: 'borrador', incluye_iva: false
   };
-  presItems = [{desc:'', cantidad:1, precio:0, costo:0}];
+  presItems = [{desc:'', cantidad:1, precio:0, costo:0, moneda:'ARS', partida_ids:[]}];
   presupuestoFotos = [];
   mostrarEditorPresupuesto();
 }
 
 async function editarPresupuesto(id) {
   const {data:p} = await sb.from('presupuestos').select('*').eq('id',id).single();
-  const {data:items} = await sb.from('presupuestos_items').select('id,descripcion,cantidad,precio,costo,orden').eq('presupuesto_id',id).order('orden');
+  const {data:items} = await sb.from('presupuestos_items').select('id,descripcion,cantidad,precio,costo,orden,moneda,partida_ids').eq('presupuesto_id',id).order('orden');
   // Presupuestos generados antes de existir el campo obra_ubicacion: completarlo con el nombre del proyecto origen
   if(!p.obra_ubicacion && p.proyecto_origen_id){
     const {data:proy} = await sb.from('proyectos').select('nombre').eq('id',p.proyecto_origen_id).single();
     if(proy?.nombre) p.obra_ubicacion = proy.nombre;
   }
   presActual = p;
-  presItems = items?.length ? items.map(it=>({...it, desc:it.descripcion||it.desc||'',costo:it.costo||0})) : [{desc:'',cantidad:1,precio:0,costo:0}];
+  presItems = items?.length ? items.map(it=>({...it, desc:it.descripcion||it.desc||'',costo:it.costo||0,moneda:it.moneda||'ARS',partida_ids:it.partida_ids||[]})) : [{desc:'',cantidad:1,precio:0,costo:0,moneda:'ARS',partida_ids:[]}];
   mostrarEditorPresupuesto();
   // Cargar fotos existentes (async, después de renderizar el editor)
   setTimeout(()=>cargarFotosPresupuesto(id), 100);
@@ -3903,13 +3945,13 @@ function mostrarEditorPresupuesto() {
           <div class="form-group"><label>Fecha</label><input type="date" id="pe-fecha" value="${presActual.fecha}"/></div>
           <div class="form-group"><label>Válido por (días)</label><input type="number" id="pe-valido-dias" value="${presActual.valido_dias||15}" min="1" placeholder="15" oninput="actualizarNotasValidez()"/></div>
           <div class="form-group"><label>Representante</label><input id="pe-representante" value="${presActual.representante||''}"/></div>
-          <div class="form-group"><label>Moneda</label>
+          <div class="form-group"><label>Ver total unificado en</label>
             <select id="pe-moneda" onchange="actualizarMoneda()">
               <option value="ARS" ${(!presActual.moneda||presActual.moneda==='ARS')?'selected':''}>ARS - Pesos</option>
               <option value="USD" ${presActual.moneda==='USD'?'selected':''}>USD - Dólares</option>
             </select>
           </div>
-          <div class="form-group"><label>Tipo de cambio</label><input type="number" id="pe-tc" placeholder="(opcional)" value="${presActual.tipo_cambio||''}"/></div>
+          <div class="form-group"><label>Tipo de cambio</label><input type="number" id="pe-tc" placeholder="(opcional)" value="${presActual.tipo_cambio||''}" oninput="recalcularTotales()"/></div>
           <div class="form-group full"><label>Obra / Ubicación</label><input id="pe-obra-ubicacion" value="${presActual.obra_ubicacion||''}"/></div>
           <div class="form-group" style="grid-column:1/-1"><label style="color:var(--accent)">Bonificación %</label><input type="number" id="pe-desc" value="${presActual.descuento||0}" min="0" max="100" step="0.1" placeholder="0" oninput="recalcularTotales()"/></div>
           <div class="form-group"><label>Estado</label>
@@ -3996,23 +4038,33 @@ function mostrarEditorPresupuesto() {
 
 function renderItems() {
   const cont = document.getElementById('pe-items-cont');
-  const moneda = document.getElementById('pe-moneda')?.value || presActual.moneda || 'USD';
-  const simb = moneda === 'USD' ? 'U$S' : '$';
   const modoUnif = document.getElementById('unificar-panel')?.style.display !== 'none';
   cont.innerHTML = presItems.map((item, i) => {
+    const monedaItem = item.moneda||'ARS';
+    const simb = monedaItem === 'USD' ? 'U$S' : '$';
     const totalVenta = (item.cantidad||1)*(item.precio||0);
     const totalCosto = (item.cantidad||1)*(item.costo||0);
     const lbl = (txt,color='var(--muted)') => i===0?`<label style="font-size:11px;color:${color}">${txt}</label>`:'<label></label>';
     const checkCol = modoUnif ? `<div style="padding-top:${i===0?'18':'8'}px;display:flex;justify-content:center">
       <input type="checkbox" class="unif-check" data-i="${i}" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent2)"/>
     </div>` : '';
-    const cols = modoUnif ? '18px 20px 1fr 70px 110px 110px 110px 110px 30px' : '18px 1fr 70px 110px 110px 110px 110px 30px';
+    const cols = modoUnif ? '18px 20px 60px 1fr 70px 110px 110px 110px 110px 30px' : '18px 60px 1fr 70px 110px 110px 110px 110px 30px';
+    const unificadoDe = (item.partida_ids||[]).length>1
+      ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">🔗 Unificado de: ${item.partida_ids.map(p=>p.nombre).join(', ')}</div>` : '';
     return `<div draggable="true" ondragstart="dragStartItem(event,${i})" ondragover="dragOverItem(event)" ondrop="dropItem(event,${i})" ondragend="dragEndItem(event)" data-drag-i="${i}" style="display:grid;grid-template-columns:${cols};gap:8px;align-items:start;margin-bottom:8px">
       <div style="padding-top:${i===0?'18':'8'}px;text-align:center;cursor:grab;color:var(--muted);font-size:14px;user-select:none">⋮⋮</div>
       ${checkCol}
       <div class="form-group" style="margin:0">
+        ${lbl('Moneda')}
+        <select data-i="${i}" data-f="moneda" onchange="updateItem(this)" style="width:100%">
+          <option value="ARS" ${monedaItem==='ARS'?'selected':''}>ARS</option>
+          <option value="USD" ${monedaItem==='USD'?'selected':''}>USD</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
         ${i===0?'<label style="font-size:11px;color:var(--muted)">Descripción</label>':''}
         <textarea data-i="${i}" data-f="desc" onchange="updateItem(this)" style="width:100%;min-height:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--fb);font-size:13px;padding:8px;resize:vertical">${item.desc||''}</textarea>
+        ${unificadoDe}
       </div>
       <div class="form-group" style="margin:0">
         ${lbl('Cant.')}
@@ -4024,7 +4076,7 @@ function renderItems() {
       </div>
       <div class="form-group" style="margin:0">
         ${lbl(`Total venta (${simb})`)}
-        <input value="${fmtPres(moneda,totalVenta)}" readonly style="text-align:right;color:var(--accent2);background:var(--bg3)"/>
+        <input value="${fmtPres(monedaItem,totalVenta)}" readonly style="text-align:right;color:var(--accent2);background:var(--bg3)"/>
       </div>
       <div class="form-group" style="margin:0">
         ${lbl(`Costo unit. (${simb})`, '#f97316')}
@@ -4032,7 +4084,7 @@ function renderItems() {
       </div>
       <div class="form-group" style="margin:0">
         ${lbl(`Total costo (${simb})`, '#f97316')}
-        <input value="${fmtPres(moneda,totalCosto)}" readonly style="text-align:right;color:#f97316;background:var(--bg3);border-color:rgba(249,115,22,.3)"/>
+        <input value="${fmtPres(monedaItem,totalCosto)}" readonly style="text-align:right;color:#f97316;background:var(--bg3);border-color:rgba(249,115,22,.3)"/>
       </div>
       <div style="padding-top:${i===0?'18':'0'}px">
         <button class="btn btn-danger btn-sm" onclick="eliminarItem(${i})">✕</button>
@@ -4073,7 +4125,7 @@ function dragEndItem(ev) {
 function updateItem(el) {
   const i = parseInt(el.dataset.i);
   const f = el.dataset.f;
-  presItems[i][f] = f==='desc' ? el.value : parseFloat(el.value)||0;
+  presItems[i][f] = (f==='desc'||f==='moneda') ? el.value : parseFloat(el.value)||0;
   recalcularTotales();
   renderItems();
 }
@@ -4097,23 +4149,29 @@ function ejecutarUnificar(){
   if(!nombre){notify('Escribí el nombre del ítem unificado',false);return;}
   const checks = document.querySelectorAll('.unif-check:checked');
   if(checks.length<2){notify('Seleccioná al menos 2 ítems para unificar',false);return;}
-  const indices = Array.from(checks).map(c=>parseInt(c.dataset.i)).sort((a,b)=>b-a);
-  // Sumar precios y costos (precio unitario * cantidad)
-  let totalPrecio=0, totalCosto=0;
-  indices.forEach(i=>{
+  const indicesAsc = Array.from(checks).map(c=>parseInt(c.dataset.i)).sort((a,b)=>a-b);
+  const monedas = new Set(indicesAsc.map(i=>presItems[i].moneda||'ARS'));
+  if(monedas.size>1){notify('Solo podés unificar ítems de la misma moneda',false);return;}
+  const monedaGrupo = [...monedas][0];
+  // Sumar precios, costos (precio unitario * cantidad) y juntar el origen (partida_ids) de cada ítem
+  let totalPrecio=0, totalCosto=0, partidaIds=[];
+  indicesAsc.forEach(i=>{
     const it=presItems[i];
     totalPrecio += (it.precio||0)*(it.cantidad||1);
     totalCosto += (it.costo||0)*(it.cantidad||1);
+    partidaIds = partidaIds.concat(it.partida_ids||[]);
   });
   // Eliminar items seleccionados (de mayor a menor índice para no desplazar)
-  indices.forEach(i=>presItems.splice(i,1));
+  indicesAsc.slice().sort((a,b)=>b-a).forEach(i=>presItems.splice(i,1));
   // Insertar el item unificado en la posición del primero (menor índice)
-  const posicion = Math.min(...Array.from(checks).map(c=>parseInt(c.dataset.i)));
+  const posicion = indicesAsc[0];
   presItems.splice(Math.min(posicion, presItems.length), 0, {
     desc: nombre,
     cantidad: 1,
     precio: totalPrecio,
-    costo: totalCosto
+    costo: totalCosto,
+    moneda: monedaGrupo,
+    partida_ids: partidaIds
   });
   // Cerrar panel
   toggleModoUnificar();
@@ -4122,49 +4180,78 @@ function ejecutarUnificar(){
 }
 
 function agregarItem() {
-  presItems.push({desc:'', cantidad:1, precio:0, costo:0});
+  presItems.push({desc:'', cantidad:1, precio:0, costo:0, moneda:'ARS', partida_ids:[]});
   renderItems(); recalcularTotales();
 }
 
 function eliminarItem(i) {
   presItems.splice(i,1);
-  if(!presItems.length) presItems.push({desc:'',cantidad:1,precio:0});
+  if(!presItems.length) presItems.push({desc:'',cantidad:1,precio:0,moneda:'ARS',partida_ids:[]});
   renderItems(); recalcularTotales();
 }
 
 function actualizarMoneda() { renderItems(); recalcularTotales(); }
 
-function recalcularTotales() {
-  const moneda = document.getElementById('pe-moneda')?.value || presActual.moneda || 'USD';
+// Cálculo compartido entre la vista previa de totales y lo que efectivamente se guarda
+// (recopilarDatosPresupuesto), para que nunca queden desincronizados entre sí.
+function calcularTotalesUnificados(){
+  const monedaVista = document.getElementById('pe-moneda')?.value || presActual.moneda || 'ARS';
+  const tc = Number(document.getElementById('pe-tc')?.value) || Number(presActual.tipo_cambio) || 0;
   const descPct = parseFloat(document.getElementById('pe-desc')?.value||0);
-  const subtotal = presItems.reduce((s,it)=>s+(it.cantidad||1)*(it.precio||0),0);
-  const costoTotal = presItems.reduce((s,it)=>s+(it.cantidad||1)*(it.costo||0),0);
+
+  const itemsArs = presItems.filter(it=>(it.moneda||'ARS')!=='USD');
+  const itemsUsd = presItems.filter(it=>it.moneda==='USD');
+  const sumaVenta = arr=>arr.reduce((s,it)=>s+(it.cantidad||1)*(it.precio||0),0);
+  const sumaCosto = arr=>arr.reduce((s,it)=>s+(it.cantidad||1)*(it.costo||0),0);
+  const subtotalArs=sumaVenta(itemsArs), costoArs=sumaCosto(itemsArs);
+  const subtotalUsd=sumaVenta(itemsUsd), costoUsd=sumaCosto(itemsUsd);
+
+  // Unificado: convertir la moneda que no es la de vista, usando el tipo de cambio cargado
+  const aVista = (montoArs,montoUsd) => monedaVista==='USD'
+    ? montoUsd + (tc>0 ? montoArs/tc : 0)
+    : montoArs + (tc>0 ? montoUsd*tc : 0);
+  const subtotal = aVista(subtotalArs,subtotalUsd);
+  const costoTotal = aVista(costoArs,costoUsd);
   const descMonto = subtotal * descPct / 100;
   const neto = subtotal - descMonto;
   const utilidad = neto - costoTotal;
   const margen = neto > 0 ? (utilidad/neto*100).toFixed(1) : 0;
+
+  return {monedaVista, tc, descPct, itemsArs, itemsUsd, subtotalArs, costoArs, subtotalUsd, costoUsd, subtotal, costoTotal, descMonto, neto, utilidad, margen};
+}
+
+function recalcularTotales() {
+  const {monedaVista, tc, descPct, itemsArs, itemsUsd, subtotalArs, costoArs, subtotalUsd, costoUsd, subtotal, costoTotal, descMonto, neto, utilidad, margen} = calcularTotalesUnificados();
+
+  const avisoTC = (itemsArs.length && itemsUsd.length && tc<=0)
+    ? `<div style="font-size:11px;color:var(--accent);text-align:left">⚠️ Cargá el tipo de cambio para que el total unificado incluya ambas monedas.</div>` : '';
+  const bloqueNativo = (itemsArs.length && itemsUsd.length) ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left;border-bottom:1px solid var(--border);padding-bottom:10px">
+      <div style="font-size:12px"><span style="color:var(--muted)">🇦🇷 En pesos (${itemsArs.length})</span><br/>Venta: ${fmtPres('ARS',subtotalArs)} · Costo: ${fmtPres('ARS',costoArs)}</div>
+      <div style="font-size:12px"><span style="color:var(--muted)">🇺🇸 En dólares (${itemsUsd.length})</span><br/>Venta: ${fmtPres('USD',subtotalUsd)} · Costo: ${fmtPres('USD',costoUsd)}</div>
+    </div>` : '';
+
   const cont = document.getElementById('pe-totales');
   if(!cont) return;
   cont.innerHTML = `
-    <div style="display:inline-flex;flex-direction:column;gap:6px;min-width:280px;background:var(--bg3);border-radius:10px;padding:12px 16px">
-      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Subtotal venta</span><span>${fmtPres(moneda,subtotal)}</span></div>
-      ${descPct>0?`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--red)">Bonificación ${descPct}%</span><span style="color:var(--red);font-weight:600">- ${fmtPres(moneda,descMonto)}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><span style="color:var(--muted)">Neto sin IVA</span><span>${fmtPres(moneda,neto)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">IVA (21%)</span><span>${fmtPres(moneda,neto*0.21)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding-top:4px"><span>TOTAL con IVA</span><span style="color:var(--accent2)">${fmtPres(moneda,neto*1.21)}</span></div>
+    <div style="display:inline-flex;flex-direction:column;gap:6px;min-width:320px;background:var(--bg3);border-radius:10px;padding:12px 16px">
+      ${avisoTC}
+      ${bloqueNativo}
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Subtotal venta (unificado)</span><span>${fmtPres(monedaVista,subtotal)}</span></div>
+      ${descPct>0?`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--red)">Bonificación ${descPct}%</span><span style="color:var(--red);font-weight:600">- ${fmtPres(monedaVista,descMonto)}</span></div>`:''}
+      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><span style="color:var(--muted)">Neto sin IVA</span><span>${fmtPres(monedaVista,neto)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">IVA (21%)</span><span>${fmtPres(monedaVista,neto*0.21)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding-top:4px"><span>TOTAL con IVA</span><span style="color:var(--accent2)">${fmtPres(monedaVista,neto*1.21)}</span></div>
       ${costoTotal>0?`
       <div style="border-top:1px dashed rgba(249,115,22,.3);padding-top:8px;margin-top:4px">
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:#f97316">Costo neto</span><span style="color:#f97316;font-weight:600">${fmtPres(moneda,costoTotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span style="color:${utilidad>=0?'var(--green)':'var(--red)'}">Utilidad estimada</span><span style="color:${utilidad>=0?'var(--green)':'var(--red)'}">${fmtPres(moneda,utilidad)} <span style="font-size:11px;opacity:.8">(${margen}%)</span></span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:#f97316">Costo neto</span><span style="color:#f97316;font-weight:600">${fmtPres(monedaVista,costoTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span style="color:${utilidad>=0?'var(--green)':'var(--red)'}">Utilidad estimada</span><span style="color:${utilidad>=0?'var(--green)':'var(--red)'}">${fmtPres(monedaVista,utilidad)} <span style="font-size:11px;opacity:.8">(${margen}%)</span></span></div>
       </div>`:''}
     </div>`;
 }
 
 function recopilarDatosPresupuesto() {
-  const moneda = document.getElementById('pe-moneda').value;
-  const descPct = parseFloat(document.getElementById('pe-desc').value||0);
-  const subtotal = presItems.reduce((s,it)=>s+(it.cantidad||1)*(it.precio||0),0);
-  const total = subtotal * (1 - descPct/100);
+  const {monedaVista:moneda, descPct, subtotal, neto:total} = calcularTotalesUnificados();
   return {
     numero: document.getElementById('pe-numero').value,
     fecha: document.getElementById('pe-fecha').value,
@@ -4204,7 +4291,7 @@ async function guardarPresupuesto() {
     presId = data.id; presActual = data;
   }
   // Guardar items
-  const items = presItems.map((it,i)=>({presupuesto_id:presId,descripcion:it.desc,cantidad:it.cantidad||1,precio:it.precio||0,costo:it.costo||0,orden:i}));
+  const items = presItems.map((it,i)=>({presupuesto_id:presId,descripcion:it.desc,cantidad:it.cantidad||1,precio:it.precio||0,costo:it.costo||0,orden:i,moneda:it.moneda||'ARS',partida_ids:it.partida_ids||[]}));
   await sb.from('presupuestos_items').insert(items);
   // Subir fotos si hay nuevas
   await subirFotosPresupuesto(presId);
