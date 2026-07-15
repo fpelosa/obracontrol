@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.25">
+<meta name="version" content="v12.26">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.25</title>
+<title>ObraControl v12.26</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.25">
+<link rel="stylesheet" href="css/styles.css?v=12.26">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.25</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.26</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -833,7 +833,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.25</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.26</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1269,10 +1269,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.25"></script>
-<script src="js/calculadora.js?v=12.25"></script>
-<script src="js/logs.js?v=12.25"></script>
-<script src="js/admin.js?v=12.25"></script>
+<script src="js/core.js?v=12.26"></script>
+<script src="js/calculadora.js?v=12.26"></script>
+<script src="js/logs.js?v=12.26"></script>
+<script src="js/admin.js?v=12.26"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -2264,38 +2264,59 @@ async function guardarTipoCambioProyecto(pid, valor){
 function renderRentabilidadHTML(p, totalGasto, pid, partidas){
   const tc = Number(p.tipo_cambio_usd)||0;
   const vista = _vistaRentabilidad[pid] || 'ARS';
-  // precio_cliente/presupuesto_total del proyecto ya están consolidados en pesos
-  // (recalcularTotalesProyecto convierte las partidas en USD con el tipo de cambio cargado).
   // Si se eligió ver en dólares pero todavía no hay tipo de cambio cargado, mostrar en
   // pesos igual (mejor que mostrar el mismo número con el símbolo U$S, que sería engañoso).
   const vistaEfectiva = vista==='USD' && tc<=0 ? 'ARS' : vista;
   const fmtVista = monto => vistaEfectiva==='USD' ? fmtMoneda(monto/tc,'USD') : fmt(monto);
 
-  const precioCliente = Number(p.precio_cliente)||0;
-  const presupuesto = Number(p.presupuesto_total)||0;
-  const gananciaEsperada = precioCliente - presupuesto;
-  const gananciaReal = precioCliente - totalGasto;
-  const margenEsperado = precioCliente>0 ? (gananciaEsperada/precioCliente*100).toFixed(1) : 0;
-  const margenReal = precioCliente>0 ? (gananciaReal/precioCliente*100).toFixed(1) : 0;
-
+  // El total del proyecto (presupuesto_total/precio_cliente) puede estar desactualizado o
+  // pisado a mano — acá se recalcula todo directo desde las partidas para que el desglose
+  // por moneda y el unificado sean siempre consistentes entre sí.
   const partidasArs = (partidas||[]).filter(pa=>(pa.moneda||'ARS')!=='USD');
   const partidasUsd = (partidas||[]).filter(pa=>pa.moneda==='USD');
   const suma = (arr,campo) => arr.reduce((s,pa)=>s+Number(pa[campo]||0),0);
+
+  const pClienteArs=suma(partidasArs,'precio_venta'), pptoArs=suma(partidasArs,'presupuesto'), gastadoArs=suma(partidasArs,'total_gastado');
+  const pClienteUsd=suma(partidasUsd,'precio_venta'), pptoUsd=suma(partidasUsd,'presupuesto'), gastadoUsd=suma(partidasUsd,'total_gastado');
+  const gananciaArs=pClienteArs-gastadoArs, gananciaUsd=pClienteUsd-gastadoUsd;
+
+  // Unificado: partidas ARS tal cual + partidas USD convertidas al tipo de cambio (si está cargado)
+  const pClienteUnif = pClienteArs + (tc>0?pClienteUsd*tc:0);
+  const pptoUnif = pptoArs + (tc>0?pptoUsd*tc:0);
+  const gananciaEsperadaUnif = pClienteUnif - pptoUnif;
+  const gananciaRealUnif = pClienteUnif - totalGasto;
+  const margenEsperadoUnif = pClienteUnif>0 ? (gananciaEsperadaUnif/pClienteUnif*100).toFixed(1) : 0;
+  const margenRealUnif = pClienteUnif>0 ? (gananciaRealUnif/pClienteUnif*100).toFixed(1) : 0;
+
+  const precioClienteManual = Number(p.precio_cliente)||0;
   const avisoTC = tc<=0
-    ? `<div style="margin-top:10px;font-size:12px;color:var(--accent)">⚠️ Cargá el tipo de cambio para ver el resumen en dólares${partidasUsd.length?' y para que el presupuesto/precio al cliente consolidados conviertan correctamente las partidas en U$S':''}.</div>`
+    ? `<div style="margin-top:10px;font-size:12px;color:var(--accent)">⚠️ Cargá el tipo de cambio para ver el resumen en dólares${partidasUsd.length?' y para que el unificado incluya las partidas en U$S':''}.</div>`
     : '';
-  const desglose = (partidasArs.length && partidasUsd.length) ? `
-    <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div style="font-size:12px"><span style="color:var(--muted)">🇦🇷 Partidas en pesos (${partidasArs.length})</span><br/>Presup.: ${fmt(suma(partidasArs,'presupuesto'))} · Venta: ${fmt(suma(partidasArs,'precio_venta'))}</div>
-      <div style="font-size:12px"><span style="color:var(--muted)">🇺🇸 Partidas en dólares (${partidasUsd.length})</span><br/>Presup.: ${fmtMoneda(suma(partidasUsd,'presupuesto'),'USD')} · Venta: ${fmtMoneda(suma(partidasUsd,'precio_venta'),'USD')}</div>
-    </div>` : '';
+
+  const bloqueMoneda = (titulo, arr, pCliente, ppto, gastado, ganancia, moneda) => `
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">${titulo} (${arr.length} ítem${arr.length!==1?'s':''})</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Precio al cliente</span><span style="font-weight:600;color:var(--accent2)">${fmtMoneda(pCliente,moneda)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Presupuesto</span><span style="font-weight:600;color:var(--accent)">${fmtMoneda(ppto,moneda)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Gastado</span><span style="font-weight:600;color:var(--red)">${fmtMoneda(gastado,moneda)}</span></div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:6px"><span style="color:var(--muted)">Ganancia real</span><span style="font-weight:700;color:${ganancia>=0?'var(--green)':'var(--red)'}">${fmtMoneda(ganancia,moneda)}</span></div>
+      </div>
+    </div>`;
 
   return `
   <div style="margin-bottom:16px">
+    ${(partidasArs.length&&partidasUsd.length) ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      ${bloqueMoneda('🇦🇷 En pesos', partidasArs, pClienteArs, pptoArs, gastadoArs, gananciaArs, 'ARS')}
+      ${bloqueMoneda('🇺🇸 En dólares', partidasUsd, pClienteUsd, pptoUsd, gastadoUsd, gananciaUsd, 'USD')}
+    </div>` : ''}
+
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Unificado</div>
         <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Ver resumen en</span>
+          <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Ver en</span>
           <button type="button" class="btn btn-ghost btn-sm" onclick="setVistaRentabilidad('${pid}','ARS')" style="${vista==='ARS'?'border-color:var(--accent);color:var(--accent)':''}">$ Pesos</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="setVistaRentabilidad('${pid}','USD')" style="${vista==='USD'?'border-color:var(--accent);color:var(--accent)':''}">U$S Dólares</button>
         </div>
@@ -2305,26 +2326,25 @@ function renderRentabilidadHTML(p, totalGasto, pid, partidas){
         </div>
       </div>
       ${avisoTC}
-      ${desglose}
     </div>
 
     <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
       <div class="metric" style="border-color:rgba(59,130,246,.3)">
         <div class="metric-label">Precio al cliente</div>
-        <div class="metric-value" style="font-size:18px;color:var(--accent2)">${fmtVista(precioCliente)}</div>
+        <div class="metric-value" style="font-size:18px;color:var(--accent2)">${fmtVista(pClienteUnif)}</div>
         <div class="metric-sub" style="margin-top:6px">
-          <button class="btn btn-ghost btn-sm" onclick="editarPrecioCliente('${pid}',${precioCliente})">✏️ Editar</button>
+          <button class="btn btn-ghost btn-sm" onclick="editarPrecioCliente('${pid}',${precioClienteManual})">✏️ Editar valor manual</button>
         </div>
       </div>
       <div class="metric" style="border-color:rgba(245,166,35,.3)">
         <div class="metric-label">Presupuesto obra</div>
-        <div class="metric-value" style="font-size:18px;color:var(--accent)">${fmtVista(presupuesto)}</div>
+        <div class="metric-value" style="font-size:18px;color:var(--accent)">${fmtVista(pptoUnif)}</div>
         <div class="metric-sub">Lo máximo a gastar</div>
       </div>
       <div class="metric" style="border-color:rgba(34,197,94,.3)">
         <div class="metric-label">Ganancia esperada</div>
-        <div class="metric-value" style="font-size:18px;color:${gananciaEsperada>=0?'var(--green)':'var(--red)'}">${fmtVista(gananciaEsperada)}</div>
-        <div class="metric-sub">Margen: ${margenEsperado}%</div>
+        <div class="metric-value" style="font-size:18px;color:${gananciaEsperadaUnif>=0?'var(--green)':'var(--red)'}">${fmtVista(gananciaEsperadaUnif)}</div>
+        <div class="metric-sub">Margen: ${margenEsperadoUnif}%</div>
       </div>
     </div>
 
@@ -2337,13 +2357,13 @@ function renderRentabilidadHTML(p, totalGasto, pid, partidas){
         </div>
         <div class="metric">
           <div class="metric-label">Ganancia real actual</div>
-          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=0?'var(--green)':'var(--red)'}">${fmtVista(gananciaReal)}</div>
-          <div class="metric-sub">Margen real: ${margenReal}%</div>
+          <div class="metric-value" style="font-size:18px;color:${gananciaRealUnif>=0?'var(--green)':'var(--red)'}">${fmtVista(gananciaRealUnif)}</div>
+          <div class="metric-sub">Margen real: ${margenRealUnif}%</div>
         </div>
         <div class="metric">
           <div class="metric-label">Diferencia vs esperado</div>
-          <div class="metric-value" style="font-size:18px;color:${gananciaReal>=gananciaEsperada?'var(--green)':'var(--red)'}">${fmtVista(gananciaReal-gananciaEsperada)}</div>
-          <div class="metric-sub">${gananciaReal>=gananciaEsperada?'✓ Mejor de lo esperado':'⚠ Por debajo del esperado'}</div>
+          <div class="metric-value" style="font-size:18px;color:${gananciaRealUnif>=gananciaEsperadaUnif?'var(--green)':'var(--red)'}">${fmtVista(gananciaRealUnif-gananciaEsperadaUnif)}</div>
+          <div class="metric-sub">${gananciaRealUnif>=gananciaEsperadaUnif?'✓ Mejor de lo esperado':'⚠ Por debajo del esperado'}</div>
         </div>
       </div>
     </div>
@@ -2351,7 +2371,7 @@ function renderRentabilidadHTML(p, totalGasto, pid, partidas){
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div class="card-title" style="margin-bottom:0">Cobros al cliente</div>
-        <button class="btn btn-primary btn-sm" onclick="openModalCobro('${pid}',${precioCliente})">+ Registrar cobro</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalCobro('${pid}',${pClienteUnif})">+ Registrar cobro</button>
       </div>
       <div id="lista-cobros-${pid}">Cargando cobros...</div>
     </div>
