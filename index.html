@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.27">
+<meta name="version" content="v12.28">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.27</title>
+<title>ObraControl v12.28</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.27">
+<link rel="stylesheet" href="css/styles.css?v=12.28">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.27</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.28</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -833,7 +833,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.27</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.28</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1269,10 +1269,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.27"></script>
-<script src="js/calculadora.js?v=12.27"></script>
-<script src="js/logs.js?v=12.27"></script>
-<script src="js/admin.js?v=12.27"></script>
+<script src="js/core.js?v=12.28"></script>
+<script src="js/calculadora.js?v=12.28"></script>
+<script src="js/logs.js?v=12.28"></script>
+<script src="js/admin.js?v=12.28"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -4407,9 +4407,9 @@ function generarPaginaFotos(fotos){
 
 async function previsualizarPresupuesto(id) {
   const {data:p} = await sb.from('presupuestos').select('*').eq('id',id).single();
-  const {data:items} = await sb.from('presupuestos_items').select('id,descripcion,cantidad,precio,costo,orden').eq('presupuesto_id',id).order('orden');
+  const {data:items} = await sb.from('presupuestos_items').select('id,descripcion,cantidad,precio,costo,orden,moneda,partida_ids').eq('presupuesto_id',id).order('orden');
   presActual = p;
-  presItems = (items||[]).map(it=>({...it, desc:it.descripcion||it.desc||'',costo:it.costo||0}));
+  presItems = (items||[]).map(it=>({...it, desc:it.descripcion||it.desc||'',costo:it.costo||0,moneda:it.moneda||'ARS',partida_ids:it.partida_ids||[]}));
   // Cargar fotos guardadas
   const {data:fotosData} = await sb.from('adjuntos').select('*')
     .eq('entidad_tipo','presupuesto_foto').eq('entidad_id',id).order('created_at');
@@ -4432,15 +4432,23 @@ async function previsualizarPresupuesto(id) {
 }
 
 function generarHTMLPresupuesto(p, items) {
-  const moneda = p.moneda||'USD';
-  const simb = moneda==='USD'?'U$S':'$';
-  const subtotal = items.reduce((s,it)=>s+(it.cantidad||1)*(it.precio||0),0);
+  const monedaVista = p.moneda||'ARS';
+  const tc = Number(p.tipo_cambio)||0;
+  const fmtDoc = (n, moneda) => moneda==='USD'
+    ? 'USD '+Number(n).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})
+    : '$'+Math.round(n).toLocaleString('es-AR');
+
+  const itemsArs = items.filter(it=>(it.moneda||'ARS')!=='USD');
+  const itemsUsd = items.filter(it=>it.moneda==='USD');
+  const sumaVenta = arr=>arr.reduce((s,it)=>s+(it.cantidad||1)*(it.precio||0),0);
+  const subtotalArs = sumaVenta(itemsArs);
+  const subtotalUsd = sumaVenta(itemsUsd);
+  // Unificado: convierte la moneda que no es la de vista, al tipo de cambio cargado
+  const subtotal = monedaVista==='USD'
+    ? subtotalUsd + (tc>0 ? subtotalArs/tc : 0)
+    : subtotalArs + (tc>0 ? subtotalUsd*tc : 0);
   const descMonto = subtotal * (p.descuento||0) / 100;
   const neto = subtotal - descMonto;
-
-  const fmtDoc = (n) => moneda==='USD'
-    ? 'U$S'+Number(n).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})
-    : '$'+Math.round(n).toLocaleString('es-AR');
 
   const notasLines = (p.notas||'').split('\n').filter(Boolean);
 
@@ -4517,8 +4525,8 @@ function generarHTMLPresupuesto(p, items) {
             <tr style="background:${i%2===0?'#fff':'#f8f9fa'};border-bottom:1px solid #eee">
               <td style="padding:10px 12px;text-align:center;font-size:10pt">${it.cantidad||1}</td>
               <td style="padding:10px 12px;font-size:10pt;white-space:pre-line">${it.desc||it.descripcion||''}</td>
-              <td style="padding:10px 12px;text-align:right;font-size:10pt">${fmtDoc(it.precio||0)}</td>
-              <td style="padding:10px 12px;text-align:right;font-size:10pt;font-weight:600">${fmtDoc((it.cantidad||1)*(it.precio||0))}</td>
+              <td style="padding:10px 12px;text-align:right;font-size:10pt">${fmtDoc(it.precio||0,it.moneda||'ARS')}</td>
+              <td style="padding:10px 12px;text-align:right;font-size:10pt;font-weight:600">${fmtDoc((it.cantidad||1)*(it.precio||0),it.moneda||'ARS')}</td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -4526,23 +4534,32 @@ function generarHTMLPresupuesto(p, items) {
 
       <!-- TOTALES -->
       <div style="padding:0 24px 20px;display:flex;justify-content:flex-end">
-        <div style="min-width:260px">
+        <div style="min-width:280px">
+          ${(itemsArs.length && itemsUsd.length) ? `
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin-bottom:10px;background:#f8f9fa">
+            <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:9.5pt">
+              <span style="color:#555">Subtotal en pesos</span><span style="font-weight:600">${fmtDoc(subtotalArs,'ARS')}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:9.5pt">
+              <span style="color:#555">Subtotal en dólares</span><span style="font-weight:600">${fmtDoc(subtotalUsd,'USD')}</span>
+            </div>
+          </div>` : ''}
           <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt">
-            <span style="color:#555">Subtotal</span><span style="font-weight:500">${fmtDoc(subtotal)}</span>
+            <span style="color:#555">Subtotal ${(itemsArs.length && itemsUsd.length)?'(unificado)':''}</span><span style="font-weight:500">${fmtDoc(subtotal,monedaVista)}</span>
           </div>
           ${p.descuento>0?`<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt">
-            <span style="color:#555">Bonificación ${p.descuento}%</span><span style="color:#e53e3e;font-weight:500">-${fmtDoc(descMonto)}</span>
+            <span style="color:#555">Bonificación ${p.descuento}%</span><span style="color:#e53e3e;font-weight:500">-${fmtDoc(descMonto,monedaVista)}</span>
           </div>`:''}
           <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt;border-top:1px solid #e2e8f0;margin-top:2px">
-            <span style="color:#555">Neto sin IVA</span><span style="font-weight:500">${fmtDoc(neto)}</span>
+            <span style="color:#555">Neto sin IVA</span><span style="font-weight:500">${fmtDoc(neto,monedaVista)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:10pt">
-            <span style="color:#555">IVA (21%)</span><span style="font-weight:500">${fmtDoc(neto*0.21)}</span>
+            <span style="color:#555">IVA (21%)</span><span style="font-weight:500">${fmtDoc(neto*0.21,monedaVista)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#1a2035;color:#fff;border-radius:6px;font-size:12pt;font-weight:700;margin-top:4px">
-            <span>TOTAL con IVA</span><span style="color:#f5a623">${fmtDoc(neto*1.21)}</span>
+            <span>TOTAL con IVA</span><span style="color:#f5a623">${fmtDoc(neto*1.21,monedaVista)}</span>
           </div>
-          ${p.tipo_cambio?`<div style="font-size:9pt;color:#888;text-align:right;margin-top:6px;padding:0 4px">Tipo de cambio: $1 USD = $${p.tipo_cambio} ARS</div>`:''}
+          ${p.tipo_cambio?`<div style="font-size:9pt;color:#888;text-align:right;margin-top:6px;padding:0 4px">Tipo de cambio: USD 1 = $${p.tipo_cambio} ARS</div>`:''}
         </div>
       </div>
 
