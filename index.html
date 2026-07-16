@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.30">
+<meta name="version" content="v12.31">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.30</title>
+<title>ObraControl v12.31</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.30">
+<link rel="stylesheet" href="css/styles.css?v=12.31">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.30</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.31</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -281,7 +281,6 @@
     <div id="view-presupuestos" class="view">
       <div class="topbar">
         <h1>Presupuestos</h1>
-        <button class="btn btn-primary" onclick="nuevoPresupuesto()">+ Nuevo presupuesto</button>
       </div>
       <div id="pres-lista-cont"></div>
       <div id="pres-editor-cont" style="display:none"></div>
@@ -833,7 +832,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.30</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.31</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1269,10 +1268,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.30"></script>
-<script src="js/calculadora.js?v=12.30"></script>
-<script src="js/logs.js?v=12.30"></script>
-<script src="js/admin.js?v=12.30"></script>
+<script src="js/core.js?v=12.31"></script>
+<script src="js/calculadora.js?v=12.31"></script>
+<script src="js/logs.js?v=12.31"></script>
+<script src="js/admin.js?v=12.31"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -3726,6 +3725,20 @@ const EMPRESA = {
 let presActual = null; // presupuesto en edición
 let presItems = []; // items del presupuesto actual
 
+let _presSort = {campo:'fecha', dir:'desc'};
+
+function _presSortBy(campo){
+  if(_presSort.campo===campo) _presSort.dir = _presSort.dir==='asc'?'desc':'asc';
+  else _presSort = {campo, dir:'asc'};
+  renderPresupuestos();
+}
+
+function _presTh(campo, label, align='left'){
+  const activo = _presSort.campo===campo;
+  const arr = activo ? (_presSort.dir==='asc'?'↑':'↓') : '';
+  return `<th style="cursor:pointer;user-select:none;text-align:${align};${activo?'color:var(--accent)':''}" onclick="_presSortBy('${campo}')">${label}${activo?' '+arr:''}</th>`;
+}
+
 async function renderPresupuestos() {
   document.getElementById('pres-editor-cont').style.display = 'none';
   document.getElementById('pres-preview-cont').style.display = 'none';
@@ -3735,7 +3748,7 @@ async function renderPresupuestos() {
   const cont = document.getElementById('pres-lista-cont');
 
   if(!data?.length) {
-    cont.innerHTML = `<div class="empty"><p>No hay presupuestos. Creá el primero.</p></div>`;
+    cont.innerHTML = `<div class="empty"><p>No hay presupuestos. Generá uno desde una obra (botón "📄 Presupuesto").</p></div>`;
     return;
   }
 
@@ -3755,21 +3768,79 @@ async function renderPresupuestos() {
     presConOrigen.forEach(p=>{ if(!proyPorPres[p.id]) proyPorPres[p.id]=proyOrigenMap[p.proyecto_origen_id]; });
   }
 
+  const busq = (document.getElementById('pres-buscar')?.value||'').toLowerCase().trim();
+  const filtroMoneda = document.getElementById('pres-filtro-moneda')?.value||'';
+  const filtroEstado = document.getElementById('pres-filtro-estado')?.value||'';
+
+  const filtrados = data.filter(p=>{
+    if(filtroMoneda && p.moneda!==filtroMoneda) return false;
+    if(filtroEstado && p.estado!==filtroEstado) return false;
+    if(busq){
+      const texto = `${p.numero||''} ${p.cliente_nombre||''} ${proyPorPres[p.id]||''}`.toLowerCase();
+      if(!texto.includes(busq)) return false;
+    }
+    return true;
+  });
+
+  filtrados.sort((a,b)=>{
+    const campo = _presSort.campo;
+    let va,vb;
+    if(campo==='numero'){va=a.numero||'';vb=b.numero||'';}
+    else if(campo==='cliente'){va=(a.cliente_nombre||'').toLowerCase();vb=(b.cliente_nombre||'').toLowerCase();}
+    else if(campo==='proyecto'){va=(proyPorPres[a.id]||'').toLowerCase();vb=(proyPorPres[b.id]||'').toLowerCase();}
+    else if(campo==='moneda'){va=a.moneda||'';vb=b.moneda||'';}
+    else if(campo==='tipo_cambio'){va=Number(a.tipo_cambio)||0;vb=Number(b.tipo_cambio)||0;}
+    else if(campo==='total'){va=Number(a.total)||0;vb=Number(b.total)||0;}
+    else if(campo==='estado'){va=a.estado||'';vb=b.estado||'';}
+    else{va=a.fecha||'';vb=b.fecha||'';}
+    if(va<vb) return _presSort.dir==='asc'?-1:1;
+    if(va>vb) return _presSort.dir==='asc'?1:-1;
+    return 0;
+  });
+
   const estadoColor = {borrador:'badge-gray', enviado:'badge-blue', aprobado:'badge-green', rechazado:'badge-red'};
   cont.innerHTML = `
     <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+        <div style="position:relative;flex:1;min-width:160px">
+          <input id="pres-buscar" type="text" placeholder="Buscar por N°, cliente u obra…" value="${busq}" oninput="renderPresupuestos()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:7px 10px;outline:none;width:100%"/>
+        </div>
+        <select id="pres-filtro-moneda" onchange="renderPresupuestos()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:7px 10px;outline:none">
+          <option value="">Todas las monedas</option>
+          <option value="ARS" ${filtroMoneda==='ARS'?'selected':''}>ARS</option>
+          <option value="USD" ${filtroMoneda==='USD'?'selected':''}>USD</option>
+        </select>
+        <select id="pres-filtro-estado" onchange="renderPresupuestos()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:7px 10px;outline:none">
+          <option value="">Todos los estados</option>
+          <option value="borrador" ${filtroEstado==='borrador'?'selected':''}>Borrador</option>
+          <option value="enviado" ${filtroEstado==='enviado'?'selected':''}>Enviado</option>
+          <option value="aprobado" ${filtroEstado==='aprobado'?'selected':''}>Aprobado</option>
+          <option value="rechazado" ${filtroEstado==='rechazado'?'selected':''}>Rechazado</option>
+        </select>
+      </div>
+      ${!filtrados.length ? '<div class="empty"><p>Sin resultados para el filtro.</p></div>' : `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>N°</th><th>Cliente</th><th>Proyecto origen</th><th>Fecha</th><th>Moneda</th><th>T. Cambio</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr>
+            ${_presTh('numero','N°')}
+            ${_presTh('cliente','Cliente')}
+            ${_presTh('proyecto','Proyecto origen')}
+            ${_presTh('fecha','Fecha')}
+            ${_presTh('moneda','Moneda')}
+            ${_presTh('tipo_cambio','T. Cambio','right')}
+            ${_presTh('total','Total','right')}
+            ${_presTh('estado','Estado')}
+            <th></th>
+          </tr></thead>
           <tbody>
-            ${data.map(p => `<tr>
+            ${filtrados.map(p => `<tr>
               <td style="font-weight:500">${p.numero}</td>
               <td>${p.cliente_nombre}</td>
               <td style="color:var(--muted);font-size:12px">${proyPorPres[p.id]||'—'}</td>
               <td>${p.fecha}</td>
               <td><span class="badge badge-gray">${p.moneda}</span></td>
-              <td style="color:var(--muted);font-size:12px">${p.tipo_cambio?('USD 1 = $'+Number(p.tipo_cambio).toLocaleString('es-AR')):'—'}</td>
-              <td style="font-weight:600">${p.moneda==='USD'?'U$S'+Number(p.total).toLocaleString('es-AR',{minimumFractionDigits:2}):'$'+Number(p.total).toLocaleString('es-AR',{maximumFractionDigits:0})}</td>
+              <td style="color:var(--muted);font-size:12px;text-align:right">${p.tipo_cambio?('USD 1 = $'+Number(p.tipo_cambio).toLocaleString('es-AR')):'—'}</td>
+              <td style="font-weight:600;text-align:right">${p.moneda==='USD'?'U$S'+Number(p.total).toLocaleString('es-AR',{minimumFractionDigits:2}):'$'+Number(p.total).toLocaleString('es-AR',{maximumFractionDigits:0})}</td>
               <td><span class="badge ${estadoColor[p.estado]||'badge-gray'}">${p.estado}</span></td>
               <td style="display:flex;gap:6px">
                 <button class="btn btn-ghost btn-sm" onclick="editarPresupuesto('${p.id}')">✏️</button>
@@ -3779,7 +3850,7 @@ async function renderPresupuestos() {
             </tr>`).join('')}
           </tbody>
         </table>
-      </div>
+      </div>`}
     </div>`;
 }
 
@@ -3884,24 +3955,6 @@ async function generarPresupuestoDesdeProyecto(proyId) {
   document.getElementById('pres-preview-cont').style.display='none';
   mostrarEditorPresupuesto();
   notify('✅ Presupuesto pre-completado — proyecto en "Esperando aprobación"');
-}
-
-async function nuevoPresupuesto() {
-  const {data:last} = await sb.from('presupuestos').select('numero').order('created_at',{ascending:false}).limit(1);
-  const lastNum = last?.[0]?.numero || '270000';
-  const nextNum = String(parseInt(lastNum.replace(/\D/g,'')) + 1);
-
-  presActual = {
-    id: null, numero: nextNum, fecha: new Date().toISOString().split('T')[0],
-    fecha_validez: '', valido_dias: 15,
-    cliente_nombre: '', cliente_dir: '', cliente_cuit: '', cliente_ciudad: '',
-    representante: 'jpelosa@nor-tel.com', moneda: 'ARS', tipo_cambio: '',
-    descuento: 0, notas: 'Precio expresado en dólares\nTipo cambio BNA Billete vendedor\nPrecio no incluye IVA',
-    estado: 'borrador', incluye_iva: false
-  };
-  presItems = [{desc:'', cantidad:1, precio:0, costo:0, moneda:'ARS', partida_ids:[]}];
-  presupuestoFotos = [];
-  mostrarEditorPresupuesto();
 }
 
 async function editarPresupuesto(id) {
