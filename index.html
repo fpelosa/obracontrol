@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.31">
+<meta name="version" content="v12.32">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.31</title>
+<title>ObraControl v12.32</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.31">
+<link rel="stylesheet" href="css/styles.css?v=12.32">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.31</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.32</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -832,7 +832,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.31</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.32</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1268,10 +1268,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.31"></script>
-<script src="js/calculadora.js?v=12.31"></script>
-<script src="js/logs.js?v=12.31"></script>
-<script src="js/admin.js?v=12.31"></script>
+<script src="js/core.js?v=12.32"></script>
+<script src="js/calculadora.js?v=12.32"></script>
+<script src="js/logs.js?v=12.32"></script>
+<script src="js/admin.js?v=12.32"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -3999,13 +3999,6 @@ function mostrarEditorPresupuesto() {
           <div class="form-group"><label>Fecha</label><input type="date" id="pe-fecha" value="${presActual.fecha}"/></div>
           <div class="form-group"><label>Válido por (días)</label><input type="number" id="pe-valido-dias" value="${presActual.valido_dias||15}" min="1" placeholder="15" oninput="actualizarNotasValidez()"/></div>
           <div class="form-group"><label>Representante</label><input id="pe-representante" value="${presActual.representante||''}"/></div>
-          <div class="form-group"><label>Ver total unificado en</label>
-            <select id="pe-moneda" onchange="actualizarMoneda()">
-              <option value="ARS" ${(!presActual.moneda||presActual.moneda==='ARS')?'selected':''}>ARS - Pesos</option>
-              <option value="USD" ${presActual.moneda==='USD'?'selected':''}>USD - Dólares</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Tipo de cambio</label><input type="number" id="pe-tc" placeholder="(opcional)" value="${presActual.tipo_cambio||''}" oninput="recalcularTotales()"/></div>
           <div class="form-group full"><label>Obra / Ubicación</label><input id="pe-obra-ubicacion" value="${presActual.obra_ubicacion||''}"/></div>
           <div class="form-group" style="grid-column:1/-1"><label style="color:var(--accent)">Bonificación %</label><input type="number" id="pe-desc" value="${presActual.descuento||0}" min="0" max="100" step="0.1" placeholder="0" oninput="recalcularTotales()"/></div>
           <div class="form-group"><label>Estado</label>
@@ -4277,11 +4270,6 @@ function calcularTotalesUnificados(){
 function recalcularTotales() {
   const {monedaVista, tc, descPct, itemsArs, itemsUsd, subtotalArs, costoArs, subtotalUsd, costoUsd, subtotal, costoTotal, descMonto, neto, utilidad, margen} = calcularTotalesUnificados();
 
-  const tcInline = (itemsArs.length && itemsUsd.length) ? `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left">
-      <label style="font-size:12px;color:var(--muted)">Tipo de cambio (USD 1 = $)</label>
-      <input type="number" step="0.01" id="pe-tc-inline" value="${tc||''}" placeholder="0" style="width:100px" onchange="document.getElementById('pe-tc').value=this.value; recalcularTotales();"/>
-    </div>` : '';
   const avisoTC = (itemsArs.length && itemsUsd.length && tc<=0)
     ? `<div style="font-size:11px;color:var(--accent);text-align:left">⚠️ Sin tipo de cambio, el total unificado no incluye los ítems en dólares.</div>` : '';
   const bloqueNativo = (itemsArs.length && itemsUsd.length) ? `
@@ -4289,15 +4277,31 @@ function recalcularTotales() {
       <div style="font-size:12px"><span style="color:var(--muted)">🇦🇷 En pesos (${itemsArs.length})</span><br/>Venta: ${fmtPres('ARS',subtotalArs)} · Costo: ${fmtPres('ARS',costoArs)}</div>
       <div style="font-size:12px"><span style="color:var(--muted)">🇺🇸 En dólares (${itemsUsd.length})</span><br/>Venta: ${fmtPres('USD',subtotalUsd)} · Costo: ${fmtPres('USD',costoUsd)}</div>
     </div>` : '';
+  // Controles de vista: se muestran siempre pegados al subtotal, para elegir ahí mismo
+  // en qué moneda mirar el total unificado (en vez de tener que ir al form de arriba).
+  const vistaControles = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;text-align:left;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:11px;color:var(--muted)">Ver en</label>
+        <select id="pe-moneda" onchange="actualizarMoneda()" style="width:auto;padding:4px 8px;font-size:12px">
+          <option value="ARS" ${monedaVista==='ARS'?'selected':''}>ARS - Pesos</option>
+          <option value="USD" ${monedaVista==='USD'?'selected':''}>USD - Dólares</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:11px;color:var(--muted)">T. cambio (USD 1=$)</label>
+        <input type="number" step="0.01" id="pe-tc" value="${tc||''}" placeholder="0" onchange="recalcularTotales()" style="width:90px;padding:4px 8px;font-size:12px"/>
+      </div>
+    </div>`;
 
   const cont = document.getElementById('pe-totales');
   if(!cont) return;
   cont.innerHTML = `
     <div style="display:inline-flex;flex-direction:column;gap:6px;min-width:320px;background:var(--bg3);border-radius:10px;padding:12px 16px">
-      ${tcInline}
       ${avisoTC}
       ${bloqueNativo}
       <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Subtotal venta (unificado)</span><span>${fmtPres(monedaVista,subtotal)}</span></div>
+      ${vistaControles}
       ${descPct>0?`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--red)">Bonificación ${descPct}%</span><span style="color:var(--red);font-weight:600">- ${fmtPres(monedaVista,descMonto)}</span></div>`:''}
       <div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid var(--border);padding-top:6px;margin-top:2px"><span style="color:var(--muted)">Neto sin IVA</span><span>${fmtPres(monedaVista,neto)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">IVA (21%)</span><span>${fmtPres(monedaVista,neto*0.21)}</span></div>
