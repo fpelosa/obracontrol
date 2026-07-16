@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.34">
+<meta name="version" content="v12.35">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.34</title>
+<title>ObraControl v12.35</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.34">
+<link rel="stylesheet" href="css/styles.css?v=12.35">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.34</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.35</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -842,7 +842,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.34</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.35</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1278,10 +1278,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.34"></script>
-<script src="js/calculadora.js?v=12.34"></script>
-<script src="js/logs.js?v=12.34"></script>
-<script src="js/admin.js?v=12.34"></script>
+<script src="js/core.js?v=12.35"></script>
+<script src="js/calculadora.js?v=12.35"></script>
+<script src="js/logs.js?v=12.35"></script>
+<script src="js/admin.js?v=12.35"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -1937,7 +1937,18 @@ async function verDetalle(id){
   const gastosXAprobar=gastos.filter(g=>g.estado_aprobacion==="por_aprobar").length;
   const av=pct(totalGasto,p.presupuesto_total),col=colorPct(av);
   const saldo=p.presupuesto_total-totalGasto;
-  _detalleActual={p,partidas,totalGasto,pid:id};
+  // Partidas que forman parte de un ítem "unificado" en el presupuesto vinculado (si hay uno),
+  // para marcarlas acá y que se vea de qué grupo forman parte.
+  let gruposPorPartida={};
+  if(p.presupuesto_ref_id){
+    const {data:itemsPres} = await sb.from('presupuestos_items').select('descripcion,partida_ids').eq('presupuesto_id',p.presupuesto_ref_id);
+    (itemsPres||[]).forEach(it=>{
+      if(Array.isArray(it.partida_ids) && it.partida_ids.length>1){
+        it.partida_ids.forEach(x=>{ gruposPorPartida[x.id]=it.descripcion; });
+      }
+    });
+  }
+  _detalleActual={p,partidas,totalGasto,pid:id,gruposPorPartida};
 
   det.innerHTML=`
     <div class="detail-back" onclick="renderProyectos()">← Volver</div>
@@ -1971,7 +1982,7 @@ async function verDetalle(id){
       ${p.estado==='Esperando aprobación' && esAdministrativoOSuperior()?`<div class="tab" style="color:#22d3ee;font-weight:600" onclick="switchTab(this,'tea')">⏳ Esperando aprobación</div>`:''}
       ${esAdmin()?`<div class="tab" onclick="switchTab(this,'tr')">💰 Rentabilidad</div>`:''}
     </div>
-    <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar()||esSupervisor())}</div>
+    <div id="tp" class="tab-panel active">${renderPartidasHTML(partidas,id,puedeEditar()||esSupervisor(),gruposPorPartida)}</div>
     <div id="tg" class="tab-panel">${renderGastosDetHTML(gastos,partidas,puedeEditar())}</div>
     <div id="tio" class="tab-panel"><div class="card"><div id="items-obra-cont-${id}" class="loading">Cargando...</div></div></div>
     <div id="tce" class="tab-panel"><div class="card"><div id="certificados-cont-${id}" class="loading">Cargando...</div></div></div>
@@ -2061,7 +2072,7 @@ function toggleModoTablaPartidas(pid){
   const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
   if(_modoTablaPartidas[pid] && partidas) _ordenEdicion[pid] = partidas.map(pa=>pa.id);
   const panel = document.getElementById('tp');
-  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
+  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor(), _detalleActual.gruposPorPartida);
 }
 
 // Descarta los cambios sin guardar (incluido el orden) y vuelve a los valores originales
@@ -2070,7 +2081,7 @@ function cancelarEdicionPartidas(pid){
   delete _ordenEdicion[pid];
   const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
   const panel = document.getElementById('tp');
-  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
+  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor(), _detalleActual.gruposPorPartida);
 }
 
 function recalcPresupuestoInline(partId){
@@ -2100,7 +2111,7 @@ function dropPartida(ev, pid, idx){
   _dragSrcPartidaIdx = null;
   const partidas = _detalleActual && _detalleActual.pid===pid ? _detalleActual.partidas : null;
   const panel = document.getElementById('tp');
-  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor());
+  if(panel && partidas) panel.innerHTML = renderPartidasHTML(partidas, pid, puedeEditar()||esSupervisor(), _detalleActual.gruposPorPartida);
 }
 function dragEndPartida(ev){
   ev.currentTarget.style.opacity = '';
@@ -2135,7 +2146,7 @@ async function guardarCambiosPartidas(pid){
   verDetalle(pid);
 }
 
-function renderPartidasHTML(partidas,pid,editar){
+function renderPartidasHTML(partidas,pid,editar,gruposPorPartida={}){
   if(!partidas.length) return `<div class="empty"><p>Sin partidas. ${editar?'Agrega partidas al presupuesto.':''}</p></div>`;
   const modoTabla = editar && _modoTablaPartidas[pid];
   const toolbar = editar ? `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
@@ -2163,6 +2174,10 @@ function renderPartidasHTML(partidas,pid,editar){
     // "Guardar cambios" sin tocar nada pise el presupuesto real por 0.
     const precioUnitInicial=pa.precio_unitario>0?pa.precio_unitario:(ppto>0?ppto/cantParaCalculo:0);
 
+    const nombreGrupo = gruposPorPartida[pa.id];
+    const badgeUnificada = nombreGrupo
+      ? `<span class="badge badge-purple" style="margin-left:8px" title="Unificada en el presupuesto">🔗 ${nombreGrupo}</span>` : '';
+
     if(modoTabla){
       const colsEdit=`70px 60px 90px 100px${esAdmin()?' 90px':''} 40px`;
       return `<div class="partida-row" draggable="true" ondragstart="dragStartPartida(event,${idx})" ondragover="dragOverPartida(event)" ondrop="dropPartida(event,'${pid}',${idx})" ondragend="dragEndPartida(event)">
@@ -2170,6 +2185,7 @@ function renderPartidasHTML(partidas,pid,editar){
         <span style="cursor:grab;color:var(--muted);user-select:none;margin-right:6px" title="Arrastrar para reordenar">⋮⋮</span>
         <span style="font-weight:500">${pa.nombre}</span>
         ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
+        ${badgeUnificada}
       </div>
       <div style="display:grid;grid-template-columns:${colsEdit};gap:10px;align-items:end">
         <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Moneda</div><select id="inl-moneda-${pa.id}" tabindex="-1" onchange="recalcPresupuestoInline('${pa.id}')" style="width:100%"><option value="ARS" ${moneda==='ARS'?'selected':''}>ARS</option><option value="USD" ${moneda==='USD'?'selected':''}>USD</option></select></div>
@@ -2189,6 +2205,7 @@ function renderPartidasHTML(partidas,pid,editar){
         <span style="font-weight:500">${pa.nombre}</span>
         ${pa.unidad?`<span style="font-size:12px;color:var(--muted);margin-left:8px">${pa.unidad}</span>`:''}
         ${moneda==='USD'?`<span class="badge badge-gray" style="margin-left:8px">U$S</span>`:''}
+        ${badgeUnificada}
       </div>
       <div style="display:grid;grid-template-columns:${colsVer};gap:14px;align-items:center;justify-content:end">
         <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Cantidad</div><div style="font-size:13px">${pa.cantidad||1}</div></div>
@@ -2805,13 +2822,15 @@ function renderEsperandoAprobacionHTML(p, id){
 
 async function actualizarPresupuestoDesdeProyecto(proyId, presId){
   if(!confirm('¿Actualizar los ítems del presupuesto con las partidas actuales del proyecto?')) return;
-  const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('created_at');
-  const items = (partidas||[]).map((pa,i)=>({
+  const nuevosItems = await construirItemsPresupuestoDesdeProyecto(proyId, presId);
+  const items = nuevosItems.map((it,i)=>({
     presupuesto_id:presId,
-    descripcion:pa.nombre||'',
-    cantidad:pa.cantidad||1,
-    precio:pa.cantidad>1 ? Math.round((pa.precio_venta||pa.presupuesto||0)/pa.cantidad) : (pa.precio_venta||pa.presupuesto||0),
-    costo:pa.cantidad>1 ? Math.round((pa.presupuesto||0)/pa.cantidad) : (pa.presupuesto||0),
+    descripcion:it.desc,
+    cantidad:it.cantidad,
+    precio:it.precio,
+    costo:it.costo,
+    moneda:it.moneda,
+    partida_ids:it.partida_ids,
     orden:i
   }));
   await sb.from('presupuestos_items').delete().eq('presupuesto_id',presId);
@@ -3864,19 +3883,66 @@ async function renderPresupuestos() {
     </div>`;
 }
 
+// Construye los ítems de presupuesto a partir de las partidas actuales del proyecto,
+// respetando su orden y preservando los grupos "unificados" que ya existieran en
+// presupuestoRefId (recalculados con las partidas del grupo que sobrevivan). Las usan
+// tanto generarPresupuestoDesdeProyecto (documento nuevo) como
+// actualizarPresupuestoDesdeProyecto (mismo documento) para no duplicar esta lógica.
+async function construirItemsPresupuestoDesdeProyecto(proyId, presupuestoRefId){
+  const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('orden');
+
+  let gruposPrevios = [];
+  if(presupuestoRefId){
+    const {data:itemsPrevios} = await sb.from('presupuestos_items').select('descripcion,moneda,partida_ids').eq('presupuesto_id',presupuestoRefId);
+    gruposPrevios = (itemsPrevios||[]).filter(it=>Array.isArray(it.partida_ids) && it.partida_ids.length>1);
+  }
+
+  const partidasPorId = new Map((partidas||[]).map(pa=>[pa.id,pa]));
+  const itemDesdePartida = pa => ({
+    desc: pa.nombre||'',
+    cantidad: pa.cantidad||1,
+    precio: pa.cantidad>1 ? Math.round((pa.precio_venta||pa.presupuesto||0) / pa.cantidad) : (pa.precio_venta||pa.presupuesto||0),
+    costo: pa.cantidad>1 ? Math.round((pa.presupuesto||0) / pa.cantidad) : (pa.presupuesto||0),
+    moneda: pa.moneda||'ARS',
+    partida_ids: [{id:pa.id, nombre:pa.nombre}]
+  });
+  const gruposUsados = new Set();
+  const consumidas = new Set();
+  const resultado = [];
+  (partidas||[]).forEach(pa=>{
+    if(consumidas.has(pa.id)) return;
+    const idxGrupo = gruposPrevios.findIndex((g,gi)=>!gruposUsados.has(gi) && g.partida_ids.some(x=>x.id===pa.id));
+    if(idxGrupo>=0){
+      gruposUsados.add(idxGrupo);
+      const grupo = gruposPrevios[idxGrupo];
+      const sobrevivientes = grupo.partida_ids.filter(x=>partidasPorId.has(x.id));
+      sobrevivientes.forEach(x=>consumidas.add(x.id));
+      if(sobrevivientes.length){
+        let totalPrecio=0, totalCosto=0;
+        sobrevivientes.forEach(x=>{
+          const p2 = partidasPorId.get(x.id);
+          totalPrecio += Number(p2.precio_venta||p2.presupuesto||0);
+          totalCosto += Number(p2.presupuesto||0);
+        });
+        resultado.push({
+          desc: grupo.descripcion, cantidad: 1, precio: totalPrecio, costo: totalCosto,
+          moneda: grupo.moneda || partidasPorId.get(sobrevivientes[0].id).moneda || 'ARS',
+          partida_ids: sobrevivientes.map(x=>({id:x.id, nombre:partidasPorId.get(x.id).nombre}))
+        });
+      }
+      return;
+    }
+    resultado.push(itemDesdePartida(pa));
+    consumidas.add(pa.id);
+  });
+  return resultado.length ? resultado : [{desc:'', cantidad:1, precio:0, costo:0, moneda:'ARS', partida_ids:[]}];
+}
+
 async function generarPresupuestoDesdeProyecto(proyId) {
   if(!confirm('¿Generar un presupuesto a partir de este proyecto? El proyecto pasará a estado "Esperando aprobación".')) return;
 
   const {data:proy} = await sb.from('proyectos').select('*').eq('id',proyId).single();
-  const {data:partidas} = await sb.from('partidas').select('*').eq('proyecto_id',proyId).order('created_at');
-
-  // Si ya había un presupuesto vinculado a esta obra, rescatar los ítems que se habían
-  // "unificado" a mano para no perder esa agrupación en esta nueva generación.
-  let gruposPrevios = [];
-  if(proy.presupuesto_ref_id){
-    const {data:itemsPrevios} = await sb.from('presupuestos_items').select('descripcion,moneda,partida_ids').eq('presupuesto_id',proy.presupuesto_ref_id);
-    gruposPrevios = (itemsPrevios||[]).filter(it=>Array.isArray(it.partida_ids) && it.partida_ids.length>1);
-  }
+  const nuevosItems = await construirItemsPresupuestoDesdeProyecto(proyId, proy.presupuesto_ref_id);
 
   const {data:last} = await sb.from('presupuestos').select('numero').order('created_at',{ascending:false}).limit(1);
   const lastNum = last?.[0]?.numero || '270000';
@@ -3913,48 +3979,7 @@ async function generarPresupuestoDesdeProyecto(proyId) {
     tiempo_estimado_obra: proy.tiempo_estimado_obra || ''
   };
 
-  // Reconstruir los ítems: las partidas que antes formaban parte de un grupo unificado
-  // se vuelven a agrupar (recalculando con las partidas que sobrevivan), y el resto se
-  // arma como una línea suelta por partida, igual que antes.
-  const partidasPorId = new Map((partidas||[]).map(pa=>[pa.id,pa]));
-  const itemDesdePartida = pa => ({
-    desc: pa.nombre||'',
-    cantidad: pa.cantidad||1,
-    precio: pa.cantidad>1 ? Math.round((pa.precio_venta||pa.presupuesto||0) / pa.cantidad) : (pa.precio_venta||pa.presupuesto||0),
-    costo: pa.cantidad>1 ? Math.round((pa.presupuesto||0) / pa.cantidad) : (pa.presupuesto||0),
-    moneda: pa.moneda||'ARS',
-    partida_ids: [{id:pa.id, nombre:pa.nombre}]
-  });
-  const gruposUsados = new Set();
-  const consumidas = new Set();
-  presItems = [];
-  (partidas||[]).forEach(pa=>{
-    if(consumidas.has(pa.id)) return;
-    const idxGrupo = gruposPrevios.findIndex((g,gi)=>!gruposUsados.has(gi) && g.partida_ids.some(x=>x.id===pa.id));
-    if(idxGrupo>=0){
-      gruposUsados.add(idxGrupo);
-      const grupo = gruposPrevios[idxGrupo];
-      const sobrevivientes = grupo.partida_ids.filter(x=>partidasPorId.has(x.id));
-      sobrevivientes.forEach(x=>consumidas.add(x.id));
-      if(sobrevivientes.length){
-        let totalPrecio=0, totalCosto=0;
-        sobrevivientes.forEach(x=>{
-          const p2 = partidasPorId.get(x.id);
-          totalPrecio += Number(p2.precio_venta||p2.presupuesto||0);
-          totalCosto += Number(p2.presupuesto||0);
-        });
-        presItems.push({
-          desc: grupo.descripcion, cantidad: 1, precio: totalPrecio, costo: totalCosto,
-          moneda: grupo.moneda || partidasPorId.get(sobrevivientes[0].id).moneda || 'ARS',
-          partida_ids: sobrevivientes.map(x=>({id:x.id, nombre:partidasPorId.get(x.id).nombre}))
-        });
-      }
-      return;
-    }
-    presItems.push(itemDesdePartida(pa));
-    consumidas.add(pa.id);
-  });
-  if(!presItems.length) presItems = [{desc:'', cantidad:1, precio:0, costo:0, moneda:'ARS', partida_ids:[]}];
+  presItems = nuevosItems;
 
   presupuestoFotos = [];
 
