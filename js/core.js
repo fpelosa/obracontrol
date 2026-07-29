@@ -317,14 +317,23 @@ async function initApp(){
 async function fetchProyectos(){
   try {
     // Todas las queries en paralelo
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       sb.from('proyectos').select('*').order('created_at',{ascending:false}),
       sb.from('gastos').select('proyecto_id, monto, estado_aprobacion'),
-      sb.from('partidas').select('proyecto_id, presupuesto, precio_venta')
+      sb.from('partidas').select('proyecto_id, presupuesto, precio_venta'),
+      sb.from('presupuestos').select('numero, proyecto_origen_id').not('proyecto_origen_id','is',null)
     ]);
     const data = r1.data||[];
     const gastos = r2.data||[];
     const partidas = r3.data||[];
+    const presupuestosDoc = r4.data||[];
+
+    const numerosPorProy={};
+    presupuestosDoc.forEach(d=>{
+      if(!numerosPorProy[d.proyecto_origen_id]) numerosPorProy[d.proyecto_origen_id]=[];
+      numerosPorProy[d.proyecto_origen_id].push(d.numero);
+    });
+    Object.values(numerosPorProy).forEach(arr=>arr.sort((a,b)=>Number(a)-Number(b)));
 
     const gastosPorProy={}, gastosPendientesPorProy={};
     gastos.forEach(g=>{
@@ -342,6 +351,7 @@ async function fetchProyectos(){
 
     cache.proyectos=data.map(p=>{
       const pptoCalculado = pptoPorProy[p.id]||0;
+      const numerosPresupuesto = numerosPorProy[p.id]||[];
       return {
         ...p,
         presupuesto_total: pptoCalculado,
@@ -351,7 +361,9 @@ async function fetchProyectos(){
         total_partidas: partidasPorProy[p.id]||0,
         total_gastos: 0,
         gastos_pendientes: gastosPendientesPorProy[p.id]||0,
-        responsable_nombre: ''
+        responsable_nombre: '',
+        presupuesto_numeros: numerosPresupuesto,
+        presupuesto_numero_max: numerosPresupuesto.length?Number(numerosPresupuesto[numerosPresupuesto.length-1]):0
       };
     });
   } catch(e){ console.error('fetchProyectos error:',e); cache.proyectos=[]; }

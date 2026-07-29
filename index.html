@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="v12.41">
+<meta name="version" content="v12.42">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,11 +14,11 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1117'/><text y='.9em' font-size='80' x='10'>⬡</text></svg>">
 <link rel="manifest" id="manifest-link">
-<title>ObraControl v12.41</title>
+<title>ObraControl v12.42</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12.41">
+<link rel="stylesheet" href="css/styles.css?v=12.42">
 </head>
 <body>
 
@@ -106,7 +106,7 @@
     <div class="sidebar-logo">
       <div class="logo-text">⬡ ObraControl</div>
       <div class="logo-sub">Gestión de Obra Civil</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.41</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;opacity:.6">v12.42</div>
     </div>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -223,6 +223,7 @@
             <select id="proy-sort-campo" onchange="renderProyectos()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:13px;padding:7px 10px;outline:none;transition:border .15s">
               <option value="nombre">Ordenar: Nombre</option>
               <option value="cliente">Ordenar: Cliente</option>
+              <option value="numero_presupuesto">Ordenar: N° Presupuesto</option>
               <option value="presupuesto">Ordenar: Presupuesto</option>
               <option value="gastado">Ordenar: Gastado</option>
               <option value="avance">Ordenar: Avance</option>
@@ -842,7 +843,7 @@
 
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.41</span>
+          <span style="font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:2px 8px;border-radius:12px">v12.42</span>
           <span style="font-size:12px;color:var(--muted)">Actual</span>
         </div>
         <ul style="font-size:13px;color:var(--text);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
@@ -1278,10 +1279,10 @@
 
 <div class="notif" id="notif"></div>
 
-<script src="js/core.js?v=12.41"></script>
-<script src="js/calculadora.js?v=12.41"></script>
-<script src="js/logs.js?v=12.41"></script>
-<script src="js/admin.js?v=12.41"></script>
+<script src="js/core.js?v=12.42"></script>
+<script src="js/calculadora.js?v=12.42"></script>
+<script src="js/logs.js?v=12.42"></script>
+<script src="js/admin.js?v=12.42"></script>
 <script>
 // ── DASHBOARD ──────────────────────────────
 function _dashSortBy(campo){
@@ -1687,6 +1688,7 @@ function renderProyectos(){
     let va, vb;
     if(campo==='nombre'){ va=a.nombre||''; vb=b.nombre||''; }
     else if(campo==='cliente'){ va=a.cliente||''; vb=b.cliente||''; }
+    else if(campo==='numero_presupuesto'){ va=Number(a.presupuesto_numero_max)||0; vb=Number(b.presupuesto_numero_max)||0; }
     else if(campo==='presupuesto'){ va=Number(a.presupuesto_total)||0; vb=Number(b.presupuesto_total)||0; }
     else if(campo==='gastado'){ va=Number(a.total_gastado)||0; vb=Number(b.total_gastado)||0; }
     else if(campo==='fecha_aprobacion'){ va=a.fecha_aprobacion||''; vb=b.fecha_aprobacion||''; }
@@ -1839,6 +1841,7 @@ function _renderProyTabla(p){
   const rows = p.map(x=>{
     const av=Number(x.pct_ejecutado),col=colorPct(av);
     return `<tr style="cursor:pointer;${x.gastos_pendientes>0&&puedeEditar()?'border-left:3px solid #f87171':''}" onclick="verDetalle('${x.id}')">
+      <td style="color:var(--muted)">${x.presupuesto_numeros&&x.presupuesto_numeros.length?x.presupuesto_numeros.join(', '):'—'}</td>
       <td><div style="font-weight:500">${x.nombre}${x.gastos_pendientes>0&&puedeEditar()?` <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:8px;padding:1px 6px;margin-left:4px">⚠️ ${x.gastos_pendientes}</span>`:''}</div><div style="font-size:11px;color:var(--muted)">${x.ubicacion||''}</div></td>
       <td style="color:var(--muted)">${x.cliente||'—'}</td>
       <td>${estadoBadge(x.estado)}</td>
@@ -1857,7 +1860,7 @@ function _renderProyTabla(p){
   }).join('');
   return `<div class="card"><div class="table-wrap"><table>
     <thead><tr>
-      <th>Proyecto</th><th>Cliente</th><th>Estado</th>
+      <th>N° Ppto</th><th>Proyecto</th><th>Cliente</th><th>Estado</th>
       <th style="text-align:right">Presupuesto</th>
       <th style="text-align:right">Gastado</th>
       <th>F. Aprobación</th>
@@ -1875,6 +1878,7 @@ function _renderProyLista(p){
     const dotCol = x.estado==='En curso'?'var(--green)':x.estado==='Suspendido'?'var(--orange)':x.estado==='Finalizado'?'var(--accent2)':x.estado==='Para Presupuesto'?'#c084fc':x.estado==='Esperando aprobación'?'#22d3ee':'var(--muted)';
     return `<div onclick="verDetalle('${x.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;${x.gastos_pendientes>0&&puedeEditar()?'border-left:3px solid #f87171':''}" onmouseover="this.style.background='rgba(255,255,255,.02)'" onmouseout="this.style.background=''">
       <div style="width:8px;height:8px;border-radius:50%;background:${dotCol};flex-shrink:0"></div>
+      <div style="min-width:70px;font-size:12px;color:var(--muted)">${x.presupuesto_numeros&&x.presupuesto_numeros.length?x.presupuesto_numeros.join(', '):'—'}</div>
       <div style="flex:1.8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px">${x.nombre}${x.gastos_pendientes>0&&puedeEditar()?` <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:8px;padding:1px 6px">⚠️ ${x.gastos_pendientes}</span>`:''}</div>
       <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)">${x.cliente||'—'}</div>
       <div style="min-width:90px;text-align:right;font-size:12px;color:var(--muted)">${x.fecha_aprobacion?new Date(x.fecha_aprobacion).toLocaleDateString('es-AR'):'—'}</div>
@@ -1891,6 +1895,7 @@ function _renderProyLista(p){
   return `<div class="card" style="padding:0;overflow:hidden">
     <div style="display:flex;gap:10px;padding:9px 14px;font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border)">
       <div style="width:8px;flex-shrink:0"></div>
+      <div style="min-width:70px;cursor:pointer;user-select:none" onclick="setSortCampo('numero_presupuesto')">N° Ppto${document.getElementById('proy-sort-campo')?.value==='numero_presupuesto'?' '+(proyOrdenDir==='asc'?'↑':'↓'):''}</div>
       <div style="flex:1.8;cursor:pointer;user-select:none" onclick="setSortCampo('nombre')">Proyecto${document.getElementById('proy-sort-campo')?.value==='nombre'?' '+(proyOrdenDir==='asc'?'↑':'↓'):''}</div>
       <div style="flex:1;cursor:pointer;user-select:none" onclick="setSortCampo('cliente')">Cliente${document.getElementById('proy-sort-campo')?.value==='cliente'?' '+(proyOrdenDir==='asc'?'↑':'↓'):''}</div>
       ${_thSort('fecha_aprobacion','F. Aprobación')}
